@@ -194,7 +194,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
             type: 'magic-link' 
         }, '48h');
         
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
         // 4. Send email
