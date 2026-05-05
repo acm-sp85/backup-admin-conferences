@@ -6,23 +6,29 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "tunnel": "node scripts/start-tunnel.js",
+    "tunnel-mongo": "node scripts/start-mongo-tunnel.js",
+    "sync": "node scripts/sync-all.js"
   },
   "dependencies": {
+    "autoprefixer": "^10.5.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
     "jose": "^6.2.2",
     "mongodb": "^7.2.0",
     "mysql2": "^3.22.2",
     "next": "16.2.4",
+    "postcss": "^8.5.13",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4.2.4"
   }
 }

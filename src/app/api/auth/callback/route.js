@@ -1,0 +1,27 @@
+import { decrypt, createSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const token = searchParams.get('token');
+
+  if (!token) {
+    redirect('/login?error=missing_token');
+  }
+
+  const payload = await decrypt(token);
+
+  if (!payload || payload.type !== 'magic-link') {
+    redirect('/login?error=invalid_token');
+  }
+
+  // Convert the temporary magic-link token into a standard session
+  await createSession(payload.userId, payload.role);
+
+  // Redirect to dashboard or voting depending on role
+  if (payload.role === 'user') {
+    redirect('/voting');
+  }
+
+  redirect('/');
+}

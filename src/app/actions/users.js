@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import crypto from 'crypto';
 import { Resend } from 'resend';
-import { verifySession } from '@/lib/auth';
+import { headers } from 'next/headers';
+import { verifySession, encrypt } from '@/lib/auth';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,30 +17,36 @@ export async function inviteUser(prevState, formData) {
     if (!email) return { error: 'Email is required' };
 
     try {
-        // 1. Generate token
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date();
-        expires.setHours(expires.getHours() + 48); // 48 hours expiry
+        let userId;
 
         // 3. Create or update user as invited
-        // If user already exists, we might just update their token (re-invite)
         const [existing] = await query('SELECT id FROM users WHERE email = ?', [email]);
         
         if (existing) {
             await query(
-                'UPDATE users SET role = ?, invitation_token = ?, token_expires = ? WHERE email = ?',
-                [role, token, expires, email]
+                'UPDATE users SET role = ? WHERE email = ?',
+                [role, email]
             );
+            userId = existing.id;
         } else {
-            await query(
-                'INSERT INTO users (email, role, invitation_token, token_expires) VALUES (?, ?, ?, ?)',
-                [email, role, token, expires]
+            const [res] = await query(
+                'INSERT INTO users (email, role) VALUES (?, ?)',
+                [email, role]
             );
+            userId = res.insertId;
         }
 
-        // 4. Send invitation email
-        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${token}`;
+        // Generate Magic Link
+        const token = await encrypt({ 
+            userId: userId, 
+            role: role, 
+            type: 'magic-link' 
+        }, '48h');
         
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
+
+        // 4. Send invitation email
         const { data, error: mailError } = await resend.emails.send({
             from: 'SCITO Admin <no-reply@scitoevents.com>',
             to: email,
@@ -51,12 +58,12 @@ export async function inviteUser(prevState, formData) {
                         You have been invited to join the SCITO Admin Dashboard as an <strong>${role}</strong>.
                     </p>
                     <p style="margin-top: 30px;">
-                        <a href="${setupUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                            Set Up Your Password
+                        <a href="${magicLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                            Log In to Dashboard
                         </a>
                     </p>
                     <p style="margin-top: 30px; font-size: 12px; color: #94a3b8;">
-                        This link will expire in 48 hours. If you didn't expect this invitation, you can safely ignore this email.
+                        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
                     </p>
                 </div>
             `
@@ -77,41 +84,7 @@ export async function inviteUser(prevState, formData) {
     }
 }
 
-export async function setupPassword(formData) {
-    const token = formData.get('token');
-    const firstName = formData.get('firstName');
-    const lastName = formData.get('lastName');
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
 
-    if (password !== confirmPassword) {
-        throw new Error('Passwords do not match');
-    }
-
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    try {
-        const [user] = await query(
-            'SELECT id FROM users WHERE invitation_token = ? AND token_expires > NOW()',
-            [token]
-        );
-
-        if (!user) {
-            throw new Error('Invalid or expired token');
-        }
-
-        await query(
-            'UPDATE users SET firstName = ?, lastName = ?, password = ?, invitation_token = NULL, token_expires = NULL WHERE id = ?',
-            [firstName, lastName, hashedPassword, user.id]
-        );
-
-        return redirect('/login');
-    } catch (error) {
-        console.error('Password setup error:', error);
-        throw error;
-    }
-}
 
 export async function deleteUser(userId) {
     const session = await verifySession();

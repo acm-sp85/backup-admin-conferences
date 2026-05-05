@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 
@@ -169,25 +170,34 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
         // 2. Ensure user exists in users table
         const [existingUser] = await query('SELECT id FROM users WHERE email = ?', [participant.email]);
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date();
-        expires.setHours(expires.getHours() + 48);
+        let userId;
 
         if (existingUser) {
             await query(
-                'UPDATE users SET invitation_token = ?, token_expires = ?, cluster_for_review = ?, firstName = ?, lastName = ? WHERE email = ?',
-                [token, expires, participant.cluster_for_review, participant.firstName, participant.lastName, participant.email]
+                'UPDATE users SET cluster_for_review = ?, firstName = ?, lastName = ? WHERE email = ?',
+                [participant.cluster_for_review, participant.firstName, participant.lastName, participant.email]
             );
+            userId = existingUser.id;
         } else {
-            await query(
-                'INSERT INTO users (email, role, invitation_token, token_expires, cluster_for_review, firstName, lastName) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [participant.email, 'user', token, expires, participant.cluster_for_review, participant.firstName, participant.lastName]
+            const [res] = await query(
+                'INSERT INTO users (email, role, cluster_for_review, firstName, lastName) VALUES (?, ?, ?, ?, ?)',
+                [participant.email, 'user', participant.cluster_for_review, participant.firstName, participant.lastName]
             );
+            userId = res.insertId;
         }
 
-        // 3. Send email
-        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${token}`;
+        // 3. Generate Magic Link (48 hours expiry for invitations)
+        const { encrypt } = require('@/lib/auth');
+        const token = await encrypt({ 
+            userId: userId, 
+            role: 'user', 
+            type: 'magic-link' 
+        }, '48h');
         
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
+
+        // 4. Send email
         await resend.emails.send({
             from: 'SCITO Voting <no-reply@scitoevents.com>',
             to: participant.email,
@@ -198,22 +208,21 @@ export async function sendVoterInvite(participantId, conferenceId) {
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${participant.firstName || 'Voter'},<br><br>
                         You have been invited to participate in the poster voting process. 
-                        Please set up your account using the link below to access your assigned clusters and cast your votes.
+                        Please use the link below to access your assigned clusters and cast your votes.
                     </p>
                     <div style="margin: 30px 0;">
-                        <a href="${setupUrl}" style="background-color: #0071e3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                            Set Up Your Account
+                        <a href="${magicLink}" style="background-color: #0071e3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                            Log In to Vote
                         </a>
                     </div>
                     <p style="color: #64748b; font-size: 13px; margin-top: 30px; border-top: 1px solid #f1f5f9; pt-20">
                         <strong>Instructions:</strong><br>
-                        1. Follow the link to set your password.<br>
-                        2. Log in to the platform.<br>
-                        3. Go to the "Voting" tab to see your assigned posters.<br>
-                        4. Rank them from 1 to 10 and save.
+                        1. Log in to the platform using the button above.<br>
+                        2. Go to the "Voting" tab to see your assigned posters.<br>
+                        3. Rank them from 1 to 10 and save.
                     </p>
                     <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
-                        This link will expire in 48 hours.
+                        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
                     </p>
                 </div>
             `

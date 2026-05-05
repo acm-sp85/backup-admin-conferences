@@ -28,7 +28,7 @@ export default async function ParticipantsPage({ searchParams }) {
       COALESCE(SUM(py.amount), 0) as total_paid,
       GROUP_CONCAT(DISTINCT py.status SEPARATOR ', ') as payment_statuses,
       (
-        SELECT JSON_ARRAYAGG(
+        SELECT CONCAT('[', COALESCE(GROUP_CONCAT(
           JSON_OBJECT(
             'amount', amount,
             'status', status,
@@ -39,7 +39,7 @@ export default async function ParticipantsPage({ searchParams }) {
             'tickets', tickets_info,
             'date', created_at
           )
-        )
+        ), ''), ']')
         FROM payments 
         WHERE registration_id = MAX(r.id)
       ) as all_payments_json

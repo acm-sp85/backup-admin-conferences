@@ -1,9 +1,4 @@
 import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-import path from 'path';
-
-// Explicitly load .env.local from the project root
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 let pool;
 

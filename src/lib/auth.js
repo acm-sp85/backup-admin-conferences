@@ -5,11 +5,11 @@ import { cookies } from 'next/headers';
 const secretKey = process.env.SESSION_SECRET || 'a-very-long-and-secure-fallback-secret-key-123';
 const encodedKey = new TextEncoder().encode(secretKey);
 
-export async function encrypt(payload) {
+export async function encrypt(payload, expiration = '24h') {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(expiration)
     .sign(encodedKey);
 }
 
@@ -26,7 +26,7 @@ export async function decrypt(session) {
 }
 
 export async function createSession(userId, role) {
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const session = await encrypt({ userId, role, expiresAt });
   const cookieStore = await cookies();
 
