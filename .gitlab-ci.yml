@@ -1,0 +1,17 @@
+image: node:20
+
+stages:
+  - deploy
+
+vercel-production:
+  stage: deploy
+  only:
+    - main
+  script:
+    - npm i -g vercel
+    # Pull the Vercel Project Configuration
+    - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+    # Build the application
+    - vercel build --prod --token=$VERCEL_TOKEN
+    # Deploy to Vercel
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
