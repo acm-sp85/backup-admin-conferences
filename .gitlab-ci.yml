@@ -11,7 +11,5 @@ vercel-production:
     - npm i -g vercel
     # Pull the Vercel Project Configuration
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-    # Build the application
-    - vercel build --prod --token=$VERCEL_TOKEN
-    # Deploy to Vercel
-    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+    # Trigger Vercel to build and deploy the app using its own environment variables
+    - vercel deploy --prod --token=$VERCEL_TOKEN
