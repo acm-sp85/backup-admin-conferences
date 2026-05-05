@@ -1,15 +1,17 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+
 // --- CONFIGURATION SECTION ---
+const ACRONYM = process.env.CONFERENCE_ACRONYM || 'HOPV26';
 const SYNC_CONFIG = {
-  mongoPostersView: 'HOPV26 - Posters',
-  targetConferenceAcronym: 'HOPV26',
-  targetConferenceName: 'HOPV 2026',
+  mongoPostersView: `${ACRONYM} - Posters`,
+  targetConferenceAcronym: ACRONYM,
+  targetConferenceName: process.env.CONFERENCE_NAME || 'HOPV 2026',
 };
 // -----------------------------
 
 const { MongoClient } = require('mongodb');
 const mysql = require('mysql2/promise');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
 
 const mariadbConfig = {
   host: process.env.DB_HOST || '127.0.0.1',
@@ -53,9 +55,15 @@ async function syncPosters() {
 
     const mongoDb = mongoClient.db(mongoDbName);
 
+    // --- PRE-FETCH DATA FOR OPTIMIZATION ---
+    console.log('📡 Pre-fetching existing posters...');
+    const [existingPosters] = await mariadb.execute('SELECT mongo_id FROM posters WHERE conference_id = ?', [conferenceId]);
+    const posterSet = new Set(existingPosters.map(p => p.mongo_id));
+    // ---------------------------------------
+
     // 2. SYNC POSTERS
     const records = await mongoDb.collection(mongoPostersView).find({}).toArray();
-    console.log(`📥 Fetched ${records.length} posters from [${mongoPostersView}]`);
+    console.log(`📥 Processing ${records.length} posters...`);
 
     let newCount = 0;
     let updateCount = 0;
@@ -67,13 +75,12 @@ async function syncPosters() {
       const authors = record.authors ? JSON.stringify(record.authors) : '[]';
       const content = record.content || null;
 
-      let [pRows] = await mariadb.execute('SELECT id FROM posters WHERE mongo_id = ?', [mongoId]);
-
-      if (pRows.length === 0) {
+      if (!posterSet.has(mongoId)) {
         await mariadb.execute(
           'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content) VALUES (?, ?, ?, ?, ?, ?)',
           [conferenceId, mongoId, title, code, authors, content]
         );
+        posterSet.add(mongoId); // Update cache
         newCount++;
       } else {
         await mariadb.execute(

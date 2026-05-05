@@ -1,18 +1,20 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+
 // --- CONFIGURATION SECTION ---
+const ACRONYM = process.env.CONFERENCE_ACRONYM || 'HOPV26';
 const SYNC_CONFIG = {
-  mongoParticipantsView: 'HOPV26 - Participants', // For participants
-  mongoPaymentsView: 'HOPV26 - Payments', // For payment info
-  mongoProgramView: 'HOPV26 - Program', // For program info
-  targetConferenceAcronym: 'HOPV26',
-  targetConferenceName: 'HOPV 2026',
+  mongoParticipantsView: `${ACRONYM} - Participants`, 
+  mongoPaymentsView: `${ACRONYM} - Payments`, 
+  mongoProgramView: `${ACRONYM} - Program`, 
+  targetConferenceAcronym: ACRONYM,
+  targetConferenceName: process.env.CONFERENCE_NAME || 'HOPV 2026',
 };
 // -----------------------------
 
 const { MongoClient } = require('mongodb');
 const mysql = require('mysql2/promise');
-const path = require('path');
 const crypto = require('crypto');
-require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
 
 const mariadbConfig = {
   host: process.env.DB_HOST || '127.0.0.1',
@@ -117,14 +119,29 @@ async function syncParticipants() {
 
     const mongoDb = mongoClient.db(mongoDbName);
 
+    // --- PRE-FETCH DATA FOR OPTIMIZATION ---
+    console.log('📡 Pre-fetching existing data to speed up sync...');
+    const [existingParticipants] = await mariadb.execute('SELECT id, email FROM participants');
+    const participantMap = new Map(existingParticipants.map(p => [p.email.toLowerCase(), p.id]));
+
+    const [existingRegs] = await mariadb.execute('SELECT id, participant_id FROM registrations WHERE conference_id = ?', [conferenceId]);
+    const registrationMap = new Map(existingRegs.map(r => [r.participant_id, r.id]));
+
+    const [existingPayments] = await mariadb.execute('SELECT mongo_id FROM payments');
+    const paymentSet = new Set(existingPayments.map(p => p.mongo_id));
+    // ---------------------------------------
+
     // 2. SYNC PARTICIPANTS
     const partFilter = mongoParticipantsView.includes(targetConferenceAcronym) ? {} : { conference: targetConferenceAcronym };
     const records = await mongoDb.collection(mongoParticipantsView).find(partFilter).toArray();
     let participantCount = 0;
     let registrationCount = 0;
 
+    console.log(`👤 Processing ${records.length} participants...`);
+
     for (const record of records) {
-      const email = record.user?.email || record.user_email || record.email;
+      const email = (record.user?.email || record.user_email || record.email || '').toLowerCase();
+      if (!email) continue;
       
       // Handle the new separate fields or fallback to concatenated name
       let firstName = record.user_firstName || record.user?.firstName || '';
@@ -137,20 +154,17 @@ async function syncParticipants() {
         lastName = parts.slice(1).join(' ');
       }
 
-      if (!email) continue;
+      let participantId = participantMap.get(email);
 
-      let [pRows] = await mariadb.execute('SELECT id FROM participants WHERE email = ?', [email]);
-      let participantId;
-
-      if (pRows.length === 0) {
+      if (!participantId) {
         const [res] = await mariadb.execute(
           'INSERT INTO participants (firstName, lastName, email, registration_type) VALUES (?, ?, ?, ?)', 
           [firstName, lastName, email, record.registration_type || 'Standard']
         );
         participantId = res.insertId;
+        participantMap.set(email, participantId); // Update cache
         participantCount++;
       } else {
-        participantId = pRows[0].id;
         await mariadb.execute(
           'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ? WHERE id = ?', 
           [firstName, lastName, record.registration_type || 'Standard', participantId]
@@ -158,18 +172,17 @@ async function syncParticipants() {
       }
 
       // Ensure Registration link exists
-      try {
-        const [regExists] = await mariadb.execute('SELECT id FROM registrations WHERE participant_id = ? AND conference_id = ?', [participantId, conferenceId]);
-        
-        if (regExists.length === 0) {
+      if (!registrationMap.has(participantId)) {
+        try {
           const checkInToken = crypto.randomBytes(16).toString('hex');
-          await mariadb.execute(
+          const [regRes] = await mariadb.execute(
             'INSERT INTO registrations (participant_id, conference_id, status, check_in_token) VALUES (?, ?, ?, ?)', 
             [participantId, conferenceId, 'Registered', checkInToken]
           );
+          registrationMap.set(participantId, regRes.insertId); // Update cache
           registrationCount++;
-        }
-      } catch (err) { console.error('Registration link error:', err.message); }
+        } catch (err) { console.error('Registration link error:', err.message); }
+      }
     }
 
     // 3. SYNC PAYMENTS
@@ -185,19 +198,13 @@ async function syncParticipants() {
 
     let payCount = 0;
     for (const pay of mongoPayments) {
-      // Mapping based on your provided structure (user.email or user_info.email)
-      const email = pay.user?.email || (pay.user_info ? pay.user_info.email : (pay.email || pay.userEmail));
+      const email = (pay.user?.email || (pay.user_info ? pay.user_info.email : (pay.email || pay.userEmail)) || '').toLowerCase();
       if (!email) continue;
 
-      const [regRows] = await mariadb.execute(`
-        SELECT r.id 
-        FROM registrations r
-        JOIN participants p ON r.participant_id = p.id
-        WHERE p.email = ? AND r.conference_id = ?
-      `, [email, conferenceId]);
+      const participantId = participantMap.get(email);
+      const registrationId = participantId ? registrationMap.get(participantId) : null;
 
-      if (regRows.length > 0) {
-        const registrationId = regRows[0].id;
+      if (registrationId) {
         const mongoId = pay._id.toString();
         
         try {
