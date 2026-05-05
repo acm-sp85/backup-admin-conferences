@@ -137,9 +137,9 @@ export default function PosterManager({ conferences }) {
                     />
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-                        {filteredPosters.length} posters
-                    </span>
+                    <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+                        Total Results: <strong className="text-[var(--foreground)] ml-1">{filteredPosters.length}</strong>
+                    </div>
                     <ClusterManager conferenceId={selectedConference} clusters={clusters} onUpdate={fetchData} />
                 </div>
             </div>

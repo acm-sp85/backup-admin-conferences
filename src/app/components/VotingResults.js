@@ -42,9 +42,9 @@ export default function VotingResults({ conferences }) {
                     </select>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-                        {posters.length} posters ranked
-                    </span>
+                    <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+                        Total Results: <strong className="text-[var(--foreground)] ml-1">{posters.length}</strong>
+                    </div>
                     <button 
                         onClick={fetchData}
                         className="p-1.5 text-[var(--muted)] hover:text-[var(--accent)] transition-colors"

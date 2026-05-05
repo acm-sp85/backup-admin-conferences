@@ -114,7 +114,9 @@ export default function ParticipantVotingManager({ conferences, allClusters }) {
             <div className="table-container">
                 <div className="bg-[#fafafa] border-b border-[var(--border)] px-3 py-2 flex justify-between items-center">
                     <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Authorized Voters</span>
-                    <span className="text-[10px] font-semibold text-[var(--muted)]">{voters.length} total</span>
+                    <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+                        Total Results: <strong className="text-[var(--foreground)] ml-1">{voters.length}</strong>
+                    </div>
                 </div>
                 <table>
                     <thead>

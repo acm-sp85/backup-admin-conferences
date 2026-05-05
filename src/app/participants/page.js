@@ -89,6 +89,9 @@ export default async function ParticipantsPage({ searchParams }) {
           <h2 className="text-xl font-semibold">Participants</h2>
           <p className="text-[var(--muted)] text-xs mt-0.5">Manage event attendees and their registrations</p>
         </div>
+        <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+          Total Results: <strong className="text-[var(--foreground)] ml-1">{participants.length}</strong>
+        </div>
       </header>
 
       <ParticipantsFilter conferences={conferences} />

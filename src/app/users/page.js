@@ -41,9 +41,9 @@ export default async function UsersPage({ searchParams }) {
           <p className="text-[var(--muted)] text-xs mt-0.5">Manage platform administrators and their permissions</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-semibold text-[var(--muted)] bg-slate-100 px-2 py-1 rounded-md">
-            {users.length} Users Found
-          </span>
+          <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+            Total Results: <strong className="text-[var(--foreground)] ml-1">{users.length}</strong>
+          </div>
           <InviteUserForm />
         </div>
       </header>

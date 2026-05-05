@@ -67,6 +67,11 @@ export default function ProgramManager({ conferences }) {
                             <option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>
                         ))}
                     </select>
+                    {!loading && (
+                        <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+                            Total Sessions: <strong className="text-[var(--foreground)] ml-1">{program.length}</strong>
+                        </div>
+                    )}
                 </div>
                 
                 <div className="flex gap-2">
