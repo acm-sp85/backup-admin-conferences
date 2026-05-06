@@ -1,6 +1,6 @@
 'use server';
 
-import { query } from '@/lib/db';
+import { query, getConnection } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 
@@ -41,25 +41,50 @@ export async function submitVotes(userId, newVotes, isParticipant = false, confe
             );
         }
 
-        // 3. Update each poster's votes_received and points
-        // We will process the newVotes object
-        for (const [posterId, score] of Object.entries(newVotes)) {
-            const [poster] = await query('SELECT votes_received, points FROM posters WHERE id = ?', [posterId]);
-            if (poster) {
-                const votesReceived = poster.votes_received || {};
-                
-                // Calculate new points
-                const oldScore = votesReceived[userId] || 0;
-                const newPoints = (poster.points - oldScore) + score;
-                
-                // Update votes mapping
-                votesReceived[userId] = score;
+        // 3. Update each poster's votes_received and points within a transaction
+        // to handle concurrent votes without overwriting each other.
+        const pool = await getConnection();
+        const connection = await pool.getConnection();
 
-                await query(
-                    'UPDATE posters SET votes_received = ?, points = ? WHERE id = ?',
-                    [JSON.stringify(votesReceived), newPoints, posterId]
+        try {
+            await connection.beginTransaction();
+
+            // Sort poster IDs to prevent deadlocks when locking multiple rows
+            const sortedPosterIds = Object.keys(newVotes).sort((a, b) => String(a).localeCompare(String(b)));
+
+            for (const posterId of sortedPosterIds) {
+                const score = newVotes[posterId];
+                
+                // Use FOR UPDATE to lock the row for the duration of the transaction
+                const [rows] = await connection.execute(
+                    'SELECT votes_received, points FROM posters WHERE id = ? FOR UPDATE', 
+                    [posterId]
                 );
+                const poster = rows[0];
+                
+                if (poster) {
+                    const votesReceived = poster.votes_received || {};
+                    
+                    // Calculate new points
+                    const oldScore = votesReceived[userId] || 0;
+                    const newPoints = (poster.points - oldScore) + score;
+                    
+                    // Update votes mapping
+                    votesReceived[userId] = score;
+
+                    await connection.execute(
+                        'UPDATE posters SET votes_received = ?, points = ? WHERE id = ?',
+                        [JSON.stringify(votesReceived), newPoints, posterId]
+                    );
+                }
             }
+
+            await connection.commit();
+        } catch (txnError) {
+            await connection.rollback();
+            throw txnError;
+        } finally {
+            connection.release();
         }
 
         revalidatePath('/voting');

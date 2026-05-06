@@ -16,12 +16,19 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
     return acc;
   }, {});
 
+  const [missingPosterIds, setMissingPosterIds] = useState([]);
+  const [selectedPoster, setSelectedPoster] = useState(null);
+
   const handleVoteChange = (posterId, value) => {
     if (hasVoted) return; // Prevent changes if already voted
     setVotes(prev => ({
       ...prev,
       [posterId]: parseInt(value)
     }));
+    // Remove from missing if it was there
+    if (missingPosterIds.includes(posterId)) {
+      setMissingPosterIds(prev => prev.filter(id => id !== posterId));
+    }
   };
 
   const handleSubmit = (e) => {
@@ -29,18 +36,27 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
     if (hasVoted) return;
     setError('');
     setSuccess('');
+    setMissingPosterIds([]);
+
+    const missing = posters.filter(p => !votes[p.id]).map(p => p.id);
+    if (missing.length > 0) {
+        setMissingPosterIds(missing);
+        setError(`Please submit a vote for all posters. You have ${missing.length} poster(s) left to rate.`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+    }
     
     startTransition(async () => {
       const res = await submitVotes(userId, votes, isParticipant, conferenceId);
       if (res.error) {
         setError(res.error);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setSuccess('Votes submitted successfully!');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
   };
-
-  const [selectedPoster, setSelectedPoster] = useState(null);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -83,9 +99,10 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                 })();
                 
                 const currentVote = votes[poster.id] || 0;
+                const isMissing = missingPosterIds.includes(poster.id);
 
                 return (
-                  <div key={poster.id} className="card overflow-hidden flex flex-col">
+                  <div key={poster.id} className={`card overflow-hidden flex flex-col transition-all ${isMissing ? 'ring-2 ring-[#ff3b30] shadow-[0_0_15px_rgba(255,59,48,0.2)]' : ''}`}>
                     <div 
                         className="p-4 cursor-pointer hover:bg-slate-50/50 transition-colors active:bg-slate-100"
                         onClick={() => setSelectedPoster(poster)}

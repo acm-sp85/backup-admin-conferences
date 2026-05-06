@@ -15,8 +15,20 @@ export default function VotingResults({ conferences }) {
         setLoading(true);
         try {
             const data = await getPostersForConference(selectedConference);
-            // Sort by points descending
-            const sortedData = [...data].sort((a, b) => (b.points || 0) - (a.points || 0));
+            // Calculate score for sorting
+            const processData = data.map(p => {
+                let votesCount = 0;
+                try {
+                    const votes = typeof p.votes_received === 'string' ? JSON.parse(p.votes_received) : (p.votes_received || {});
+                    votesCount = Object.keys(votes).length;
+                } catch(e) {}
+                const points = p.points || 0;
+                p.calculatedScore = votesCount > 0 ? (points / votesCount) : 0;
+                p.votesCount = votesCount;
+                return p;
+            });
+            // Sort by calculated score descending
+            const sortedData = processData.sort((a, b) => b.calculatedScore - a.calculatedScore);
             setPosters(sortedData);
         } catch (err) {
             console.error(err);
@@ -64,7 +76,7 @@ export default function VotingResults({ conferences }) {
                             <th style={{width: 80}}>Code</th>
                             <th>Poster Details</th>
                             <th style={{width: 100}} className="text-center">Votes</th>
-                            <th style={{width: 100}} className="text-center">Points</th>
+                            <th style={{width: 100}} className="text-center">Score</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -76,12 +88,6 @@ export default function VotingResults({ conferences }) {
                             posters.map((poster, index) => {
                                 const rank = index + 1;
                                 const isTopThree = rank <= 3;
-                                const votesReceived = (() => {
-                                    try {
-                                        const votes = typeof poster.votes_received === 'string' ? JSON.parse(poster.votes_received) : (poster.votes_received || {});
-                                        return Object.keys(votes).length;
-                                    } catch(e) { return 0; }
-                                })();
 
                                 return (
                                     <tr key={poster.id}>
@@ -115,13 +121,16 @@ export default function VotingResults({ conferences }) {
                                                 onClick={() => setSelectedPosterDetails(poster)}
                                                 className="w-full h-full min-h-[40px] font-bold text-[var(--accent)] hover:bg-[var(--accent-light)] rounded-lg transition-colors underline underline-offset-4 decoration-dotted"
                                             >
-                                                {votesReceived}
+                                                {poster.votesCount}
                                             </button>
                                         </td>
                                         <td className="text-center">
                                             <span className="font-black text-[var(--accent)] text-base">
-                                                {poster.points || 0}
+                                                {poster.calculatedScore.toFixed(2)}
                                             </span>
+                                            <div className="text-[9px] text-[var(--muted)] mt-0.5">
+                                                ({poster.points || 0} pts)
+                                            </div>
                                         </td>
                                     </tr>
                                 );
