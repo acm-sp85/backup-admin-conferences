@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTransition, useState, useEffect } from 'react';
 
-export default function SocialDinnerFilter({ conferences }) {
+export default function SocialDinnerFilter({ conferences, attendees }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -11,6 +11,39 @@ export default function SocialDinnerFilter({ conferences }) {
 
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [conference, setConference] = useState(searchParams.get('conference') || '');
+
+  const exportToCSV = () => {
+    if (!attendees || attendees.length === 0) return;
+    
+    const headers = ['Name', 'Email', 'Conference', 'Payment Status', 'Dietary Preference', 'Amount', 'Currency', 'Invoice', 'Date'];
+    
+    const rows = attendees.map(a => [
+      a.name,
+      a.email,
+      a.conference,
+      a.payment_status,
+      a.dietary_preference,
+      a.amount_paid,
+      a.currency,
+      a.invoice_code,
+      new Date(a.purchase_date).toLocaleDateString()
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `social_dinner_attendees_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -77,6 +110,16 @@ export default function SocialDinnerFilter({ conferences }) {
           Show Duplicate Records
         </label>
       </div>
+
+      {/* Export Button */}
+      <button
+        onClick={exportToCSV}
+        className="flex items-center gap-2 bg-[#0071e3] hover:bg-[#0077ed] text-white px-3 py-1.5 rounded-lg h-9 transition-colors group shadow-sm"
+        title="Export current results to CSV"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-y-0.5 transition-transform"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span className="text-[10px] font-bold uppercase tracking-wider">Export CSV</span>
+      </button>
 
       {/* Clear Button */}
       {(search || conference || searchParams.get('showAll')) && (

@@ -179,7 +179,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
             );
             userId = existingUser.id;
         } else {
-            const [res] = await query(
+            const res = await query(
                 'INSERT INTO users (email, role, cluster_for_review, firstName, lastName) VALUES (?, ?, ?, ?, ?)',
                 [participant.email, 'user', participant.cluster_for_review, participant.firstName, participant.lastName]
             );

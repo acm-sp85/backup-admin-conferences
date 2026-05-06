@@ -151,7 +151,7 @@ export default async function SocialDinnerPage({ searchParams }) {
         </div>
       </header>
 
-      <SocialDinnerFilter conferences={conferences} />
+      <SocialDinnerFilter conferences={conferences} attendees={attendees} />
 
       <SocialDinnerTable attendees={attendees} />
     </DashboardLayout>

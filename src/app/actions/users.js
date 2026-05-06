@@ -13,10 +13,21 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function inviteUser(prevState, formData) {
     const email = formData.get('email');
     const role = formData.get('role') || 'admin';
+    let firstName = formData.get('firstName');
+    let lastName = formData.get('lastName');
 
     if (!email) return { error: 'Email is required' };
 
     try {
+        // Try to fetch names from participants table if not provided
+        if (!firstName || !lastName) {
+            const [participant] = await query('SELECT firstName, lastName FROM participants WHERE email = ? LIMIT 1', [email]);
+            if (participant) {
+                firstName = firstName || participant.firstName;
+                lastName = lastName || participant.lastName;
+            }
+        }
+
         let userId;
 
         // 3. Create or update user as invited
@@ -24,14 +35,14 @@ export async function inviteUser(prevState, formData) {
         
         if (existing) {
             await query(
-                'UPDATE users SET role = ? WHERE email = ?',
-                [role, email]
+                'UPDATE users SET role = ?, firstName = ?, lastName = ? WHERE email = ?',
+                [role, firstName, lastName, email]
             );
             userId = existing.id;
         } else {
-            const [res] = await query(
-                'INSERT INTO users (email, role) VALUES (?, ?)',
-                [email, role]
+            const res = await query(
+                'INSERT INTO users (email, role, firstName, lastName) VALUES (?, ?, ?, ?)',
+                [email, role, firstName, lastName]
             );
             userId = res.insertId;
         }
