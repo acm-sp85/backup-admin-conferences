@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { submitVotes } from '../actions/voting';
 
 export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false }) {
@@ -18,6 +18,11 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
 
   const [missingPosterIds, setMissingPosterIds] = useState([]);
   const [selectedPoster, setSelectedPoster] = useState(null);
+  const [isTocExpanded, setIsTocExpanded] = useState(false);
+
+  useEffect(() => {
+    setIsTocExpanded(false);
+  }, [selectedPoster]);
 
   const handleVoteChange = (posterId, value) => {
     if (hasVoted) return; // Prevent changes if already voted
@@ -214,6 +219,40 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                                 }
                             })()}
                         </div>
+
+                        {selectedPoster.toc && selectedPoster.toc !== 'null' && (
+                            <div className="pt-2">
+                                <div className="relative group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
+                                    <div 
+                                        onClick={() => setIsTocExpanded(true)}
+                                        className="w-full h-32 md:h-40 cursor-pointer overflow-hidden"
+                                    >
+                                        <img 
+                                            src={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`} 
+                                            alt="TOC" 
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-all">
+                                            <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-900 shadow-lg translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
+                                                Tap to expand TOC
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-2 right-2 flex gap-1">
+                                        <a 
+                                            href={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="bg-white/80 hover:bg-white backdrop-blur-md p-1.5 rounded-lg text-slate-600 hover:text-[var(--accent)] shadow-sm transition-all"
+                                            title="Open in new tab"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         
                         <div className="text-[13px] text-slate-600 leading-relaxed pt-2 border-t border-slate-100 whitespace-pre-wrap">
                             {selectedPoster.content ? (
@@ -237,6 +276,25 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                 </div>
             </div>
         </div>
+      )}
+ 
+      {/* Full Screen TOC Overlay */}
+      {isTocExpanded && selectedPoster && selectedPoster.toc && (
+          <div 
+              onClick={() => setIsTocExpanded(false)}
+              className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-300"
+          >
+              <div className="relative w-full h-full flex items-center justify-center">
+                  <img 
+                      src={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`} 
+                      alt="TOC Full" 
+                      className="max-w-[95vw] max-h-[95vh] object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+                  />
+                  <div className="absolute top-4 right-4 text-white/50 text-[11px] font-medium tracking-widest uppercase">
+                      Click anywhere to close
+                  </div>
+              </div>
+          </div>
       )}
     </form>
   );

@@ -74,18 +74,19 @@ async function syncPosters() {
       const code = record.code || null;
       const authors = record.authors ? JSON.stringify(record.authors) : '[]';
       const content = record.content || null;
+      const toc = record.toc || null;
 
       if (!posterSet.has(mongoId)) {
         await mariadb.execute(
-          'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content) VALUES (?, ?, ?, ?, ?, ?)',
-          [conferenceId, mongoId, title, code, authors, content]
+          'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content, toc) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [conferenceId, mongoId, title, code, authors, content, toc]
         );
         posterSet.add(mongoId); // Update cache
         newCount++;
       } else {
         await mariadb.execute(
-          'UPDATE posters SET title = ?, code = ?, authors = ?, content = ? WHERE mongo_id = ?',
-          [title, code, authors, content, mongoId]
+          'UPDATE posters SET title = ?, code = ?, authors = ?, content = ?, toc = ? WHERE mongo_id = ?',
+          [title, code, authors, content, toc, mongoId]
         );
         updateCount++;
       }

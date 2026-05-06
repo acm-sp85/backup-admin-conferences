@@ -164,15 +164,15 @@ async function syncAll() {
         const mongoId = record._id.toString();
         if (!posterSet.has(mongoId)) {
           await mariadb.execute(
-            'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content) VALUES (?, ?, ?, ?, ?, ?)',
-            [conferenceId, mongoId, record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null]
+            'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content, toc) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [conferenceId, mongoId, record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null]
           );
           summary.posters.new++;
           posterSet.add(mongoId);
         } else {
           await mariadb.execute(
-            'UPDATE posters SET title = ?, code = ?, authors = ?, content = ? WHERE mongo_id = ?',
-            [record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, mongoId]
+            'UPDATE posters SET title = ?, code = ?, authors = ?, content = ?, toc = ? WHERE mongo_id = ?',
+            [record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null, mongoId]
           );
           summary.posters.updated++;
         }
