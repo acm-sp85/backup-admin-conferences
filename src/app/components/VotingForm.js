@@ -9,10 +9,10 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Group posters by conference
-  const postersByConference = posters.reduce((acc, poster) => {
-    if (!acc[poster.conference_id]) acc[poster.conference_id] = [];
-    acc[poster.conference_id].push(poster);
+  // Group posters by cluster
+  const postersByCluster = posters.reduce((acc, poster) => {
+    if (!acc[poster.cluster_id]) acc[poster.cluster_id] = [];
+    acc[poster.cluster_id].push(poster);
     return acc;
   }, {});
 
@@ -63,8 +63,8 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
       {error && <div className="p-3 bg-[#fff5f5] text-[#ff3b30] text-xs font-semibold rounded-xl border border-[#ff3b30]/10">{error}</div>}
       {success && <div className="p-3 bg-[#e8faf0] text-[#34c759] text-xs font-semibold rounded-xl border border-[#34c759]/10">{success}</div>}
 
-      {hasVoted && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col items-center text-center gap-2 mx-4 mt-4">
+      {!!hasVoted && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col items-center text-center gap-2 mt-4">
           <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
@@ -79,7 +79,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
       )}
 
       {activeClusters.map(cluster => {
-        const clusterPosters = postersByConference[cluster.conference_id] || [];
+        const clusterPosters = postersByCluster[cluster.id] || [];
         
         return (
           <div key={cluster.id} className="space-y-4">
@@ -127,20 +127,20 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                       </div>
                     </div>
 
-                    <div className="p-4 pt-0 space-y-2 border-t border-[var(--border)] mt-2">
+                    <div className="p-2 sm:p-4 pt-0 space-y-2 border-t border-[var(--border)] mt-2">
                         <div className="flex justify-between items-center pt-3">
                             <span className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">Your Score</span>
                             <span className={`text-[12px] font-bold ${currentVote > 0 ? 'text-[var(--accent)]' : 'text-[var(--muted)]'}`}>
                                 {currentVote > 0 ? currentVote : 'Not Rated'}
                             </span>
                         </div>
-                        <div className="flex justify-between gap-1 overflow-x-auto pb-1 no-scrollbar">
+                        <div className="grid grid-cols-10 gap-0.5 pt-3">
                             {[1,2,3,4,5,6,7,8,9,10].map(n => (
                                 <button
                                     key={n}
                                     type="button"
                                     onClick={() => handleVoteChange(poster.id, n)}
-                                    className={`flex-1 min-w-[32px] h-9 rounded-lg text-[13px] font-bold transition-all border ${
+                                    className={`h-9 rounded-lg text-[11px] font-bold transition-all border flex items-center justify-center ${
                                         currentVote === n 
                                         ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-sm scale-110 z-10' 
                                         : 'bg-white border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
@@ -215,10 +215,16 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                             })()}
                         </div>
                         
-                        <div 
-                            className="text-[13px] text-slate-600 leading-relaxed html-content pt-2 border-t border-slate-100"
-                            dangerouslySetInnerHTML={{ __html: selectedPoster.content || '<span class="italic opacity-50">No abstract available.</span>' }}
-                        />
+                        <div className="text-[13px] text-slate-600 leading-relaxed pt-2 border-t border-slate-100 whitespace-pre-wrap">
+                            {selectedPoster.content ? (
+                                selectedPoster.content
+                                    .replace(/<[^>]*>?/gm, '')
+                                    .replace(/&nbsp;/g, ' ')
+                                    .replace(/&amp;/g, '&')
+                            ) : (
+                                <span className="italic opacity-50">No abstract available.</span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-100">

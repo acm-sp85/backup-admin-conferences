@@ -21,7 +21,7 @@ export default function Sidebar({ userRole }) {
   const items = userRole === 'superadmin' ? [...NAV, ...ADMIN_NAV] : NAV;
 
   return (
-    <aside className="w-[220px] flex flex-col fixed inset-y-0 left-0 bg-[#1d1d1f] z-50">
+    <aside className="hidden md:flex w-[220px] flex-col fixed inset-y-0 left-0 bg-[#1d1d1f] z-50">
       {/* Brand */}
       <div className="px-5 py-5">
         <Link href="/" className="flex items-center gap-2.5">

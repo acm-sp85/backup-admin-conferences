@@ -86,7 +86,7 @@ export default async function VotingPage() {
         <div>
           <h2 className="text-xl font-semibold">{isVoter ? 'Poster Voting' : 'Voting Management'}</h2>
           <p className="text-[var(--muted)] text-xs mt-0.5">
-            {isVoter ? 'Rank your assigned posters (1-10)' : 'Select a conference to manage participant voting clusters'}
+            {isVoter ? 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)' : 'Select a conference to manage participant voting clusters'}
           </p>
         </div>
         
@@ -99,7 +99,7 @@ export default async function VotingPage() {
         )}
       </header>
 
-      {isVoter && user.has_voted && (
+      {isVoter && !!user.has_voted && (
         <div className="card p-4 mb-4 border-amber-200 bg-amber-50">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-amber-600">✓</span>
@@ -121,7 +121,7 @@ export default async function VotingPage() {
           initialVotes={typeof user.votes === 'string' ? JSON.parse(user.votes) : (user.votes || {})} 
           userId={user.id}
           conferenceEmail={activeClusters[0]?.conference_email}
-          hasVoted={user.has_voted}
+          hasVoted={!!user.has_voted}
         />
       ) : (
         <ParticipantVotingManager 
