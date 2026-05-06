@@ -92,7 +92,7 @@ export default async function VotingPage() {
         
         {isVoter && (
           <form action={logout}>
-             <button type="submit" className="text-[11px] font-semibold text-[#ff3b30] bg-[#fff5f5] px-3 py-1.5 rounded-full">
+             <button type="submit" className="text-[11px] font-semibold text-[#ff3b30] cursor-pointer">
                Sign Out
              </button>
           </form>

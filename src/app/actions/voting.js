@@ -19,11 +19,15 @@ export async function submitVotes(userId, newVotes, isParticipant = false, confe
             if (!conferenceId) return { error: 'Conference ID required for participants' };
             const [reg] = await query('SELECT votes FROM registrations WHERE participant_id = ? AND conference_id = ?', [userId, conferenceId]);
             if (!reg) return { error: 'Registration not found' };
-            currentVotes = reg.votes || {};
+            try {
+                currentVotes = typeof reg.votes === 'string' ? JSON.parse(reg.votes) : (reg.votes || {});
+            } catch (e) { currentVotes = {}; }
         } else {
             const [user] = await query('SELECT votes FROM users WHERE id = ?', [userId]);
             if (!user) return { error: 'User not found' };
-            currentVotes = user.votes || {};
+            try {
+                currentVotes = typeof user.votes === 'string' ? JSON.parse(user.votes) : (user.votes || {});
+            } catch (e) { currentVotes = {}; }
         }
 
         const combinedVotes = { ...currentVotes, ...newVotes };
@@ -63,7 +67,12 @@ export async function submitVotes(userId, newVotes, isParticipant = false, confe
                 const poster = rows[0];
                 
                 if (poster) {
-                    const votesReceived = poster.votes_received || {};
+                    let votesReceived = {};
+                    try {
+                        votesReceived = typeof poster.votes_received === 'string' 
+                            ? JSON.parse(poster.votes_received) 
+                            : (poster.votes_received || {});
+                    } catch (e) { votesReceived = {}; }
                     
                     // Calculate new points
                     const oldScore = votesReceived[userId] || 0;
