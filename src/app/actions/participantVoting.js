@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -159,12 +160,14 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
     try {
         // 1. Get participant details and REGISTRATION-specific cluster data
-        const [participant] = await query(`
-            SELECT p.firstName, p.lastName, p.email, r.cluster_for_review 
+        const participants = await query(`
+            SELECT p.firstName, p.lastName, p.email, r.cluster_for_review, c.*
             FROM participants p
             JOIN registrations r ON p.id = r.participant_id
+            JOIN conferences c ON r.conference_id = c.id
             WHERE p.id = ? AND r.conference_id = ?
         `, [participantId, conferenceId]);
+        const participant = participants[0];
         
         if (!participant) return { error: 'Participant/Registration not found' };
 
@@ -197,35 +200,19 @@ export async function sendVoterInvite(participantId, conferenceId) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
+
         // 4. Send email
+        const template = emailTemplates.posterVotingInvite({
+            name: participant.firstName,
+            magicLink,
+            conference: participant
+        });
+
         await resend.emails.send({
-            from: 'SCITO Voting <no-reply@scitoevents.com>',
+            from: EMAIL_CONFIG.fromVoting,
             to: participant.email,
-            subject: 'Invitation to Poster Voting',
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px;">
-                    <h2 style="color: #1e293b; margin-bottom: 20px;">Poster Voting Invitation</h2>
-                    <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
-                        Hello ${participant.firstName || 'Voter'},<br><br>
-                        You have been invited to participate in the poster voting process. 
-                        Please use the link below to access your assigned clusters and cast your votes.
-                    </p>
-                    <div style="margin: 30px 0;">
-                        <a href="${magicLink}" style="background-color: #0071e3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                            Log In to Vote
-                        </a>
-                    </div>
-                    <p style="color: #64748b; font-size: 13px; margin-top: 30px; border-top: 1px solid #f1f5f9; pt-20">
-                        <strong>Instructions:</strong><br>
-                        1. Log in to the platform using the button above.<br>
-                        2. Go to the "Voting" tab to see your assigned posters.<br>
-                        3. Rank them from 1 to 10 and save.
-                    </p>
-                    <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
-                        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
-                    </p>
-                </div>
-            `
+            subject: template.subject,
+            html: template.html
         });
 
         return { success: true };

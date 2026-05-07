@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { headers } from 'next/headers';
 import { verifySession, encrypt } from '@/lib/auth';
+import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -57,27 +58,22 @@ export async function inviteUser(prevState, formData) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
+
         // 4. Send invitation email
+        const [conferences] = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM]);
+        const conference = conferences[0];
+
+        const template = emailTemplates.userInvitation({
+            role,
+            magicLink,
+            conference
+        });
+
         const { data, error: mailError } = await resend.emails.send({
-            from: 'SCITO Admin <no-reply@scitoevents.com>',
+            from: EMAIL_CONFIG.from,
             to: email,
-            subject: 'Invitation to SCITO Admin Dashboard',
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
-                    <h2 style="color: #1e293b;">You've been invited!</h2>
-                    <p style="color: #475569; line-height: 1.6;">
-                        You have been invited to join the SCITO Admin Dashboard as an <strong>${role}</strong>.
-                    </p>
-                    <p style="margin-top: 30px;">
-                        <a href="${magicLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                            Log In to Dashboard
-                        </a>
-                    </p>
-                    <p style="margin-top: 30px; font-size: 12px; color: #94a3b8;">
-                        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
-                    </p>
-                </div>
-            `
+            subject: template.subject,
+            html: template.html
         });
 
         if (mailError) {

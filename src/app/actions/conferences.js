@@ -13,15 +13,20 @@ export async function createConference(formData) {
     const name = formData.get('name');
     const acronym = formData.get('acronym');
     const email = formData.get('email');
+    const logo_url = formData.get('logo_url') || null;
+    const banner_url = formData.get('banner_url') || null;
+    const accent_color = formData.get('accent_color') || '#007aff';
 
     if (!name || !acronym) {
         return { error: 'Name and Acronym are required' };
     }
 
+    console.log('📝 Creating conference with:', { name, acronym, email, logo_url, banner_url, accent_color });
+
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email) VALUES (?, ?, ?)',
-            [name, acronym, email]
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, acronym, email, logo_url, banner_url, accent_color]
         );
         revalidatePath('/');
         return { success: true };
@@ -76,15 +81,20 @@ export async function updateConference(id, formData) {
     const name = formData.get('name');
     const acronym = formData.get('acronym');
     const email = formData.get('email');
+    const logo_url = formData.get('logo_url') || null;
+    const banner_url = formData.get('banner_url') || null;
+    const accent_color = formData.get('accent_color') || '#007aff';
 
     if (!name || !acronym) {
         return { error: 'Name and Acronym are required' };
     }
 
+    console.log('📝 Updating conference:', id, { name, acronym, email, logo_url, banner_url, accent_color });
+
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ? WHERE id = ?',
-            [name, acronym, email, id]
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ? WHERE id = ?',
+            [name, acronym, email, logo_url, banner_url, accent_color, id]
         );
         revalidatePath('/');
         return { success: true };

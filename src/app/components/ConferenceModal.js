@@ -4,7 +4,14 @@ import { createConference, updateConference } from '../actions/conferences';
 export default function ConferenceModal({ isOpen, onClose, conference = null }) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState('');
+    const [accentColor, setAccentColor] = useState(conference?.accent_color || '#007aff');
     const isEdit = !!conference;
+
+    useEffect(() => {
+        if (isOpen) {
+            setAccentColor(conference?.accent_color || '#007aff');
+        }
+    }, [isOpen, conference]);
 
     if (!isOpen) return null;
 
@@ -83,6 +90,49 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     defaultValue={conference?.email || ''}
                                     placeholder="organizers@..."
                                     className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Logo URL (Optional)</label>
+                                <input 
+                                    name="logo_url"
+                                    type="url" 
+                                    defaultValue={conference?.logo_url || ''}
+                                    placeholder="https://..."
+                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Banner URL (Optional)</label>
+                                <input 
+                                    name="banner_url"
+                                    type="url" 
+                                    defaultValue={conference?.banner_url || ''}
+                                    placeholder="https://..."
+                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Accent Color (Optional)</label>
+                            <div className="flex gap-3 items-center">
+                                <input 
+                                    name="accent_color"
+                                    type="color" 
+                                    value={accentColor}
+                                    onChange={(e) => setAccentColor(e.target.value)}
+                                    className="h-12 w-16 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer"
+                                />
+                                <input 
+                                    name="accent_color_text"
+                                    type="text"
+                                    value={accentColor}
+                                    onChange={(e) => setAccentColor(e.target.value)}
+                                    className="flex-1 h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-mono text-slate-500 outline-none"
                                 />
                             </div>
                         </div>

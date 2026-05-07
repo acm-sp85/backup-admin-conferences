@@ -1,18 +1,61 @@
 'use client';
+import { useState, useTransition } from 'react';
+import { Mail, CheckCircle2, Loader2, QrCode } from 'lucide-react';
+import { sendSocialDinnerQR } from '../actions/social-dinner';
 
-import { useState } from 'react';
-
-export default function SocialDinnerRow({ person }) {
+export default function SocialDinnerRow({ person, selected, onSelect }) {
   const [expanded, setExpanded] = useState(false);
+  const [isSending, startSending] = useTransition();
+
+  const handleSendEmail = (e) => {
+    e.stopPropagation();
+    if (!confirm(`Send QR code(s) to ${person.email}?`)) return;
+    startSending(async () => {
+      try {
+        await sendSocialDinnerQR(person.registration_id);
+        alert('Email sent successfully!');
+      } catch (e) {
+        alert('Failed to send email: ' + e.message);
+      }
+    });
+  };
+
+  const tickets = person.tickets_status || [];
+  const allSent = tickets.length > 0 && tickets.every(t => t.sent_at);
+  const someSent = tickets.some(t => t.sent_at);
+  const allScanned = tickets.length > 0 && tickets.every(t => t.scanned_at);
+  const someScanned = tickets.some(t => t.scanned_at);
 
   return (
     <>
       <tr 
-        className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+        className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${expanded ? 'bg-slate-50/80' : ''}`}
         onClick={() => setExpanded(!expanded)}
       >
+        <td onClick={(e) => e.stopPropagation()}>
+          <input 
+            type="checkbox" 
+            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            checked={selected}
+            onChange={onSelect}
+          />
+        </td>
         <td>
-          <div className="font-medium text-[13px]">{person.name}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-[13px]">{person.name}</div>
+            <div className="flex gap-1">
+              {allScanned ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-500" title="All tickets scanned" />
+              ) : someScanned ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400 opacity-60" title="Some tickets scanned" />
+              ) : null}
+              {allSent ? (
+                <Mail className="w-3.5 h-3.5 text-blue-500" title="All QR codes sent" />
+              ) : someSent ? (
+                <Mail className="w-3.5 h-3.5 text-blue-400 opacity-60" title="Some QR codes sent" />
+              ) : null}
+            </div>
+          </div>
         </td>
         <td>
           <div className="text-[13px] text-[var(--muted)]">{person.email}</div>
@@ -45,16 +88,27 @@ export default function SocialDinnerRow({ person }) {
       </tr>
       
       {expanded && (
-        <tr className="bg-white/[0.01]">
-          <td colSpan="6" className="pb-6 pt-0 border-t-0">
+        <tr className="bg-slate-50/30">
+          <td colSpan="7" className="pb-6 pt-0 border-t-0">
             <div className="mx-4 p-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Column: Billing Info */}
+                {/* Left Column: Billing Info & QR Actions */}
                 <div>
-                  <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-4 flex items-center gap-1.5">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    Registration Details
-                  </h4>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold flex items-center gap-1.5">
+                      <QrCode className="w-2.5 h-2.5" />
+                      Ticket Management
+                    </h4>
+                    <button 
+                      onClick={handleSendEmail}
+                      disabled={isSending}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md text-[10px] font-bold transition-all disabled:opacity-50"
+                    >
+                      {isSending ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Mail className="w-2.5 h-2.5" />}
+                      Send QR Email
+                    </button>
+                  </div>
+                  
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
                       <span className="text-[11px] text-[var(--muted)] font-medium">Conference</span>
@@ -65,8 +119,19 @@ export default function SocialDinnerRow({ person }) {
                       <span className="text-xs font-bold text-[var(--accent)]">{person.dietary_preference}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                      <span className="text-[11px] text-[var(--muted)] font-medium">Attendee Email</span>
-                      <span className="text-xs font-medium text-[var(--foreground)]">{person.email}</span>
+                      <span className="text-[11px] text-[var(--muted)] font-medium">Tickets Issued</span>
+                      <span className="text-xs font-bold text-[var(--foreground)]">
+                        {tickets.length > 0 ? (
+                          <div className="flex gap-2">
+                            {tickets.map((t, i) => (
+                              <div key={i} className="flex items-center gap-1" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
+                                <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
+                                <span className="text-[10px] text-slate-400">T{i+1}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : 'Not synced'}
+                      </span>
                     </div>
                   </div>
                 </div>

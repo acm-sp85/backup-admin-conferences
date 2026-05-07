@@ -1,16 +1,62 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import SocialDinnerRow from './SocialDinnerRow';
+import { syncSocialDinnerTickets, sendSocialDinnerQR } from '../actions/social-dinner';
+import { Loader2, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function SocialDinnerTable({ attendees }) {
   const [sortConfig, setSortConfig] = useState({ key: 'purchase_date', direction: 'desc' });
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isSyncing, startSync] = useTransition();
+  const [isSendingBulk, startSendingBulk] = useTransition();
 
   const handleSort = (key) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sortedAttendees.map(a => a.registration_id)));
+    }
+  };
+
+  const toggleSelect = (registrationId) => {
+    const next = new Set(selectedIds);
+    if (next.has(registrationId)) next.delete(registrationId);
+    else next.add(registrationId);
+    setSelectedIds(next);
+  };
+
+  const handleSync = () => {
+    startSync(async () => {
+      const res = await syncSocialDinnerTickets();
+      alert(`Sync complete! ${res.newTickets} new tickets found.`);
+    });
+  };
+
+  const handleBulkEmail = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Send QR code emails to ${selectedIds.size} participants?`)) return;
+
+    startSendingBulk(async () => {
+      let success = 0;
+      let fail = 0;
+      for (const id of selectedIds) {
+        try {
+          await sendSocialDinnerQR(id);
+          success++;
+        } catch (e) {
+          fail++;
+        }
+      }
+      alert(`Bulk send complete: ${success} successful, ${fail} failed.`);
+      setSelectedIds(new Set());
+    });
   };
 
   const sortedAttendees = [...attendees].sort((a, b) => {
@@ -32,10 +78,56 @@ export default function SocialDinnerTable({ attendees }) {
   };
 
   return (
-    <div className="table-container">
-      <table>
-        <thead>
-          <tr>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+          >
+            {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Sync Tickets
+          </button>
+          
+          {selectedIds.size > 0 && (
+            <div className="h-4 w-px bg-slate-200 mx-1" />
+          )}
+
+          {selectedIds.size > 0 && (
+            <button 
+              onClick={handleBulkEmail}
+              disabled={isSendingBulk}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-blue-100 transition-all disabled:opacity-50"
+            >
+              {isSendingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+              Send QR Codes ({selectedIds.size})
+            </button>
+          )}
+        </div>
+
+        <div className="text-[10px] text-slate-400 font-medium italic">
+          Tip: QRs must be synced before they can be sent.
+        </div>
+      </div>
+
+      <div className="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th className="w-10">
+                <input 
+                  type="checkbox" 
+                  ref={(el) => {
+                    if (el) {
+                      el.indeterminate = selectedIds.size > 0 && selectedIds.size < sortedAttendees.length;
+                    }
+                  }}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  checked={selectedIds.size === sortedAttendees.length && sortedAttendees.length > 0}
+                  onChange={toggleSelectAll}
+                />
+              </th>
             <th 
               className="cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => handleSort('name')}
@@ -74,6 +166,8 @@ export default function SocialDinnerTable({ attendees }) {
             <SocialDinnerRow 
               key={person.id} 
               person={person} 
+              selected={selectedIds.has(person.registration_id)}
+              onSelect={() => toggleSelect(person.registration_id)}
             />
           ))}
         </tbody>
@@ -84,6 +178,7 @@ export default function SocialDinnerTable({ attendees }) {
           No attendees found for the selected filters.
         </div>
       )}
+      </div>
     </div>
   );
 }

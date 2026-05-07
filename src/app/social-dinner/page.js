@@ -37,7 +37,18 @@ export default async function SocialDinnerPage({ searchParams }) {
         ), ''), ']')
         FROM payments 
         WHERE registration_id = r.id
-      ) as all_payments_json
+      ) as all_payments_json,
+      (
+        SELECT CONCAT('[', COALESCE(GROUP_CONCAT(
+          JSON_OBJECT(
+            'id', id,
+            'sent_at', email_sent_at,
+            'scanned_at', scanned_at
+          )
+        ), ''), ']')
+        FROM social_dinner_tickets
+        WHERE registration_id = r.id
+      ) as tickets_status_json
     FROM participants p
     JOIN registrations r ON p.id = r.participant_id
     JOIN conferences c ON r.conference_id = c.id
@@ -88,12 +99,17 @@ export default async function SocialDinnerPage({ searchParams }) {
 
   // Parse tickets to extract dietary preferences
   const attendees = [];
+  const sourceData = isShowAll ? rawData : processedData;
   
-  rawData.forEach(person => {
+  sourceData.forEach(person => {
     try {
       const allPayments = JSON.parse(person.all_payments_json || '[]');
       
       allPayments.forEach(pay => {
+        // In default view, we only care about the specific payment status that led us here
+        // or we filter by status. Let's make it robust.
+        if (!isShowAll && pay.status === 'refunded') return;
+
         try {
           const tickets = typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets;
           const seenPreferences = new Set();
@@ -119,6 +135,7 @@ export default async function SocialDinnerPage({ searchParams }) {
                 id: `${person.id}-${person.registration_id}-${pay.invoice || Math.random()}-${ticket._id || Math.random()}`,
                 name: person.name,
                 email: person.email,
+                registration_id: person.registration_id,
                 conference: person.conference,
                 dietary_preference,
                 amount_paid: pay.amount,
@@ -126,7 +143,8 @@ export default async function SocialDinnerPage({ searchParams }) {
                 invoice_code: pay.invoice,
                 purchase_date: pay.date,
                 payment_status: pay.status,
-                all_payments: allPayments // Pass the whole history for the expanded view
+                all_payments: allPayments,
+                tickets_status: JSON.parse(person.tickets_status_json || '[]')
               });
             }
           });
@@ -139,15 +157,37 @@ export default async function SocialDinnerPage({ searchParams }) {
     }
   });
 
+  const totalPaid = attendees.filter(a => a.payment_status === 'paid').length;
+  const totalPending = attendees.filter(a => a.payment_status === 'pending').length;
+  const totalRefunded = attendees.filter(a => a.payment_status === 'refunded').length;
+  const totalActive = totalPaid + totalPending;
+
   return (
     <DashboardLayout>
       <header className="mb-6 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-semibold">Social Dinner</h2>
-          <p className="text-[var(--muted)] text-xs mt-0.5">Manage attendees and dietary preferences</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Social Dinner</h2>
+            <p className="text-[var(--muted)] text-xs mt-0.5">Manage attendees and dietary preferences</p>
+          </div>
         </div>
-        <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
-          Total Attendees: <strong className="text-[var(--foreground)] ml-1">{attendees.length}</strong>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-full text-slate-500 font-medium">
+              Active: <strong className="text-slate-900 ml-1">{totalActive}</strong>
+            </div>
+            <div className="text-[10px] bg-green-50 px-3 py-1.5 rounded-full text-green-600 font-medium border border-green-100">
+              Paid: <strong className="text-green-700 ml-1">{totalPaid}</strong>
+            </div>
+            <div className="text-[10px] bg-orange-50 px-3 py-1.5 rounded-full text-orange-600 font-medium border border-orange-100">
+              Pending: <strong className="text-orange-700 ml-1">{totalPending}</strong>
+            </div>
+            {totalRefunded > 0 && (
+              <div className="text-[10px] bg-red-50 px-3 py-1.5 rounded-full text-red-600 font-medium border border-red-100">
+                Refunded: <strong className="text-red-700 ml-1">{totalRefunded}</strong>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
