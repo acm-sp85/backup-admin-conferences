@@ -55,8 +55,8 @@ export async function requestMagicLink(prevState, formData) {
 
 
       // 3. Send Email
-      const [conferences] = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM]);
-      const conference = conferences[0];
+      const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+      const conference = results[0];
 
       const template = emailTemplates.magicLink({
         magicLink,

@@ -18,12 +18,19 @@ const getBranding = (conf) => {
     let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin-conferencias.vercel.app';
     if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
 
+    const formatUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+        const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${baseUrl}${cleanUrl}`;
+    };
+
     return {
         name: conf?.name || 'SCITO Admin',
         email: conf?.email || 'info@scito.org',
         accentColor: conf?.accent_color || '#007aff',
-        logo: conf?.logo_url || null,
-        banner: conf?.banner_url || null,
+        logo: formatUrl(conf?.logo_url),
+        banner: formatUrl(conf?.banner_url),
         baseUrl
     };
 };
