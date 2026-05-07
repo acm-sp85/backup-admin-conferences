@@ -38,8 +38,27 @@ export default function ScannerClient() {
         };
     }, [isLibLoaded]);
 
+    const resetScanner = () => {
+        setScanResult(null);
+        setLastToken(null);
+        setIsScanning(true);
+        // Resume scanning
+        if (scannerRef.current) {
+            scannerRef.current.resume();
+        }
+    };
+
     async function onScanSuccess(decodedText) {
         if (decodedText === lastToken) return;
+        
+        // PAUSE the scanner immediately to stop CPU and Network load
+        if (scannerRef.current) {
+            try {
+                scannerRef.current.pause();
+            } catch (e) {
+                console.error("Pause failed", e);
+            }
+        }
         
         let token = decodedText;
         if (decodedText.includes('/checkin/')) {
@@ -55,18 +74,8 @@ export default function ScannerClient() {
         try {
             const result = await validateTicket(token);
             setScanResult(result);
-            setTimeout(() => {
-                setScanResult(null);
-                setLastToken(null);
-                setIsScanning(true);
-            }, 2500);
         } catch (error) {
             setScanResult({ success: false, error: 'Network Error' });
-            setTimeout(() => {
-                setScanResult(null);
-                setLastToken(null);
-                setIsScanning(true);
-            }, 2500);
         }
     }
 
@@ -123,12 +132,15 @@ export default function ScannerClient() {
                 <div id="reader" className="w-full h-full"></div>
 
                 {scanResult && (
-                    <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-200 ${
-                        scanResult.loading ? 'bg-slate-900/80' :
-                        scanResult.success && scanResult.paymentStatus === 'paid' ? 'bg-green-600/95' : 
-                        scanResult.success && scanResult.paymentStatus !== 'paid' ? 'bg-amber-500/95' : 
-                        'bg-red-600/95'
-                    }`}>
+                    <div 
+                        onClick={resetScanner}
+                        className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-200 cursor-pointer ${
+                            scanResult.loading ? 'bg-slate-900/80' :
+                            scanResult.success && scanResult.paymentStatus === 'paid' ? 'bg-green-600/95' : 
+                            scanResult.success && scanResult.paymentStatus !== 'paid' ? 'bg-amber-500/95' : 
+                            'bg-red-600/95'
+                        }`}
+                    >
                         {scanResult.loading ? (
                             <RefreshCw className="w-16 h-16 text-white animate-spin mb-4" />
                         ) : scanResult.success ? (
@@ -160,22 +172,22 @@ export default function ScannerClient() {
                                         )}
                                     </div>
                                 </div>
-                                {scanResult.paymentStatus !== 'paid' && (
-                                    <p className="mt-4 text-white font-bold text-sm bg-black/20 px-4 py-2 rounded-xl">
-                                        Please verify payment on-site
-                                    </p>
-                                )}
+                                
+                                <div className="mt-8 flex flex-col items-center gap-2 animate-pulse">
+                                    <div className="px-6 py-2 bg-white/10 rounded-full border border-white/20 text-white font-bold text-sm tracking-widest uppercase">
+                                        Tap screen for next scan
+                                    </div>
+                                </div>
                             </>
                         ) : (
                             <>
                                 <XCircle className="w-24 h-24 text-white mb-6 animate-pulse" />
                                 <h3 className="text-3xl font-black text-white mb-2">INVALID</h3>
-                                <p className="text-white/90 font-bold text-xl px-4">{scanResult.error}</p>
-                                {scanResult.attendee && (
-                                    <p className="mt-4 text-white/70 text-sm uppercase font-bold">
-                                        Registered to: {scanResult.attendee}
-                                    </p>
-                                )}
+                                <p className="text-white/90 font-bold text-xl px-4 mb-8">{scanResult.error}</p>
+                                
+                                <div className="px-6 py-2 bg-white/10 rounded-full border border-white/20 text-white font-bold text-sm tracking-widest uppercase animate-pulse">
+                                    Tap screen to try again
+                                </div>
                             </>
                         )}
                     </div>
