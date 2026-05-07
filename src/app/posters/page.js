@@ -21,7 +21,7 @@ export default async function PostersPage() {
         <p className="text-[var(--muted)] text-xs mt-0.5">Manage posters, clusters, and participant voting permissions</p>
       </header>
 
-      <UnifiedPostersView conferences={conferences} allClusters={allClusters} />
+      <UnifiedPostersView conferences={conferences} allClusters={allClusters} userRole={session.role} />
     </DashboardLayout>
   );
 }

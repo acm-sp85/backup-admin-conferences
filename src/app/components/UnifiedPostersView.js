@@ -5,7 +5,7 @@ import PosterManager from './PosterManager';
 import ParticipantVotingManager from './ParticipantVotingManager';
 import VotingResults from './VotingResults';
 
-export default function UnifiedPostersView({ conferences, allClusters }) {
+export default function UnifiedPostersView({ conferences, allClusters, userRole }) {
     const [activeTab, setActiveTab] = useState('posters');
 
     return (
@@ -58,7 +58,7 @@ export default function UnifiedPostersView({ conferences, allClusters }) {
                 ) : activeTab === 'voting' ? (
                     <ParticipantVotingManager conferences={conferences} allClusters={allClusters} />
                 ) : (
-                    <VotingResults conferences={conferences} />
+                    <VotingResults conferences={conferences} userRole={userRole} />
                 )}
             </div>
         </div>

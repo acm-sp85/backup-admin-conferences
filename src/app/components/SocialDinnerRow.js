@@ -1,12 +1,25 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { Mail, CheckCircle2, Loader2, QrCode as QrIcon } from 'lucide-react';
-import { sendSocialDinnerQR } from '../actions/social-dinner';
+import { sendSocialDinnerQR, resetTicketScan } from '../actions/social-dinner';
 import SocialDinnerTicketsBadge from './SocialDinnerTicketsBadge';
 
-export default function SocialDinnerRow({ person, selected, onSelect }) {
+export default function SocialDinnerRow({ person, selected, onSelect, userRole }) {
   const [expanded, setExpanded] = useState(false);
   const [isSending, startSending] = useTransition();
+  const [isResetting, startResetting] = useTransition();
+
+  const handleResetScan = (e, ticketId) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to reset this scan? The user will need to scan again to enter.')) return;
+    startResetting(async () => {
+      try {
+        await resetTicketScan(ticketId);
+      } catch (e) {
+        alert('Failed to reset scan: ' + e.message);
+      }
+    });
+  };
 
   const handleSendEmail = (e) => {
     e.stopPropagation();
@@ -130,11 +143,20 @@ export default function SocialDinnerRow({ person, selected, onSelect }) {
                       <span className="text-[11px] text-[var(--muted)] font-medium">Tickets Issued</span>
                       <span className="text-xs font-bold text-[var(--foreground)]">
                         {tickets.length > 0 ? (
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             {tickets.map((t, i) => (
-                              <div key={i} className="flex items-center gap-1" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
+                              <div key={i} className="flex items-center gap-1.5" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
                                 <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
                                 <span className="text-[10px] text-slate-400">T{i+1}</span>
+                                {t.scanned_at && userRole === 'superadmin' && (
+                                  <button
+                                    onClick={(e) => handleResetScan(e, t.id)}
+                                    disabled={isResetting}
+                                    className="ml-1 text-[9px] text-red-500 hover:text-red-700 font-bold underline disabled:opacity-50"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
                               </div>
                             ))}
                           </div>

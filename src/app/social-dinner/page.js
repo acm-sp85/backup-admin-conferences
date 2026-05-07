@@ -164,7 +164,7 @@ export default async function SocialDinnerPage({ searchParams }) {
 
       <SocialDinnerFilter conferences={conferences} attendees={attendees} />
 
-      <SocialDinnerTable attendees={attendees} />
+      <SocialDinnerTable attendees={attendees} userRole={session.role} />
     </DashboardLayout>
   );
 }

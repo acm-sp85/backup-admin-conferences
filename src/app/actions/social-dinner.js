@@ -189,3 +189,14 @@ export async function validateTicket(token) {
         paymentStatus: ticket.payment_status
     };
 }
+
+export async function resetTicketScan(ticketId) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized: Only superadmins can reset scans.');
+    }
+
+    await query('UPDATE social_dinner_tickets SET scanned_at = NULL WHERE id = ?', [ticketId]);
+    revalidatePath('/social-dinner');
+    return { success: true };
+}

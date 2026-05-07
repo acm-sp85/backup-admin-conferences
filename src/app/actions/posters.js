@@ -109,3 +109,19 @@ export async function deleteCluster(clusterId) {
         return { error: 'Failed to delete cluster' };
     }
 }
+
+export async function resetVotingResults(conferenceId) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized: Only superadmins can reset voting results.');
+    }
+
+    try {
+        await query('UPDATE posters SET votes_received = NULL, points = 0 WHERE conference_id = ?', [conferenceId]);
+        revalidatePath('/posters');
+        return { success: true };
+    } catch (error) {
+        console.error('Reset voting results error:', error);
+        throw new Error('Failed to reset voting results');
+    }
+}

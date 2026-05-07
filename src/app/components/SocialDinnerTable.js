@@ -4,7 +4,7 @@ import SocialDinnerRow from './SocialDinnerRow';
 import { syncSocialDinnerTickets, sendSocialDinnerQR } from '../actions/social-dinner';
 import { Loader2, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
 
-export default function SocialDinnerTable({ attendees }) {
+export default function SocialDinnerTable({ attendees, userRole }) {
   const [sortConfig, setSortConfig] = useState({ key: 'purchase_date', direction: 'desc' });
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isSyncing, startSync] = useTransition();
@@ -166,6 +166,7 @@ export default function SocialDinnerTable({ attendees }) {
             <SocialDinnerRow 
               key={person.id} 
               person={person} 
+              userRole={userRole}
               selected={selectedIds.has(person.registration_id)}
               onSelect={() => toggleSelect(person.registration_id)}
             />
