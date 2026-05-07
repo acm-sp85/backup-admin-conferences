@@ -1,7 +1,8 @@
 'use client';
 import { useState, useTransition } from 'react';
-import { Mail, CheckCircle2, Loader2, QrCode } from 'lucide-react';
+import { Mail, CheckCircle2, Loader2, QrCode as QrIcon } from 'lucide-react';
 import { sendSocialDinnerQR } from '../actions/social-dinner';
+import SocialDinnerTicketsBadge from './SocialDinnerTicketsBadge';
 
 export default function SocialDinnerRow({ person, selected, onSelect }) {
   const [expanded, setExpanded] = useState(false);
@@ -61,9 +62,16 @@ export default function SocialDinnerRow({ person, selected, onSelect }) {
           <div className="text-[13px] text-[var(--muted)]">{person.email}</div>
         </td>
         <td>
-          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">
-            {person.conference}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">
+              {person.conference}
+            </span>
+            <SocialDinnerTicketsBadge 
+              participantName={person.name}
+              conferenceAcronym={person.conference}
+              tickets={person.tickets_status}
+            />
+          </div>
         </td>
         <td>
           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -96,7 +104,7 @@ export default function SocialDinnerRow({ person, selected, onSelect }) {
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold flex items-center gap-1.5">
-                      <QrCode className="w-2.5 h-2.5" />
+                      <QrIcon className="w-2.5 h-2.5" />
                       Ticket Management
                     </h4>
                     <button 

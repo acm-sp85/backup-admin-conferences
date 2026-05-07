@@ -21,8 +21,6 @@ export async function createConference(formData) {
         return { error: 'Name and Acronym are required' };
     }
 
-    console.log('📝 Creating conference with:', { name, acronym, email, logo_url, banner_url, accent_color });
-
     try {
         await query(
             'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color) VALUES (?, ?, ?, ?, ?, ?)',
@@ -88,8 +86,6 @@ export async function updateConference(id, formData) {
     if (!name || !acronym) {
         return { error: 'Name and Acronym are required' };
     }
-
-    console.log('📝 Updating conference:', id, { name, acronym, email, logo_url, banner_url, accent_color });
 
     try {
         await query(

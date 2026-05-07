@@ -145,11 +145,12 @@ export async function validateTicket(token) {
     if (!session) throw new Error('Unauthorized');
 
     const [ticket] = await query(`
-        SELECT t.*, p.firstName, p.lastName, p.email, c.acronym as conference
+        SELECT t.*, p.firstName, p.lastName, p.email, c.acronym as conference, pay.tickets_info, pay.status as payment_status
         FROM social_dinner_tickets t
         JOIN registrations r ON t.registration_id = r.id
         JOIN participants p ON r.participant_id = p.id
         JOIN conferences c ON r.conference_id = c.id
+        JOIN payments pay ON t.payment_id = pay.id
         WHERE t.token = ?
     `, [token]);
 
@@ -164,6 +165,16 @@ export async function validateTicket(token) {
         };
     }
 
+    // Parse dietary preference
+    let dietary = 'Regular';
+    try {
+        const allTickets = typeof ticket.tickets_info === 'string' ? JSON.parse(ticket.tickets_info) : ticket.tickets_info;
+        const ticketData = allTickets[ticket.ticket_index];
+        if (ticketData.option !== undefined && ticketData.ticket_data?.options) {
+            dietary = ticketData.ticket_data.options[ticketData.option] || dietary;
+        }
+    } catch (e) {}
+
     await query(
         'UPDATE social_dinner_tickets SET scanned_at = NOW() WHERE token = ?',
         [token]
@@ -173,6 +184,8 @@ export async function validateTicket(token) {
         success: true, 
         attendee: `${ticket.firstName} ${ticket.lastName}`,
         email: ticket.email,
-        conference: ticket.conference
+        conference: ticket.conference,
+        dietary,
+        paymentStatus: ticket.payment_status
     };
 }
