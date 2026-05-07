@@ -17,41 +17,14 @@ export default async function SocialDinnerPage({ searchParams }) {
   const isShowAll = showAll === 'true';
   const conferences = await query('SELECT id, acronym FROM conferences ORDER BY acronym ASC');
 
+  // 1. Fetch basic participant and registration data
   let sql = `
     SELECT 
-      p.id, 
+      p.id as participant_id, 
       CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name,
       p.email, 
       r.id as registration_id,
-      c.acronym as conference,
-      (
-        SELECT CONCAT('[', COALESCE(GROUP_CONCAT(
-          JSON_OBJECT(
-            'amount', amount,
-            'status', status,
-            'currency', currency,
-            'invoice', invoice_code,
-            'client', client_name,
-            'method', payment_method,
-            'tickets', tickets_info,
-            'date', created_at
-          )
-        ), ''), ']')
-        FROM payments 
-        WHERE registration_id = r.id
-      ) as all_payments_json,
-      (
-        SELECT CONCAT('[', COALESCE(GROUP_CONCAT(
-          JSON_OBJECT(
-            'id', id,
-            'token', token,
-            'sent_at', email_sent_at,
-            'scanned_at', scanned_at
-          )
-        ), ''), ']')
-        FROM social_dinner_tickets
-        WHERE registration_id = r.id
-      ) as tickets_status_json
+      c.acronym as conference
     FROM participants p
     JOIN registrations r ON p.id = r.participant_id
     JOIN conferences c ON r.conference_id = c.id
@@ -71,93 +44,81 @@ export default async function SocialDinnerPage({ searchParams }) {
     params.push(conference);
   }
 
-  sql += ` ORDER BY p.lastName ASC`;
-
-  const rawData = await query(sql, params);
-
-  // Intelligent Deduplication
-  let processedData = [];
-  if (isShowAll) {
-    processedData = rawData;
-  } else {
-    // Group by registration_id
-    const grouped = rawData.reduce((acc, row) => {
-      if (!acc[row.registration_id]) acc[row.registration_id] = [];
-      acc[row.registration_id].push(row);
-      return acc;
-    }, {});
-
-    Object.values(grouped).forEach(group => {
-      const paid = group.filter(r => r.payment_status === 'paid');
-      if (paid.length > 0) {
-        // If there are paid records, only show those (could be multiple if they bought extra tickets)
-        processedData.push(...paid);
-      } else {
-        // If none are paid, just show the most recent attempt
-        const mostRecent = group.sort((a, b) => new Date(b.purchase_date) - new Date(a.purchase_date))[0];
-        processedData.push(mostRecent);
-      }
-    });
+  const participants = await query(sql, params);
+  
+  if (participants.length === 0) {
+    return (
+      <DashboardLayout>
+        <header className="mb-6"><h2 className="text-xl font-semibold">Social Dinner</h2></header>
+        <SocialDinnerFilter conferences={conferences} attendees={[]} />
+        <SocialDinnerTable attendees={[]} />
+      </DashboardLayout>
+    );
   }
 
-  // Parse tickets to extract dietary preferences
+  const registrationIds = participants.map(p => p.registration_id);
+
+  // 2. Fetch all payments for these registrations
+  const payments = await query(`
+    SELECT registration_id, amount, status, currency, invoice_code as invoice, client_name as client, payment_method as method, tickets_info as tickets, created_at as date
+    FROM payments 
+    WHERE registration_id IN (${registrationIds.join(',')})
+  `);
+
+  // 3. Fetch all tickets for these registrations
+  const tickets = await query(`
+    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at
+    FROM social_dinner_tickets
+    WHERE registration_id IN (${registrationIds.join(',')})
+  `);
+
+  // 4. Join data in Javascript
   const attendees = [];
-  const sourceData = isShowAll ? rawData : processedData;
   
-  sourceData.forEach(person => {
-    try {
-      const allPayments = JSON.parse(person.all_payments_json || '[]');
-      
-      allPayments.forEach(pay => {
-        // In default view, we only care about the specific payment status that led us here
-        // or we filter by status. Let's make it robust.
-        if (!isShowAll && pay.status === 'refunded') return;
+  participants.forEach(p => {
+    const pPayments = payments.filter(pay => pay.registration_id === p.registration_id);
+    const pTickets = tickets.filter(t => t.registration_id === p.registration_id);
 
-        try {
-          const tickets = typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets;
-          const seenPreferences = new Set();
-          
-          if (!Array.isArray(tickets)) return;
+    pPayments.forEach(pay => {
+      if (!isShowAll && pay.status === 'refunded') return;
 
-          tickets.forEach(ticket => {
-            // Look for Social Dinner tickets
-            if (ticket.name === 'Social Dinner' || (ticket.ticket_data && ticket.ticket_data.name === 'Social Dinner')) {
-              let dietary_preference = 'Regular (Default)';
-              
-              if (ticket.option !== undefined && ticket.ticket_data && ticket.ticket_data.options) {
-                dietary_preference = ticket.ticket_data.options[ticket.option] || dietary_preference;
-              }
+      try {
+        const ticketItems = typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets;
+        if (!Array.isArray(ticketItems)) return;
 
-              // In default view, if we see the exact same dietary preference in the same payment, skip it
-              if (!isShowAll) {
-                if (seenPreferences.has(dietary_preference)) return;
-                seenPreferences.add(dietary_preference);
-              }
-              
-              attendees.push({
-                id: `${person.id}-${person.registration_id}-${pay.invoice || Math.random()}-${ticket._id || Math.random()}`,
-                name: person.name,
-                email: person.email,
-                registration_id: person.registration_id,
-                conference: person.conference,
-                dietary_preference,
-                amount_paid: pay.amount,
-                currency: pay.currency,
-                invoice_code: pay.invoice,
-                purchase_date: pay.date,
-                payment_status: pay.status,
-                all_payments: allPayments,
-                tickets_status: JSON.parse(person.tickets_status_json || '[]')
-              });
+        const seenPreferences = new Set();
+
+        ticketItems.forEach(ticket => {
+          if (ticket.name === 'Social Dinner' || (ticket.ticket_data && ticket.ticket_data.name === 'Social Dinner')) {
+            let dietary_preference = 'Regular (Default)';
+            if (ticket.option !== undefined && ticket.ticket_data?.options) {
+              dietary_preference = ticket.ticket_data.options[ticket.option] || dietary_preference;
             }
-          });
-        } catch (e) {
-          console.error('Error parsing payment tickets', e);
-        }
-      });
-    } catch (e) {
-      console.error('Failed to parse all_payments_json for participant', person.id);
-    }
+
+            if (!isShowAll && seenPreferences.has(dietary_preference)) return;
+            seenPreferences.add(dietary_preference);
+
+            attendees.push({
+              id: `${p.participant_id}-${p.registration_id}-${pay.invoice || Math.random()}-${ticket._id || Math.random()}`,
+              name: p.name,
+              email: p.email,
+              registration_id: p.registration_id,
+              conference: p.conference,
+              dietary_preference,
+              amount_paid: pay.amount,
+              currency: pay.currency,
+              invoice_code: pay.invoice,
+              purchase_date: pay.date,
+              payment_status: pay.status,
+              all_payments: pPayments,
+              tickets_status: pTickets
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Error parsing tickets', e);
+      }
+    });
   });
 
   const totalPaid = attendees.filter(a => a.payment_status === 'paid').length;

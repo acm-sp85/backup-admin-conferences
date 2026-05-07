@@ -19,38 +19,15 @@ export default async function ParticipantsPage({ searchParams }) {
   const activeConf = conferences.find(c => c.acronym === conference);
   const activeConfId = activeConf?.id;
 
+  // 1. Fetch participants with their registration summary
   let sql = `
     SELECT 
       p.*, 
-      CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name,
-      MAX(r.cluster_for_review) as cluster_for_review,
-      GROUP_CONCAT(DISTINCT CONCAT(c.acronym, ':', COALESCE(r.check_in_token, '')) SEPARATOR '|') as conference_tokens,
-      COALESCE(SUM(py.amount), 0) as total_paid,
-      GROUP_CONCAT(DISTINCT py.status SEPARATOR ', ') as payment_statuses,
-      (
-        SELECT CONCAT('[', COALESCE(GROUP_CONCAT(
-          JSON_OBJECT(
-            'amount', amount,
-            'status', status,
-            'invoice', invoice_code,
-            'client', client_name,
-            'group', group_name,
-            'method', payment_method,
-            'tickets', tickets_info,
-            'date', created_at
-          )
-        ), ''), ']')
-        FROM payments 
-        WHERE registration_id = MAX(r.id)
-      ) as all_payments_json
+      CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name
     FROM participants p
-    LEFT JOIN registrations r ON p.id = r.participant_id ${activeConfId ? 'AND r.conference_id = ?' : ''}
-    LEFT JOIN conferences c ON r.conference_id = c.id
-    LEFT JOIN payments py ON r.id = py.registration_id
     WHERE 1=1
   `;
   const params = [];
-  if (activeConfId) params.push(activeConfId);
 
   if (search) {
     sql += ` AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ?)`;
@@ -66,21 +43,71 @@ export default async function ParticipantsPage({ searchParams }) {
     params.push(conference);
   }
 
-  sql += ` GROUP BY p.id`;
-
-  if (status) {
-    if (status === 'paid') {
-      sql += ` HAVING payment_statuses LIKE '%paid%' AND payment_statuses NOT LIKE '%pending%'`;
-    } else if (status === 'pending') {
-      sql += ` HAVING payment_statuses LIKE '%pending%'`;
-    } else if (status === 'none') {
-      sql += ` HAVING payment_statuses IS NULL`;
-    }
-  }
-
   sql += ` ORDER BY p.created_at DESC`;
 
-  const participants = await query(sql, params);
+  const rawParticipants = await query(sql, params);
+  
+  if (rawParticipants.length === 0) {
+    return (
+      <DashboardLayout>
+        <header className="mb-6"><h2 className="text-xl font-semibold">Participants</h2></header>
+        <ParticipantsFilter conferences={conferences} />
+        <div className="table-container"><div className="p-10 text-center text-xs">No participants found.</div></div>
+      </DashboardLayout>
+    );
+  }
+
+  const pIds = rawParticipants.map(p => p.id);
+
+  // 2. Fetch all registrations for these participants
+  const registrations = await query(`
+    SELECT r.*, c.acronym
+    FROM registrations r
+    JOIN conferences c ON r.conference_id = c.id
+    WHERE r.participant_id IN (${pIds.join(',')})
+  `);
+
+  // 3. Fetch all payments for these registrations
+  const rIds = registrations.map(r => r.id);
+  const payments = rIds.length > 0 ? await query(`
+    SELECT * FROM payments WHERE registration_id IN (${rIds.join(',')})
+  `) : [];
+
+  // 4. Map data together
+  const participants = rawParticipants.map(p => {
+    const pRegs = registrations.filter(r => r.participant_id === p.id);
+    const pRIds = pRegs.map(r => r.id);
+    const pPayments = payments.filter(pay => pRIds.includes(pay.registration_id));
+    
+    // Summary data for the row
+    const total_paid = pPayments.reduce((sum, pay) => pay.status === 'paid' ? sum + Number(pay.amount) : sum, 0);
+    const payment_statuses = [...new Set(pPayments.map(pay => pay.status))].join(', ');
+    const conference_tokens = pRegs.map(r => `${r.acronym}:${r.check_in_token || ''}`).join('|');
+    
+    // Pick a primary registration for things like cluster_for_review
+    const primaryReg = pRegs.find(r => r.conference_id === activeConfId) || pRegs[0];
+
+    return {
+      ...p,
+      total_paid,
+      payment_statuses,
+      conference_tokens,
+      cluster_for_review: primaryReg?.cluster_for_review,
+      all_payments_json: JSON.stringify(pPayments) // We stringify here so the component can JSON.parse it back
+    };
+  });
+
+  // 5. Filter by payment status if requested (since we now have the data in JS)
+  let filteredParticipants = participants;
+  if (status) {
+    if (status === 'paid') {
+      filteredParticipants = participants.filter(p => p.payment_statuses.includes('paid') && !p.payment_statuses.includes('pending'));
+    } else if (status === 'pending') {
+      filteredParticipants = participants.filter(p => p.payment_statuses.includes('pending'));
+    } else if (status === 'none') {
+      filteredParticipants = participants.filter(p => !p.payment_statuses);
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -90,7 +117,7 @@ export default async function ParticipantsPage({ searchParams }) {
           <p className="text-[var(--muted)] text-xs mt-0.5">Manage event attendees and their registrations</p>
         </div>
         <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
-          Total Results: <strong className="text-[var(--foreground)] ml-1">{participants.length}</strong>
+          Total Results: <strong className="text-[var(--foreground)] ml-1">{filteredParticipants.length}</strong>
         </div>
       </header>
 
@@ -108,7 +135,7 @@ export default async function ParticipantsPage({ searchParams }) {
             </tr>
           </thead>
           <tbody>
-            {participants.map((person) => (
+            {filteredParticipants.map((person) => (
               <ParticipantRow 
                 key={person.id} 
                 person={person} 

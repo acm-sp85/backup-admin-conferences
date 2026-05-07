@@ -79,6 +79,41 @@ export default function ScannerClient() {
                 strategy="lazyOnload"
                 onLoad={() => setIsLibLoaded(true)}
             />
+            <style>{`
+                #reader { border: none !important; }
+                #reader__dashboard_section_csr button {
+                    background-color: #0f172a !important;
+                    color: white !important;
+                    padding: 10px 20px !important;
+                    border-radius: 12px !important;
+                    border: none !important;
+                    font-weight: bold !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    margin-top: 10px !important;
+                }
+                #reader__dashboard_section_csr button:hover {
+                    background-color: #000 !important;
+                }
+                #reader__status_span {
+                    color: white !important;
+                    font-weight: bold !important;
+                    display: block !important;
+                    margin-bottom: 10px !important;
+                }
+                #reader select {
+                    padding: 8px !important;
+                    border-radius: 8px !important;
+                    border: 1px solid #e2e8f0 !important;
+                    margin-bottom: 10px !important;
+                    width: 100% !important;
+                    background: white !important;
+                    color: #0f172a !important;
+                }
+                #reader img {
+                    display: none !important;
+                }
+            `}</style>
             <header className="mb-8 text-center">
                 <h2 className="text-2xl font-bold text-slate-900">Dinner Check-in</h2>
                 <p className="text-slate-500 text-sm mt-1">High-speed continuous scanner</p>
