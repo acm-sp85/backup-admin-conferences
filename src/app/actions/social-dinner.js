@@ -108,8 +108,8 @@ export async function sendSocialDinnerQR(registrationId) {
 
 
     // Fetch conference details for branding
-    const [conferences] = await query('SELECT * FROM conferences WHERE acronym = ?', [participant.conference]);
-    const conference = conferences[0];
+    const results = await query('SELECT * FROM conferences WHERE acronym = ?', [participant.conference]);
+    const conference = results[0];
 
     // Send Email
     const template = emailTemplates.socialDinnerTickets({

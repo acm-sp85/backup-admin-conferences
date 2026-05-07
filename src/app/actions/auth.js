@@ -55,8 +55,13 @@ export async function requestMagicLink(prevState, formData) {
 
 
       // 3. Send Email
+      console.log(`📧 Attempting to send magic link to: ${email} using domain: ${EMAIL_CONFIG.from}`);
       const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
       const conference = results[0];
+
+      if (!conference) {
+          console.warn(`⚠️ Warning: No conference found for acronym ${process.env.CONFERENCE_ACRONYM}. Using default branding.`);
+      }
 
       const template = emailTemplates.magicLink({
         magicLink,
@@ -71,9 +76,10 @@ export async function requestMagicLink(prevState, formData) {
       });
 
       if (error) {
-        console.error('❌ Resend Error:', error);
+        console.error('❌ Resend Error Details:', JSON.stringify(error, null, 2));
         return { message: 'Failed to send email. Please try again later.' };
       }
+      console.log('✅ Resend Success:', data);
     }
 
     return { 

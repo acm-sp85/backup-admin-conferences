@@ -161,7 +161,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
     try {
         // 1. Get participant details and REGISTRATION-specific cluster data
         const participants = await query(`
-            SELECT p.firstName, p.lastName, p.email, r.cluster_for_review, c.*
+            SELECT p.firstName, p.lastName, p.email as participant_email, r.cluster_for_review, c.*
             FROM participants p
             JOIN registrations r ON p.id = r.participant_id
             JOIN conferences c ON r.conference_id = c.id
@@ -202,18 +202,25 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
 
         // 4. Send email
+        console.log(`📧 Sending Voting Invite to ${participant.participant_email} from ${EMAIL_CONFIG.fromVoting}`);
         const template = emailTemplates.posterVotingInvite({
             name: participant.firstName,
             magicLink,
             conference: participant
         });
 
-        await resend.emails.send({
+        const { data, error } = await resend.emails.send({
             from: EMAIL_CONFIG.fromVoting,
-            to: participant.email,
+            to: participant.participant_email,
             subject: template.subject,
             html: template.html
         });
+
+        if (error) {
+            console.error('❌ Resend Voting Error:', JSON.stringify(error, null, 2));
+            return { error: error.message };
+        }
+        console.log('✅ Voting Invite Sent Successfully:', data);
 
         return { success: true };
     } catch (error) {

@@ -6,6 +6,7 @@
  */
 
 export const EMAIL_CONFIG = {
+    // IMPORTANT: Ensure the domain below is verified in https://resend.com/domains
     from: 'SCITO Admin <no-reply@scitoevents.com>',
     fromConferences: 'SCITO Conferences <no-reply@scitoevents.com>',
     fromVoting: 'SCITO Voting <no-reply@scitoevents.com>',

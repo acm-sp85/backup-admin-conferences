@@ -60,8 +60,9 @@ export async function inviteUser(prevState, formData) {
 
 
         // 4. Send invitation email
-        const [conferences] = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM]);
-        const conference = conferences[0];
+        console.log(`📧 Sending invitation to ${email} from ${EMAIL_CONFIG.from}`);
+        const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+        const conference = results[0];
 
         const template = emailTemplates.userInvitation({
             role,
@@ -77,9 +78,10 @@ export async function inviteUser(prevState, formData) {
         });
 
         if (mailError) {
-            console.error('Resend error:', mailError);
+            console.error('❌ Resend Invitation Error:', JSON.stringify(mailError, null, 2));
             return { error: mailError.message };
         }
+        console.log('✅ Invitation Sent Successfully:', data);
 
         console.log(`📧 Invitation email sent to ${email}`);
 
