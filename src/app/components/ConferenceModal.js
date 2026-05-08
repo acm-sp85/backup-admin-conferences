@@ -206,6 +206,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             </button>
                                         </div>
                                         
+                                        <input type="hidden" name="email_magic_link_body" value={templates.magicLink} />
                                         {viewMode.magicLink === 'preview' ? (
                                             <div 
                                                 className="w-full h-40 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container"
@@ -213,7 +214,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             />
                                         ) : (
                                             <textarea 
-                                                name="email_magic_link_body"
                                                 value={templates.magicLink}
                                                 onChange={(e) => setTemplates(t => ({ ...t, magicLink: e.target.value }))}
                                                 placeholder="Use ${magicLink} for the login URL."
@@ -236,6 +236,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             </button>
                                         </div>
                                         
+                                        <input type="hidden" name="email_poster_voting_invite_body" value={templates.posterVotingInvite} />
                                         {viewMode.posterVotingInvite === 'preview' ? (
                                             <div 
                                                 className="w-full h-40 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container"
@@ -243,7 +244,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             />
                                         ) : (
                                             <textarea 
-                                                name="email_poster_voting_invite_body"
                                                 value={templates.posterVotingInvite}
                                                 onChange={(e) => setTemplates(t => ({ ...t, posterVotingInvite: e.target.value }))}
                                                 placeholder="Use ${name} and ${magicLink} placeholders."
@@ -266,6 +266,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             </button>
                                         </div>
                                         
+                                        <input type="hidden" name="email_social_dinner_tickets_body" value={templates.socialDinnerTickets} />
                                         {viewMode.socialDinnerTickets === 'preview' ? (
                                             <div 
                                                 className="w-full h-40 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container"
@@ -273,7 +274,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             />
                                         ) : (
                                             <textarea 
-                                                name="email_social_dinner_tickets_body"
                                                 value={templates.socialDinnerTickets}
                                                 onChange={(e) => setTemplates(t => ({ ...t, socialDinnerTickets: e.target.value }))}
                                                 placeholder="Use ${name} placeholder."

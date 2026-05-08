@@ -1,34 +1,24 @@
-// src/lib/email-dispatcher.js
-
 import { query } from '@/lib/db';
 import sanitizeHtml from 'sanitize-html';
-import { emailTemplates } from '@/lib/email-templates';
-
-// Simple per-request in-memory cache
-const cache = new Map();
+import { emailTemplates, getBranding, renderHeader } from '@/lib/email-templates';
 
 /**
  * Retrieve email subject and HTML for a given conference and email type.
- * If custom body is defined in the conferences table, it is used (subject stays generic).
- * Placeholders are interpolated using ${placeholder} syntax.
- *
- * @param {number} conferenceId - ID of the conference
- * @param {string} type - one of 'magicLink', 'posterVotingInvite', 'socialDinnerTickets'
- * @param {Object} placeholders - key/value pairs for interpolation
- * @returns {Promise<{subject:string, html:string}>}
  */
 export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   let conf = null;
   if (conferenceId) {
-    conf = cache.get(conferenceId);
-    if (!conf) {
-      const rows = await query('SELECT * FROM conferences WHERE id = ?', [conferenceId]);
-      conf = rows[0];
-      if (conf) cache.set(conferenceId, conf);
-    }
+    const rows = await query('SELECT * FROM conferences WHERE id = ?', [conferenceId]);
+    conf = rows[0];
   }
 
-  const bodyKey = `email_${type}_body`;
+  const columnMap = {
+    magicLink: 'email_magic_link_body',
+    posterVotingInvite: 'email_poster_voting_invite_body',
+    socialDinnerTickets: 'email_social_dinner_tickets_body'
+  };
+
+  const bodyKey = columnMap[type];
   let html = conf ? conf[bodyKey] : null;
 
   // If no custom body, fall back to generic template
@@ -37,13 +27,56 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     return { subject: generic.subject, html: generic.html };
   }
 
-  // Interpolate placeholders in custom body
-  Object.entries(placeholders).forEach(([k, v]) => {
-    const re = new RegExp('\\$\\{' + k + '\\}', 'g');
-    html = html.replace(re, v);
+  // 1. Prepare rich branding placeholders
+  const brand = getBranding(conf);
+  const richPlaceholders = {
+    ...placeholders,
+    header: renderHeader(brand),
+    conferenceName: brand.name,
+    conferenceEmail: brand.email,
+    accentColor: brand.accentColor,
+    logoUrl: brand.logo,
+    bannerUrl: brand.banner,
+    // Support legacy/intuitive ${brand.xxx} syntax by flattening
+    'brand.name': brand.name,
+    'brand.email': brand.email,
+    'brand.accentColor': brand.accentColor,
+    'renderHeader(brand)': renderHeader(brand) // Support the exact string the user tried
+  };
+
+  // 2. Interpolate placeholders
+  Object.entries(richPlaceholders).forEach(([k, v]) => {
+    let value = v;
+    
+    // Special handling for QR codes array
+    if (k === 'qrCodes' && Array.isArray(v)) {
+      value = v.map((qc) => `
+        <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+            <img src="${brand.baseUrl}/api/qr/${qc.token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+            <p style="margin: 5px 0; font-weight: bold; color: ${brand.accentColor};">Dietary: ${qc.dietary}</p>
+        </div>
+      `).join('');
+    }
+
+    const re = new RegExp('\\$\\{' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\}', 'g');
+    html = html.replace(re, value);
   });
 
-  // Sanitize custom HTML (best‑practice)
+  // 3. Fallback for social dinner tickets
+  if (type === 'socialDinnerTickets' && !html.includes('api/qr/')) {
+     const qrHtml = placeholders.qrCodes?.map((qc) => `
+        <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+            <img src="${brand.baseUrl}/api/qr/${qc.token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+            <p style="margin: 5px 0; font-weight: bold; color: ${brand.accentColor};">Dietary: ${qc.dietary}</p>
+        </div>
+     `).join('') || '';
+     
+     if (qrHtml) {
+        html = html.replace('</div>', qrHtml + '</div>');
+     }
+  }
+
+  // Sanitize
   html = sanitizeHtml(html, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'style']),
     allowedAttributes: {
@@ -53,7 +86,6 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     }
   });
 
-  // Subject remains generic, derived from the built‑in template
   const generic = emailTemplates[type]({ ...placeholders, conference: conf });
   return { subject: generic.subject, html };
 }
