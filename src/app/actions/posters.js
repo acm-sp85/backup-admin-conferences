@@ -144,8 +144,8 @@ export async function resetVotingResults(conferenceId) {
 
 export async function resetParticipantVotes(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
-        return { error: 'Unauthorized' };
+    if (!session || session.role !== 'superadmin') {
+        return { error: 'Unauthorized: Only superadmins can reset individual votes.' };
     }
 
     try {

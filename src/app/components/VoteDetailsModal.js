@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { getVoteDetails } from '../actions/results';
 import { resetParticipantVotes } from '../actions/posters';
 
-export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId }) {
+export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId, userRole }) {
     const [details, setDetails] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isResetting, setIsResetting] = useState(null);
@@ -121,7 +121,7 @@ export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId
                                                 <span className="block opacity-50 text-[9px]">{new Date(vote.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                         </div>
-                                        {vote.voter.type === 'participant' && (
+                                        {userRole === 'superadmin' && vote.voter.type === 'participant' && (
                                             <button
                                                 onClick={() => handleResetVote(vote.voter)}
                                                 disabled={isResetting === vote.voter.id}

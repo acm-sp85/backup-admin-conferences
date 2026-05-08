@@ -127,6 +127,7 @@ export default async function VotingPage() {
         <ParticipantVotingManager 
           conferences={conferences} 
           allClusters={allClusters} 
+          userRole={user.role}
         />
       )}
     </DashboardLayout>

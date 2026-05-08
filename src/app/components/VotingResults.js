@@ -175,6 +175,7 @@ export default function VotingResults({ conferences, userRole }) {
                 isOpen={!!selectedPosterDetails} 
                 poster={selectedPosterDetails}
                 conferenceId={selectedConference}
+                userRole={userRole}
                 onClose={() => {
                     setSelectedPosterDetails(null);
                     fetchData();
