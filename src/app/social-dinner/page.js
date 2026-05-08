@@ -148,6 +148,11 @@ export default async function SocialDinnerPage({ searchParams }) {
   const totalRefunded = attendees.filter(a => a.payment_status === 'refunded').length;
   const totalActive = totalPaid + totalPending;
   const totalDebtAmount = attendees.reduce((sum, a) => sum + (a.dinner_debt || 0), 0);
+  
+  const totalTickets = attendees.reduce((sum, a) => sum + a.ticket_count, 0);
+  const totalScanned = attendees.reduce((sum, a) => {
+    return sum + (a.tickets_status?.filter(t => t.scanned_at).length || 0);
+  }, 0);
 
   return (
     <DashboardLayout>
@@ -168,7 +173,13 @@ export default async function SocialDinnerPage({ searchParams }) {
           </Link>
           <div className="flex gap-2">
             <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-full text-slate-500 font-medium">
-              Active: <strong className="text-slate-900 ml-1">{totalActive}</strong>
+              People: <strong className="text-slate-900 ml-1">{totalActive}</strong>
+            </div>
+            <div className="text-[10px] bg-blue-50 px-3 py-1.5 rounded-full text-blue-600 font-medium border border-blue-100">
+              Total Tickets: <strong className="text-blue-700 ml-1">{totalTickets}</strong>
+            </div>
+            <div className="text-[10px] bg-indigo-50 px-3 py-1.5 rounded-full text-indigo-600 font-medium border border-indigo-100">
+              Scanned: <strong className="text-indigo-700 ml-1">{totalScanned} / {totalTickets}</strong>
             </div>
             <div className="text-[10px] bg-green-50 px-3 py-1.5 rounded-full text-green-600 font-medium border border-green-100">
               Paid: <strong className="text-green-700 ml-1">{totalPaid}</strong>
