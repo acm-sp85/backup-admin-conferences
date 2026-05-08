@@ -67,7 +67,7 @@ export default function SocialDinnerTicketsBadge({ participantName, conferenceAc
                                             className="w-48 h-48 mix-blend-multiply"
                                         />
                                     </div>
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Ticket #{index + 1}</h4>
+
                                     <p className="text-[10px] font-mono text-slate-300 break-all px-12">{ticket.token}</p>
                                     {ticket.scanned_at && (
                                         <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-bold border border-green-100">

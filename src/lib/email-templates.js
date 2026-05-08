@@ -126,7 +126,6 @@ export const emailTemplates = {
                     
                     ${qrCodes.map((qc, idx) => `
                         <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
-                            <h3 style="margin: 0 0 10px 0;">Ticket #${idx + 1}</h3>
                             <img src="${brand.baseUrl}/api/qr/${qc.token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
                             <p style="margin: 5px 0; font-weight: bold; color: ${brand.accentColor};">Dietary: ${qc.dietary}</p>
                         </div>
