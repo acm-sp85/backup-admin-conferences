@@ -79,6 +79,11 @@ export default async function SocialDinnerPage({ searchParams }) {
     const pPayments = payments.filter(pay => pay.registration_id === p.registration_id);
     const pTickets = tickets.filter(t => t.registration_id === p.registration_id);
 
+    // Collect all Social Dinner ticket items across ALL payments
+    const dinnerTickets = [];
+    let latestPayment = null;
+    let latestCurrency = 'EUR';
+
     pPayments.forEach(pay => {
       if (!isShowAll && pay.status === 'refunded') return;
 
@@ -86,46 +91,55 @@ export default async function SocialDinnerPage({ searchParams }) {
         const ticketItems = typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets;
         if (!Array.isArray(ticketItems)) return;
 
-        const seenPreferences = new Set();
-
         ticketItems.forEach(ticket => {
           if (ticket.name === 'Social Dinner' || (ticket.ticket_data && ticket.ticket_data.name === 'Social Dinner')) {
             let dietary_preference = 'Regular (Default)';
             if (ticket.option !== undefined && ticket.ticket_data?.options) {
               dietary_preference = ticket.ticket_data.options[ticket.option] || dietary_preference;
             }
-
-            if (!isShowAll && seenPreferences.has(dietary_preference)) return;
-            seenPreferences.add(dietary_preference);
-
-            // Calculate dinner-specific debt using same logic as participants page
-            const dinnerDebt = pPayments.reduce((sum, p) => {
-              const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
-              return sum + balance;
-            }, 0);
-
-            attendees.push({
-              id: `${p.participant_id}-${p.registration_id}-${pay.invoice || Math.random()}-${ticket._id || Math.random()}`,
-              name: p.name,
-              email: p.email,
-              registration_id: p.registration_id,
-              conference: p.conference,
-              dietary_preference,
-              amount_paid: pay.amount,
-              currency: pay.currency,
-              invoice_code: pay.invoice,
-              purchase_date: pay.date,
-              payment_status: pay.status,
-              dinner_debt: dinnerDebt,
-              ticket_count: pTickets.length,
-              all_payments: pPayments,
-              tickets_status: pTickets
-            });
+            dinnerTickets.push({ dietary_preference, price: ticket.price, invoice: pay.invoice });
+            latestPayment = pay;
+            latestCurrency = pay.currency || 'EUR';
           }
         });
       } catch (e) {
         console.error('Error parsing tickets', e);
       }
+    });
+
+    // Only add one row per participant if they have dinner tickets
+    if (dinnerTickets.length === 0) return;
+
+    const dinnerDebt = pPayments.reduce((sum, p) => {
+      const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
+      return sum + balance;
+    }, 0);
+
+    // Use the most common dietary preference, or list multiples
+    const preferenceMap = {};
+    dinnerTickets.forEach(t => {
+      preferenceMap[t.dietary_preference] = (preferenceMap[t.dietary_preference] || 0) + 1;
+    });
+    const dietary_preference = Object.entries(preferenceMap)
+      .map(([pref, count]) => count > 1 ? `${pref} ×${count}` : pref)
+      .join(', ');
+
+    attendees.push({
+      id: `${p.participant_id}-${p.registration_id}`,
+      name: p.name,
+      email: p.email,
+      registration_id: p.registration_id,
+      conference: p.conference,
+      dietary_preference,
+      amount_paid: latestPayment?.amount || 0,
+      currency: latestCurrency,
+      invoice_code: latestPayment?.invoice,
+      purchase_date: latestPayment?.date,
+      payment_status: latestPayment?.status,
+      dinner_debt: dinnerDebt,
+      ticket_count: dinnerTickets.length,
+      all_payments: pPayments,
+      tickets_status: pTickets
     });
   });
 

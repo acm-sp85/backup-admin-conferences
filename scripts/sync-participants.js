@@ -78,6 +78,22 @@ async function syncParticipants() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // 0.2 Ensure Social Dinner Tickets table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS social_dinner_tickets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        registration_id INT NOT NULL,
+        payment_id INT NOT NULL,
+        ticket_index INT NOT NULL,
+        token VARCHAR(100) UNIQUE NOT NULL,
+        email_sent_at TIMESTAMP NULL,
+        scanned_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_ticket_registration FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE,
+        CONSTRAINT fk_ticket_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     // 1. Ensure Conference exists
     let [confRows] = await mariadb.execute('SELECT id FROM conferences WHERE acronym = ?', [targetConferenceAcronym]);
     let conferenceId;
@@ -274,7 +290,55 @@ async function syncParticipants() {
       }
     }
 
-    // 4. SYNC PROGRAM
+    // 3.1 AUTO-SYNC SOCIAL DINNER TICKETS
+    console.log('🎫 Generating Social Dinner tickets...');
+    const [paymentsWithDinner] = await mariadb.execute(`
+        SELECT id, registration_id, tickets_info 
+        FROM payments 
+        WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?)
+        AND tickets_info LIKE '%Social Dinner%'
+    `, [conferenceId]);
+
+    const seenTicketIds = new Set();
+    let ticketsGenerated = 0;
+
+    for (const pay of paymentsWithDinner) {
+        let tickets = [];
+        try {
+            tickets = typeof pay.tickets_info === 'string' ? JSON.parse(pay.tickets_info) : pay.tickets_info;
+        } catch (e) { continue; }
+
+        if (!Array.isArray(tickets)) continue;
+
+        for (let i = 0; i < tickets.length; i++) {
+            const ticket = tickets[i];
+            const name = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
+            
+            if (name === 'Social Dinner') {
+                const [existing] = await mariadb.execute(
+                    'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',
+                    [pay.id, i]
+                );
+
+                if (!existing.length) {
+                    const token = crypto.randomBytes(24).toString('hex');
+                    await mariadb.execute(
+                        'INSERT INTO social_dinner_tickets (registration_id, payment_id, ticket_index, token) VALUES (?, ?, ?, ?)',
+                        [pay.registration_id, pay.id, i, token]
+                    );
+                    ticketsGenerated++;
+                }
+                
+                // Track for mirror sync
+                const [final] = await mariadb.execute(
+                    'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',
+                    [pay.id, i]
+                );
+                if (final.length) seenTicketIds.add(final[0].id);
+            }
+        }
+    }
+    if (ticketsGenerated > 0) console.log(`✅ Generated ${ticketsGenerated} new dinner tickets`);
     console.log(`📥 Fetching program from [${mongoProgramView}]...`);
     const progFilter = mongoProgramView.includes(targetConferenceAcronym) ? {} : { conference: targetConferenceAcronym };
     const programRecords = await mongoDb.collection(mongoProgramView).find(progFilter).toArray();
@@ -398,6 +462,30 @@ async function syncParticipants() {
             WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})
         `, [conferenceId]);
         if (delSessions.affectedRows > 0) console.log(`🗑️  Archived and removed ${delSessions.affectedRows} stale program sessions`);
+    }
+    // D. Delete stale dinner tickets
+    if (seenTicketIds.size > 0) {
+        const ids = Array.from(seenTicketIds).join(',');
+        
+        // Archive first
+        const [toArchive] = await mariadb.execute(`
+            SELECT * FROM social_dinner_tickets 
+            WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
+            AND id NOT IN (${ids})
+        `, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
+                ['dinner_ticket', row.id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delTickets] = await mariadb.execute(`
+            DELETE FROM social_dinner_tickets 
+            WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
+            AND id NOT IN (${ids})
+        `, [conferenceId]);
+        if (delTickets.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTickets.affectedRows} stale dinner tickets`);
     }
     // ----------------------------------------
 

@@ -75,21 +75,16 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
           <div className="text-[13px] text-[var(--muted)]">{person.email}</div>
         </td>
         <td>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">
-              {person.conference}
-            </span>
-            <SocialDinnerTicketsBadge 
-              participantName={person.name}
-              conferenceAcronym={person.conference}
-              tickets={person.tickets_status}
-            />
-          </div>
+          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">
+            {person.conference}
+          </span>
         </td>
         <td className="text-center">
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
-            {person.ticket_count ?? 0}
-          </span>
+          <SocialDinnerTicketsBadge 
+            participantName={person.name}
+            conferenceAcronym={person.conference}
+            tickets={person.tickets_status}
+          />
         </td>
         <td>
           <div className="flex flex-col gap-1">
