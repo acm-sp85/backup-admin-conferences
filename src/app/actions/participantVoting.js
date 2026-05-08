@@ -8,6 +8,7 @@ import { headers } from 'next/headers';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
+import { getEmailTemplate } from '@/lib/email-dispatcher';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -172,19 +173,19 @@ export async function sendVoterInvite(participantId, conferenceId) {
         if (!participant) return { error: 'Participant/Registration not found' };
 
         // 2. Ensure user exists in users table
-        const [existingUser] = await query('SELECT id FROM users WHERE email = ?', [participant.email]);
+        const [existingUser] = await query('SELECT id FROM users WHERE email = ?', [participant.participant_email]);
         let userId;
 
         if (existingUser) {
             await query(
                 'UPDATE users SET cluster_for_review = ?, firstName = ?, lastName = ? WHERE email = ?',
-                [participant.cluster_for_review, participant.firstName, participant.lastName, participant.email]
+                [participant.cluster_for_review, participant.firstName, participant.lastName, participant.participant_email]
             );
             userId = existingUser.id;
         } else {
             const res = await query(
                 'INSERT INTO users (email, role, cluster_for_review, firstName, lastName) VALUES (?, ?, ?, ?, ?)',
-                [participant.email, 'user', participant.cluster_for_review, participant.firstName, participant.lastName]
+                [participant.participant_email, 'user', participant.cluster_for_review, participant.firstName, participant.lastName]
             );
             userId = res.insertId;
         }
@@ -203,17 +204,16 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
         // 4. Send email
         console.log(`📧 Sending Voting Invite to ${participant.participant_email} from ${EMAIL_CONFIG.fromVoting}`);
-        const template = emailTemplates.posterVotingInvite({
+        const { subject, html } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
             name: participant.firstName,
-            magicLink,
-            conference: participant
+            magicLink
         });
 
         const { data, error } = await resend.emails.send({
             from: EMAIL_CONFIG.fromVoting,
             to: participant.participant_email,
-            subject: template.subject,
-            html: template.html
+            subject,
+            html
         });
 
         if (error) {

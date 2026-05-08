@@ -37,10 +37,10 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
             <div 
-                className="bg-white w-full max-w-md rounded-[12px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+                className="bg-white w-full max-w-5xl rounded-[12px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="p-8">
+                <div className="p-8 overflow-y-auto">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-bold text-slate-900">
                             {isEdit ? 'Edit Conference' : 'New Conference'}
@@ -57,83 +57,129 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Conference Name</label>
-                            <input 
-                                name="name"
-                                type="text" 
-                                required
-                                defaultValue={conference?.name || ''}
-                                placeholder="e.g. Hybrid and Organic Photovoltaics"
-                                className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            />
-                        </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                            {/* Left Column: Conference Details */}
+                            <div className="space-y-5">
+                                <div className="pb-2 border-b border-slate-50 mb-4">
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Conference Details</label>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Conference Name</label>
+                                    <input 
+                                        name="name"
+                                        type="text" 
+                                        required
+                                        defaultValue={conference?.name || ''}
+                                        placeholder="e.g. Hybrid and Organic Photovoltaics"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Acronym</label>
-                                <input 
-                                    name="acronym"
-                                    type="text" 
-                                    required
-                                    defaultValue={conference?.acronym || ''}
-                                    placeholder="e.g. HOPV26"
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Contact Email</label>
-                                <input 
-                                    name="email"
-                                    type="email" 
-                                    defaultValue={conference?.email || ''}
-                                    placeholder="organizers@..."
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Acronym</label>
+                                        <input 
+                                            name="acronym"
+                                            type="text" 
+                                            required
+                                            defaultValue={conference?.acronym || ''}
+                                            placeholder="e.g. HOPV26"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Contact Email</label>
+                                        <input 
+                                            name="email"
+                                            type="email" 
+                                            defaultValue={conference?.email || ''}
+                                            placeholder="organizers@..."
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Logo URL (Optional)</label>
-                                <input 
-                                    name="logo_url"
-                                    type="url" 
-                                    defaultValue={conference?.logo_url || ''}
-                                    placeholder="https://..."
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Banner URL (Optional)</label>
-                                <input 
-                                    name="banner_url"
-                                    type="url" 
-                                    defaultValue={conference?.banner_url || ''}
-                                    placeholder="https://..."
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                        </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Logo URL (Optional)</label>
+                                        <input 
+                                            name="logo_url"
+                                            type="url" 
+                                            defaultValue={conference?.logo_url || ''}
+                                            placeholder="https://..."
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Banner URL (Optional)</label>
+                                        <input 
+                                            name="banner_url"
+                                            type="url" 
+                                            defaultValue={conference?.banner_url || ''}
+                                            placeholder="https://..."
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                </div>
 
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Accent Color (Optional)</label>
-                            <div className="flex gap-3 items-center">
-                                <input 
-                                    name="accent_color"
-                                    type="color" 
-                                    value={accentColor}
-                                    onChange={(e) => setAccentColor(e.target.value)}
-                                    className="h-12 w-16 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer"
-                                />
-                                <input 
-                                    name="accent_color_text"
-                                    type="text"
-                                    value={accentColor}
-                                    onChange={(e) => setAccentColor(e.target.value)}
-                                    className="flex-1 h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-mono text-slate-500 outline-none"
-                                />
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Accent Color (Optional)</label>
+                                    <div className="flex gap-3 items-center">
+                                        <input 
+                                            name="accent_color"
+                                            type="color" 
+                                            value={accentColor}
+                                            onChange={(e) => setAccentColor(e.target.value)}
+                                            className="h-12 w-16 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer"
+                                        />
+                                        <input 
+                                            name="accent_color_text"
+                                            type="text"
+                                            value={accentColor}
+                                            onChange={(e) => setAccentColor(e.target.value)}
+                                            className="flex-1 h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-mono text-slate-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Column: Custom Email Templates */}
+                            <div className="space-y-6">
+                                <div className="pb-2 border-b border-slate-50 mb-4">
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Custom Email Templates (Optional)</label>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1">Magic Link Body (HTML)</label>
+                                    <textarea 
+                                        name="email_magic_link_body"
+                                        defaultValue={conference?.email_magic_link_body || ''}
+                                        placeholder="Leave empty for generic template. Use ${magicLink} for the login URL."
+                                        className="w-full h-32 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1">Poster Voting Invite Body (HTML)</label>
+                                    <textarea 
+                                        name="email_poster_voting_invite_body"
+                                        defaultValue={conference?.email_poster_voting_invite_body || ''}
+                                        placeholder="Use ${name} and ${magicLink} placeholders."
+                                        className="w-full h-32 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 ml-1">Social Dinner Tickets Body (HTML)</label>
+                                    <textarea 
+                                        name="email_social_dinner_tickets_body"
+                                        defaultValue={conference?.email_social_dinner_tickets_body || ''}
+                                        placeholder="Use ${name} placeholder. QR codes are appended automatically."
+                                        className="w-full h-32 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                    />
+                                </div>
                             </div>
                         </div>
 

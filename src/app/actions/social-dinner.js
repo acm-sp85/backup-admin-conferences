@@ -7,6 +7,7 @@ import { generateQR } from '@/lib/qr';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
+import { getEmailTemplate } from '@/lib/email-dispatcher';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -108,21 +109,20 @@ export async function sendSocialDinnerQR(registrationId) {
 
 
     // Fetch conference details for branding
-    const results = await query('SELECT * FROM conferences WHERE acronym = ?', [participant.conference]);
+    const results = await query('SELECT id FROM conferences WHERE acronym = ?', [participant.conference]);
     const conference = results[0];
 
     // Send Email
-    const template = emailTemplates.socialDinnerTickets({
+    const { subject, html } = await getEmailTemplate(conference?.id, 'socialDinnerTickets', {
         name: participant.name,
-        conference,
         qrCodes
     });
 
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
         to: [participant.email],
-        subject: template.subject,
-        html: template.html
+        subject,
+        html
     });
 
     if (error) {

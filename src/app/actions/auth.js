@@ -8,6 +8,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { Resend } from 'resend';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
+import { getEmailTemplate } from '@/lib/email-dispatcher';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -56,23 +57,15 @@ export async function requestMagicLink(prevState, formData) {
 
       // 3. Send Email
       console.log(`📧 Attempting to send magic link to: ${email} using domain: ${EMAIL_CONFIG.from}`);
-      const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+      const results = await query('SELECT id FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
       const conference = results[0];
-
-      if (!conference) {
-          console.warn(`⚠️ Warning: No conference found for acronym ${process.env.CONFERENCE_ACRONYM}. Using default branding.`);
-      }
-
-      const template = emailTemplates.magicLink({
-        magicLink,
-        conference
-      });
-
+      const { subject, html } = await getEmailTemplate(conference?.id, 'magicLink', { magicLink });
+      
       const { data, error } = await resend.emails.send({
         from: EMAIL_CONFIG.from,
         to: email,
-        subject: template.subject,
-        html: template.html,
+        subject,
+        html,
       });
 
       if (error) {

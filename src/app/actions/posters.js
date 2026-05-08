@@ -117,8 +117,14 @@ export async function resetVotingResults(conferenceId) {
     }
 
     try {
+        // 1. Clear the scores and vote tallies on the posters
         await query('UPDATE posters SET votes_received = NULL, points = 0 WHERE conference_id = ?', [conferenceId]);
+        
+        // 2. Clear the "has voted" flag and the votes JSON for all participants in this conference
+        await query('UPDATE registrations SET has_voted = 0, votes = NULL WHERE conference_id = ?', [conferenceId]);
+
         revalidatePath('/posters');
+        revalidatePath('/voting');
         return { success: true };
     } catch (error) {
         console.error('Reset voting results error:', error);

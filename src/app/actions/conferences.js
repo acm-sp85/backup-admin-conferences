@@ -23,9 +23,19 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, acronym, email, logo_url, banner_url, accent_color]
-        );
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              name,
+              acronym,
+              email,
+              logo_url,
+              banner_url,
+              accent_color,
+              formData.get('email_magic_link_body') || null,
+              formData.get('email_poster_voting_invite_body') || null,
+              formData.get('email_social_dinner_tickets_body') || null
+            ]
+          );
         revalidatePath('/');
         return { success: true };
     } catch (error) {
@@ -89,9 +99,20 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ? WHERE id = ?',
-            [name, acronym, email, logo_url, banner_url, accent_color, id]
-        );
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ? WHERE id = ?',
+            [
+              name,
+              acronym,
+              email,
+              logo_url,
+              banner_url,
+              accent_color,
+              formData.get('email_magic_link_body') || null,
+              formData.get('email_poster_voting_invite_body') || null,
+              formData.get('email_social_dinner_tickets_body') || null,
+              id
+            ]
+          );
         revalidatePath('/');
         return { success: true };
     } catch (error) {
