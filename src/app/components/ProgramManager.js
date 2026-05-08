@@ -135,16 +135,23 @@ export default function ProgramManager({ conferences }) {
                                     <div key={session.id} className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-300 transition-all ${session.is_hidden ? 'opacity-50 grayscale-[0.5]' : ''}`}>
                                         <div className="p-4 flex justify-between items-start bg-slate-50/50">
                                             <div>
-                                                <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex items-center gap-2 mb-1.5">
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
                                                         {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
-                                                    <span className="text-xs font-semibold text-slate-600">{session.session_name}</span>
                                                     {!!session.is_hidden && (
                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
                                                     )}
                                                 </div>
-                                                <h4 className="font-bold text-slate-800">{session.full_session_name}</h4>
+                                                <h4 className="font-bold text-slate-800 text-[15px] leading-snug">
+                                                    {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
+                                                </h4>
+                                                {session.full_session_name.includes('(Chair:') && (
+                                                    <div className="text-[11px] text-slate-500 italic mt-0.5 flex items-center gap-1.5">
+                                                        <div className="w-1 h-1 rounded-full bg-slate-300" />
+                                                        Chair: {session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-4">
                                                 <button

@@ -59,11 +59,20 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                 </div>
                                 
                                 <h1 
-                                    className="font-black leading-tight mb-4"
+                                    className="font-black leading-tight mb-2"
                                     style={{ fontSize: config.titleSize || '48px' }}
                                 >
-                                    {session.full_session_name}
+                                    {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
                                 </h1>
+
+                                {session.full_session_name.includes('(Chair:') && (
+                                    <div 
+                                        className="font-bold opacity-80 mb-6 italic"
+                                        style={{ fontSize: config.chairSize || '24px', color: config.titleColor }}
+                                    >
+                                        Chair: {session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                                    </div>
+                                )}
 
                                 <div className="flex gap-4 items-center">
                                     <div className=" text-white px-4 py-2 font-bold text-xl"

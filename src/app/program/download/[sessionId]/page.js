@@ -46,7 +46,12 @@ export default async function DownloadDocPage({ params }) {
     <body>
         <div class="header">
             <div class="conf-name">${session.conference_name} - ${new Date(session.start_time).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-            <div class="session-title">${session.full_session_name}</div>
+            <div class="session-title">${session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}</div>
+            ${session.full_session_name.includes('(Chair:') ? `
+                <div style="font-size: 16pt; font-style: italic; color: #555; margin-bottom: 15pt;">
+                    Chair: ${session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                </div>
+            ` : ''}
             <div class="time-box">
                 ${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
