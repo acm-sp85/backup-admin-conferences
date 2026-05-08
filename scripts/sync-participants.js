@@ -50,6 +50,7 @@ async function syncParticipants() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         registration_id INT NOT NULL,
         amount DECIMAL(10,2),
+        balance DECIMAL(10,2) DEFAULT 0.00,
         currency VARCHAR(10) DEFAULT 'EUR',
         status VARCHAR(50),
         payment_method VARCHAR(50),
@@ -104,6 +105,7 @@ async function syncParticipants() {
     try {
         const paymentCols = [
             { name: 'invoice_code', type: 'VARCHAR(100)' },
+            { name: 'balance', type: 'DECIMAL(10,2) DEFAULT NULL' },
             { name: 'client_name', type: 'VARCHAR(255)' },
             { name: 'client_country_id', type: 'VARCHAR(100)' },
             { name: 'group_name', type: 'VARCHAR(100)' },
@@ -216,12 +218,13 @@ async function syncParticipants() {
 
           await mariadb.execute(`
             INSERT INTO payments (
-              registration_id, amount, currency, status, payment_method, mongo_id,
+              registration_id, amount, balance, currency, status, payment_method, mongo_id,
               invoice_code, client_name, client_country_id, group_name, tickets_info
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
               amount = VALUES(amount),
+              balance = VALUES(balance),
               status = VALUES(status),
               invoice_code = VALUES(invoice_code),
               client_name = VALUES(client_name),
@@ -231,6 +234,7 @@ async function syncParticipants() {
           `, [
             registrationId,
             pay.total || 0,
+            pay.balance !== undefined ? pay.balance : null,
             pay.currency || 'EUR',
             pay.status || 'Paid',
             pay.method || 'Unknown',

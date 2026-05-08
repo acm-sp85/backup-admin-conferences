@@ -135,16 +135,16 @@ async function syncAll() {
           const mongoId = pay._id.toString();
           await mariadb.execute(`
             INSERT INTO payments (
-              registration_id, amount, currency, status, payment_method, mongo_id,
+              registration_id, amount, balance, currency, status, payment_method, mongo_id,
               invoice_code, client_name, client_country_id, group_name, tickets_info
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-              amount = VALUES(amount), status = VALUES(status), invoice_code = VALUES(invoice_code),
+              amount = VALUES(amount), balance = VALUES(balance), status = VALUES(status), invoice_code = VALUES(invoice_code),
               client_name = VALUES(client_name), client_country_id = VALUES(client_country_id),
               group_name = VALUES(group_name), tickets_info = VALUES(tickets_info)
           `, [
-            registrationId, pay.total || 0, pay.currency || 'EUR', pay.status || 'Paid',
+            registrationId, pay.total || 0, pay.balance !== undefined ? pay.balance : null, pay.currency || 'EUR', pay.status || 'Paid',
             pay.method || 'Unknown', mongoId, pay.code || null, pay.client?.name || null,
             pay.client?.country?.$oid || null, pay.group?.name || null, 
             pay.tickets ? JSON.stringify(pay.tickets) : null
