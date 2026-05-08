@@ -85,6 +85,12 @@ async function syncAll() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // 0.2 Ensure program_sessions has is_hidden column
+    try {
+      await mariadb.execute('ALTER TABLE program_sessions ADD COLUMN is_hidden TINYINT(1) DEFAULT 0');
+      console.log('✅ Added is_hidden column to program_sessions');
+    } catch (e) { /* ignore duplicate */ }
+
     // 1. Ensure Conference exists
     let conferenceId = await ensureConference(mariadb, targetConferenceAcronym, targetConferenceName);
 
@@ -265,6 +271,7 @@ async function syncAll() {
           VALUES (?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE session_name = VALUES(session_name), full_session_name = VALUES(full_session_name),
                                   start_time = VALUES(start_time), end_time = VALUES(end_time)
+                                  /* is_hidden is intentionally omitted to preserve manual state */
         `, [conferenceId, session.session_name, session.full_session_name, 
             session.start_time ? new Date(session.start_time) : null,
             session.end_time ? new Date(session.end_time) : null, mongoId]);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProgram, getConferenceConfig, updateDoorSignConfig } from '../actions/program';
+import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility } from '../actions/program';
 
 export default function ProgramManager({ conferences }) {
     const [selectedConfId, setSelectedConfId] = useState(conferences[0]?.id || '');
@@ -9,6 +9,8 @@ export default function ProgramManager({ conferences }) {
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState(null);
     const [isCustomizing, setIsCustomizing] = useState(false);
+    const [showHidden, setShowHidden] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(null);
 
     useEffect(() => {
         if (selectedConfId) {
@@ -43,15 +45,29 @@ export default function ProgramManager({ conferences }) {
         }
     };
 
+    const handleToggleVisibility = async (sessionId, currentHidden) => {
+        setIsUpdating(sessionId);
+        try {
+            await toggleSessionVisibility(sessionId, !currentHidden);
+            await loadData();
+        } catch (error) {
+            alert('Error updating visibility: ' + error.message);
+        } finally {
+            setIsUpdating(null);
+        }
+    };
+
     // Group sessions by day
-    const groupedProgram = program.reduce((groups, session) => {
-        const date = new Date(session.start_time).toLocaleDateString('en-GB', { 
-            weekday: 'long', day: 'numeric', month: 'long' 
-        });
-        if (!groups[date]) groups[date] = [];
-        groups[date].push(session);
-        return groups;
-    }, {});
+    const groupedProgram = program
+        .filter(s => showHidden || !s.is_hidden)
+        .reduce((groups, session) => {
+            const date = new Date(session.start_time).toLocaleDateString('en-GB', { 
+                weekday: 'long', day: 'numeric', month: 'long' 
+            });
+            if (!groups[date]) groups[date] = [];
+            groups[date].push(session);
+            return groups;
+        }, {});
 
     return (
         <div className="space-y-6">
@@ -72,6 +88,17 @@ export default function ProgramManager({ conferences }) {
                             Total Sessions: <strong className="text-[var(--foreground)] ml-1">{program.length}</strong>
                         </div>
                     )}
+                    <button 
+                        onClick={() => setShowHidden(!showHidden)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            showHidden 
+                            ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                    >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        {showHidden ? 'Showing Hidden' : 'Show Hidden'}
+                    </button>
                 </div>
                 
                 <div className="flex gap-2">
@@ -105,7 +132,7 @@ export default function ProgramManager({ conferences }) {
                             <h3 className="text-lg font-bold text-slate-800 border-b pb-2 sticky top-0 bg-[var(--bg)] z-10">{day}</h3>
                             <div className="grid grid-cols-1 gap-4">
                                 {sessions.map(session => (
-                                    <div key={session.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-300 transition-colors">
+                                    <div key={session.id} className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-300 transition-all ${session.is_hidden ? 'opacity-50 grayscale-[0.5]' : ''}`}>
                                         <div className="p-4 flex justify-between items-start bg-slate-50/50">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
@@ -113,17 +140,40 @@ export default function ProgramManager({ conferences }) {
                                                         {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                     <span className="text-xs font-semibold text-slate-600">{session.session_name}</span>
+                                                    {!!session.is_hidden && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
+                                                    )}
                                                 </div>
                                                 <h4 className="font-bold text-slate-800">{session.full_session_name}</h4>
                                             </div>
-                                            <a 
-                                                href={`/program/print/${session.id}`}
-                                                target="_blank"
-                                                className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 transition-all"
-                                            >
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                                                Door Sign
-                                            </a>
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={() => handleToggleVisibility(session.id, session.is_hidden)}
+                                                    disabled={isUpdating === session.id}
+                                                    className={`opacity-0 group-hover:opacity-100 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                                        session.is_hidden ? 'text-green-600 hover:text-green-700' : 'text-slate-400 hover:text-red-500'
+                                                    }`}
+                                                >
+                                                    {isUpdating === session.id ? (
+                                                        <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                                                    ) : session.is_hidden ? (
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    ) : (
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                                    )}
+                                                    {session.is_hidden ? 'Restore' : 'Hide'}
+                                                </button>
+                                                {!session.is_hidden && (
+                                                    <a 
+                                                        href={`/program/print/${session.id}`}
+                                                        target="_blank"
+                                                        className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 transition-all"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                                        Door Sign
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="p-4 border-t border-slate-100">
                                             <ul className="space-y-3">

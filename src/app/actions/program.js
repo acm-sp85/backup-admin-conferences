@@ -64,3 +64,18 @@ export async function getConferenceConfig(conferenceId) {
 
     return { config, bgUrl: conf?.door_sign_bg };
 }
+
+export async function toggleSessionVisibility(sessionId, isHidden) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    await query(
+        'UPDATE program_sessions SET is_hidden = ? WHERE id = ?',
+        [isHidden ? 1 : 0, sessionId]
+    );
+
+    revalidatePath('/program');
+    return { success: true };
+}

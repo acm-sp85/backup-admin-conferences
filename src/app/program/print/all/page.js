@@ -13,7 +13,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
     // Fetch all sessions for this conference
     const sessions = await query(`
         SELECT * FROM program_sessions 
-        WHERE conference_id = ? 
+        WHERE conference_id = ? AND (is_hidden = 0 OR is_hidden IS NULL)
         ORDER BY start_time ASC, session_name ASC
     `, [conferenceId]);
 

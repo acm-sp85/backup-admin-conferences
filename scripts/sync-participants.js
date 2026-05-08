@@ -94,6 +94,11 @@ async function syncParticipants() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // 0.3 Ensure program_sessions has is_hidden column
+    try {
+      await mariadb.execute('ALTER TABLE program_sessions ADD COLUMN is_hidden TINYINT(1) DEFAULT 0');
+    } catch (e) { /* ignore duplicate */ }
+
     // 1. Ensure Conference exists
     let [confRows] = await mariadb.execute('SELECT id FROM conferences WHERE acronym = ?', [targetConferenceAcronym]);
     let conferenceId;
@@ -360,6 +365,7 @@ async function syncParticipants() {
                 full_session_name = VALUES(full_session_name),
                 start_time = VALUES(start_time),
                 end_time = VALUES(end_time)
+                /* is_hidden is intentionally omitted to preserve manual state */
         `, [
             conferenceId,
             session.session_name,
