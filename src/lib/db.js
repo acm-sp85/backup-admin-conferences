@@ -1,21 +1,25 @@
 import mysql from 'mysql2/promise';
 
-let pool;
+// Prevent multiple pools in development/hot-reload
+const globalForDb = global;
 
 export const getConnection = async () => {
-    if (!pool) {
-        pool = mysql.createPool({
+    if (!globalForDb.pool) {
+        console.log('📦 Creating new DB connection pool...');
+        globalForDb.pool = mysql.createPool({
             host: process.env.DB_HOST || '127.0.0.1',
             port: Number(process.env.DB_PORT) || 3306,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.replace(/\\(\$)/g, '$1') : process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
             waitForConnections: true,
-            connectionLimit: 10,
+            connectionLimit: 5, // Reduced from 10 to be safer on shared environments
             queueLimit: 0,
+            enableKeepAlive: true,
+            keepAliveInitialDelay: 10000
         });
     }
-    return pool;
+    return globalForDb.pool;
 };
 
 export const query = async (sql, params) => {

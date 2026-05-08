@@ -77,6 +77,9 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                     )}
 
                     <form onSubmit={handleSubmit}>
+                        {/* Hidden input to preserve email safety lock state if not editable in modal */}
+                        <input type="hidden" name="emails_enabled" value={conference?.emails_enabled ? 'on' : 'off'} />
+                        
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                             {/* Left Column: Conference Details */}
                             <div className="space-y-5">
