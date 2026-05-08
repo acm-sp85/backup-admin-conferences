@@ -149,3 +149,17 @@ body {
   color: var(--muted);
   margin: 1rem 0;
 }
+
+/* Email Preview Styles */
+.email-preview-container {
+    background: white !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    color: #1d1d1f !important;
+}
+.email-preview-container img {
+    max-width: 100%;
+    height: auto;
+}
+.email-preview-container a {
+    pointer-events: none; /* Disable links in preview */
+}

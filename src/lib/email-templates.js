@@ -15,7 +15,7 @@ export const EMAIL_CONFIG = {
 /**
  * HELPER: Safe defaults for conference data
  */
-const getBranding = (conf) => {
+export const getBranding = (conf) => {
     let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin-conferencias.vercel.app';
     if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
 
@@ -39,7 +39,7 @@ const getBranding = (conf) => {
 /**
  * HELPER: Simple wrapper for logo if it exists
  */
-const renderHeader = (brand) => {
+export const renderHeader = (brand) => {
     let html = '';
     
     // Banner (Wide, at the very top)
@@ -173,5 +173,74 @@ export const emailTemplates = {
                 </div>
             `
         };
+    }
+};
+
+/**
+ * Returns the default email body as a string with ${placeholder} syntax
+ * for use in the admin dashboard UI.
+ */
+export const getDefaultEmailBody = (type, conference) => {
+    const brand = getBranding(conference);
+    
+    switch(type) {
+        case 'magicLink':
+            return `
+<div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
+    \${renderHeader(brand)}
+    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Login to \${brand.name} Poster Voting System</h2>
+    <p style="font-size: 14px; color: #666; margin-bottom: 24px;">Click the button below to sign in to your account. This link expires in 15 minutes.</p>
+    <a href="\${magicLink}" style="display: block; background: \${brand.accentColor}; color: white; text-align: center; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Sign In</a>
+    <p style="font-size: 11px; color: #999; margin-top: 24px; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
+</div>
+`.replace('\\${renderHeader(brand)}', renderHeader(brand))
+ .replace('\\${brand.name}', brand.name)
+ .replace('\\${brand.accentColor}', brand.accentColor);
+
+        case 'posterVotingInvite':
+            return `
+<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+    \${renderHeader(brand)}
+    <h2 style="color: #1e293b; margin-bottom: 20px;">Poster Voting Invitation</h2>
+    <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
+        Hello \${name},<br><br>
+        You have been invited to participate in the poster voting process for <strong>\${brand.name}</strong>. 
+        Please use the link below to access your assigned clusters and cast your votes.
+    </p>
+    <div style="margin: 30px 0;">
+        <a href="\${magicLink}" style="background-color: \${brand.accentColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+            Log In to Vote
+        </a>
+    </div>
+    <p style="color: #64748b; font-size: 13px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+        <strong>Instructions:</strong><br>
+        1. Log in to the platform using the button above.<br>
+        2. Go to the "Voting" tab to see your assigned posters.<br>
+        3. Rank them from 1 to 10 and save.
+    </p>
+    <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
+    </p>
+</div>
+`.replace('\\${renderHeader(brand)}', renderHeader(brand))
+ .replace('\\${brand.name}', brand.name)
+ .replace('\\${brand.accentColor}', brand.accentColor);
+
+        case 'socialDinnerTickets':
+            return `
+<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+    \${renderHeader(brand)}
+    <h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
+    <p>Here are your tickets for the Social Dinner. Please show these QR codes at the entrance.</p>
+    <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+        This is an automated message from \${brand.name}. For support, contact \${brand.email}.
+    </p>
+</div>
+`.replace('\\${renderHeader(brand)}', renderHeader(brand))
+ .replace('\\${brand.name}', brand.name)
+ .replace('\\${brand.email}', brand.email);
+
+        default:
+            return '';
     }
 };
