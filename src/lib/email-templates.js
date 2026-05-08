@@ -30,8 +30,8 @@ export const getBranding = (conf) => {
         name: conf?.name || 'SCITO Admin',
         email: conf?.email || 'info@scito.org',
         accentColor: conf?.accent_color || '#007aff',
-        logo: formatUrl(conf?.logo_url),
-        banner: formatUrl(conf?.banner_url),
+        logo: formatUrl(conf?.logo_url || 'https://www.nanoge.org/img/logo-nanoge.png'),
+        banner: formatUrl(conf?.banner_url || 'https://www.nanoge.org/img/cabecera2.png'),
         baseUrl
     };
 };

@@ -56,10 +56,17 @@ export async function requestMagicLink(prevState, formData) {
 
 
       // 3. Send Email
-      console.log(`📧 Attempting to send magic link to: ${email} using domain: ${EMAIL_CONFIG.from}`);
-      const results = await query('SELECT id FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
-      const conference = results[0];
-      const { subject, html } = await getEmailTemplate(conference?.id, 'magicLink', { magicLink });
+      console.log(`📧 Attempting to send magic link to: ${email}`);
+      
+      let conferenceId = null;
+      // Only use conference-specific branding if the user is a regular 'user' (voter)
+      // and we have a specific conference acronym defined in the environment.
+      if (user.role === 'user') {
+        const results = await query('SELECT id FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+        conferenceId = results[0]?.id;
+      }
+
+      const { subject, html } = await getEmailTemplate(conferenceId, 'magicLink', { magicLink });
       
       const { data, error } = await resend.emails.send({
         from: EMAIL_CONFIG.from,

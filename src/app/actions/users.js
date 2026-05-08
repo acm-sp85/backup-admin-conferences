@@ -60,9 +60,14 @@ export async function inviteUser(prevState, formData) {
 
 
         // 4. Send invitation email
-        console.log(`📧 Sending invitation to ${email} from ${EMAIL_CONFIG.from}`);
-        const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
-        const conference = results[0];
+        console.log(`📧 Sending invitation to ${email}`);
+        
+        let conference = null;
+        // Only use conference-specific branding if it's a regular user
+        if (role === 'user') {
+            const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+            conference = results[0];
+        }
 
         const template = emailTemplates.userInvitation({
             role,
