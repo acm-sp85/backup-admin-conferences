@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { getPostersForConference, getClustersForConference, updatePosterCluster, bulkUpdatePosterClusters } from '../actions/posters';
 import ClusterManager from './ClusterManager';
 
-export default function PosterManager({ conferences }) {
-    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
+export default function PosterManager({ conferences, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
     const [clusters, setClusters] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -121,7 +120,7 @@ export default function PosterManager({ conferences }) {
                 <div className="flex gap-2 w-full md:w-auto items-center">
                     <select 
                         value={selectedConference}
-                        onChange={(e) => setSelectedConference(e.target.value)}
+                        onChange={(e) => onConferenceChange(e.target.value)}
                         className="input-base font-semibold"
                     >
                         {conferences.map(c => (

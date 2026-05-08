@@ -23,7 +23,7 @@ export default function VotingToggle({ conferenceId, initialStatus }) {
       }}
     >
       <span className="w-[5px] h-[5px] rounded-full" style={{ background: initialStatus ? '#34c759' : '#aeaeb2' }}/>
-      {isPending ? '...' : initialStatus ? 'Open' : 'Closed'}
+      {isPending ? '...' : initialStatus ? 'Voting Open' : 'Voting Closed'}
     </button>
   );
 }

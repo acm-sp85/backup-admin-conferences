@@ -173,6 +173,11 @@ export async function sendVoterInvite(participantId, conferenceId) {
         const participant = participants[0];
         
         if (!participant) return { error: 'Participant/Registration not found' };
+        
+        // 1.5 Safety Check: Is communication enabled for this conference?
+        if (!participant.emails_enabled) {
+            return { error: 'Communication is currently LOCKED for this conference. Please enable it in Conference Settings first.' };
+        }
 
         // 2. Ensure user exists in users table
         const [existingUser] = await query('SELECT id FROM users WHERE email = ?', [participant.participant_email]);

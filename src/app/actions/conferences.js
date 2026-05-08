@@ -23,7 +23,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, voting_validation_enabled, voting_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, voting_validation_enabled, voting_instructions, emails_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -35,7 +35,8 @@ export async function createConference(formData) {
               formData.get('email_poster_voting_invite_body') || null,
               formData.get('email_social_dinner_tickets_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
-              formData.get('voting_instructions') || null
+              formData.get('voting_instructions') || null,
+              formData.get('emails_enabled') === 'on' ? 1 : 0
             ]
           );
         revalidatePath('/');
@@ -82,6 +83,26 @@ export async function toggleVotingWindow(conferenceId, currentStatus) {
     }
 }
 
+export async function toggleEmailsEnabled(conferenceId, currentStatus) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const newStatus = currentStatus === 1 ? 0 : 1;
+        await query(
+            'UPDATE conferences SET emails_enabled = ? WHERE id = ?',
+            [newStatus, conferenceId]
+        );
+        revalidatePath('/');
+        return { success: true, newStatus };
+    } catch (error) {
+        console.error('Toggle emails error:', error);
+        return { error: 'Failed to update communication status' };
+    }
+}
+
 export async function updateConference(id, formData) {
     const session = await verifySession();
     if (!session || session.role !== 'superadmin') {
@@ -101,7 +122,7 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, voting_validation_enabled = ?, voting_instructions = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -114,6 +135,7 @@ export async function updateConference(id, formData) {
               formData.get('email_social_dinner_tickets_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
               formData.get('voting_instructions') || null,
+              formData.get('emails_enabled') === 'on' ? 1 : 0,
               id
             ]
           );

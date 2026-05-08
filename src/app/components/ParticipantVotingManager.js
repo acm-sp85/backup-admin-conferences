@@ -5,8 +5,7 @@ import { searchConferenceParticipants, getVotersForConference, updateParticipant
 import { resetParticipantVotes } from '../actions/posters';
 import ParticipantClusterSelect from './ParticipantClusterSelect';
 
-export default function ParticipantVotingManager({ conferences, allClusters, userRole }) {
-    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
+export default function ParticipantVotingManager({ conferences, allClusters, userRole, selectedConference, onConferenceChange }) {
     const [search, setSearch] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [voters, setVoters] = useState([]);
@@ -84,7 +83,7 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                         <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Conference</label>
                         <select 
                             value={selectedConference}
-                            onChange={(e) => setSelectedConference(e.target.value)}
+                            onChange={(e) => onConferenceChange(e.target.value)}
                             className="input-base w-full font-semibold"
                         >
                             {conferences.map(c => (

@@ -7,6 +7,7 @@ import VotingResults from './VotingResults';
 
 export default function UnifiedPostersView({ conferences, allClusters, userRole }) {
     const [activeTab, setActiveTab] = useState('posters');
+    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
 
     return (
         <div className="space-y-6">
@@ -54,11 +55,25 @@ export default function UnifiedPostersView({ conferences, allClusters, userRole 
 
             <div className="page-enter">
                 {activeTab === 'posters' ? (
-                    <PosterManager conferences={conferences} />
+                    <PosterManager 
+                        conferences={conferences} 
+                        selectedConference={selectedConference}
+                        onConferenceChange={setSelectedConference}
+                    />
                 ) : activeTab === 'voting' ? (
-                    <ParticipantVotingManager conferences={conferences} allClusters={allClusters} />
+                    <ParticipantVotingManager 
+                        conferences={conferences} 
+                        allClusters={allClusters}
+                        selectedConference={selectedConference}
+                        onConferenceChange={setSelectedConference}
+                    />
                 ) : (
-                    <VotingResults conferences={conferences} userRole={userRole} />
+                    <VotingResults 
+                        conferences={conferences} 
+                        userRole={userRole}
+                        selectedConference={selectedConference}
+                        onConferenceChange={setSelectedConference}
+                    />
                 )}
             </div>
         </div>

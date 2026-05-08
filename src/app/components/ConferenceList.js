@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import VotingToggle from './VotingToggle';
+import CommunicationToggle from './CommunicationToggle';
 import ConferenceModal from './ConferenceModal';
 import { deleteConference } from '../actions/conferences';
 
@@ -70,7 +71,7 @@ export default function ConferenceList({ initialConferences, userRole }) {
               <th>Acronym</th>
               <th>Conference Name</th>
               <th>Created</th>
-              <th>Voting</th>
+              <th>Comms & Voting</th>
               <th className="text-right">Actions</th>
             </tr>
           </thead>
@@ -89,7 +90,17 @@ export default function ConferenceList({ initialConferences, userRole }) {
                   {new Date(conf.created_at).toLocaleDateString()}
                 </td>
                 <td>
-                  <VotingToggle conferenceId={conf.id} initialStatus={conf.voting_window_open} />
+                  <div className="flex items-center gap-2">
+                    <CommunicationToggle 
+                      conferenceId={conf.id} 
+                      initialStatus={conf.emails_enabled} 
+                      isSuperAdmin={isSuperAdmin}
+                    />
+                    <VotingToggle 
+                      conferenceId={conf.id} 
+                      initialStatus={conf.voting_window_open} 
+                    />
+                  </div>
                 </td>
                 <td className="text-right">
                   <button 

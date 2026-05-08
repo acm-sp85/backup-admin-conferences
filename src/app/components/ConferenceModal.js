@@ -176,8 +176,10 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     </label>
                                 </div>
 
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Voting Portal Instructions</label>
+                                <div className="space-y-4">
+                                    <div className="pb-2 border-b border-slate-50 mb-2">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Voting Settings</label>
+                                    </div>
                                     <textarea 
                                         name="voting_instructions"
                                         defaultValue={conference?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}

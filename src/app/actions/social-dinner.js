@@ -108,9 +108,12 @@ export async function sendSocialDinnerQR(registrationId) {
     }));
 
 
-    // Fetch conference details for branding
-    const results = await query('SELECT id FROM conferences WHERE acronym = ?', [participant.conference]);
-    const conference = results[0];
+    // Fetch conference details for branding and safety check
+    const [conference] = await query('SELECT id, emails_enabled FROM conferences WHERE acronym = ?', [participant.conference]);
+    
+    if (!conference?.emails_enabled) {
+        throw new Error('Communication is currently LOCKED for this conference. Please enable it in Conference Settings first.');
+    }
 
     // Send Email
     const { subject, html } = await getEmailTemplate(conference?.id, 'socialDinnerTickets', {

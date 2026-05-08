@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { getPostersForConference, resetVotingResults } from '../actions/posters';
 import VoteDetailsModal from './VoteDetailsModal';
 
-export default function VotingResults({ conferences, userRole }) {
-    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
+export default function VotingResults({ conferences, userRole, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
@@ -62,7 +61,7 @@ export default function VotingResults({ conferences, userRole }) {
                 <div className="flex gap-2 w-full md:w-auto items-center">
                     <select 
                         value={selectedConference}
-                        onChange={(e) => setSelectedConference(e.target.value)}
+                        onChange={(e) => onConferenceChange(e.target.value)}
                         className="input-base font-semibold"
                     >
                         {conferences.map(c => (
