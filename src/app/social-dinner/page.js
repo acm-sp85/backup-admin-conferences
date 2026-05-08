@@ -60,7 +60,7 @@ export default async function SocialDinnerPage({ searchParams }) {
 
   // 2. Fetch all payments for these registrations
   const payments = await query(`
-    SELECT registration_id, amount, status, currency, invoice_code as invoice, client_name as client, payment_method as method, tickets_info as tickets, created_at as date
+    SELECT registration_id, amount, balance, status, currency, invoice_code as invoice, client_name as client, payment_method as method, tickets_info as tickets, created_at as date
     FROM payments 
     WHERE registration_id IN (${registrationIds.join(',')})
   `);
@@ -98,6 +98,12 @@ export default async function SocialDinnerPage({ searchParams }) {
             if (!isShowAll && seenPreferences.has(dietary_preference)) return;
             seenPreferences.add(dietary_preference);
 
+            // Calculate dinner-specific debt using same logic as participants page
+            const dinnerDebt = pPayments.reduce((sum, p) => {
+              const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
+              return sum + balance;
+            }, 0);
+
             attendees.push({
               id: `${p.participant_id}-${p.registration_id}-${pay.invoice || Math.random()}-${ticket._id || Math.random()}`,
               name: p.name,
@@ -110,6 +116,8 @@ export default async function SocialDinnerPage({ searchParams }) {
               invoice_code: pay.invoice,
               purchase_date: pay.date,
               payment_status: pay.status,
+              dinner_debt: dinnerDebt,
+              ticket_count: pTickets.length,
               all_payments: pPayments,
               tickets_status: pTickets
             });
@@ -121,10 +129,11 @@ export default async function SocialDinnerPage({ searchParams }) {
     });
   });
 
-  const totalPaid = attendees.filter(a => a.payment_status === 'paid').length;
-  const totalPending = attendees.filter(a => a.payment_status === 'pending').length;
+  const totalPaid = attendees.filter(a => a.payment_status === 'paid' && a.dinner_debt <= 0).length;
+  const totalPending = attendees.filter(a => a.payment_status === 'pending' || a.dinner_debt > 0).length;
   const totalRefunded = attendees.filter(a => a.payment_status === 'refunded').length;
   const totalActive = totalPaid + totalPending;
+  const totalDebtAmount = attendees.reduce((sum, a) => sum + (a.dinner_debt || 0), 0);
 
   return (
     <DashboardLayout>
@@ -153,6 +162,11 @@ export default async function SocialDinnerPage({ searchParams }) {
             <div className="text-[10px] bg-orange-50 px-3 py-1.5 rounded-full text-orange-600 font-medium border border-orange-100">
               Pending: <strong className="text-orange-700 ml-1">{totalPending}</strong>
             </div>
+            {totalDebtAmount > 0 && (
+              <div className="text-[10px] bg-red-50 px-3 py-1.5 rounded-full text-red-600 font-medium border border-red-100">
+                Debt Owed: <strong className="text-red-700 ml-1">{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(totalDebtAmount)}</strong>
+              </div>
+            )}
             {totalRefunded > 0 && (
               <div className="text-[10px] bg-red-50 px-3 py-1.5 rounded-full text-red-600 font-medium border border-red-100">
                 Refunded: <strong className="text-red-700 ml-1">{totalRefunded}</strong>

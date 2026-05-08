@@ -8,24 +8,30 @@ export default function ParticipantRow({ person, activeConfId }) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const statuses = person.payment_statuses ? person.payment_statuses.toLowerCase().split(', ') : [];
-    const isPaid = statuses.length > 0 && statuses.every(s => s === 'paid');
-    const isPending = statuses.includes('pending');
-    const hasNoPayments = statuses.length === 0;
-
-    const confTokens = person.conference_tokens ? person.conference_tokens.split('|').map(item => {
-        const [acronym, token] = item.split(':');
-        return { acronym, token };
-    }) : [];
-
     // Parse all payments from the JSON array
     const payments = person.all_payments_json ? (typeof person.all_payments_json === 'string' ? JSON.parse(person.all_payments_json) : person.all_payments_json) : [];
     
+    // Calculate total debt: use balance if it exists, otherwise use amount if not paid
+    const totalDebt = payments.reduce((sum, pay) => {
+        const balance = pay?.balance !== null ? Number(pay?.balance) : (pay?.status?.toLowerCase() !== 'paid' ? Number(pay?.amount || 0) : 0);
+        return sum + balance;
+    }, 0);
+
     // Filter out nulls and sort by date latest first
     const validPayments = Array.isArray(payments) ? payments.filter(p => p !== null) : [];
     const sortedPayments = validPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
     
     // Get latest info for the summary display
     const latestPayment = sortedPayments[0] || null;
+
+    const isPaid = statuses.length > 0 && statuses.every(s => s === 'paid') && totalDebt <= 0;
+    const isPending = statuses.includes('pending') || totalDebt > 0;
+    const hasNoPayments = statuses.length === 0;
+
+    const confTokens = person.conference_tokens ? person.conference_tokens.split('|').map(item => {
+        const [acronym, token] = item.split(':');
+        return { acronym, token };
+    }) : [];
 
     return (
         <>
@@ -76,15 +82,23 @@ export default function ParticipantRow({ person, activeConfId }) {
                                 <span className="w-[4px] h-[4px] rounded-full" style={{ background: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#aeaeb2' }} />
                                 {isPaid ? 'Paid' : isPending ? 'Pending' : 'Mixed'}
                             </span>
-                            <div className="flex items-baseline gap-1.5 mt-0.5">
-                                <span className="text-xs font-medium text-[var(--foreground)]">
+                        <div className="flex flex-col gap-1 mt-1">
+                            {totalDebt > 0 ? (
+                                <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
+                                    <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                                    Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(totalDebt)}
+                                </div>
+                            ) : (
+                                <div className="text-[11px] font-bold text-[var(--foreground)]">
                                     {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(person.total_paid)}
-                                </span>
-                                {latestPayment?.invoice && (
-                                    <span className="text-[9px] text-[var(--muted)] font-mono">{latestPayment.invoice}</span>
-                                )}
-                            </div>
+                                </div>
+                            )}
+                            
+                            {latestPayment?.invoice && (
+                                <span className="text-[9px] text-[var(--muted)] font-mono">{latestPayment.invoice}</span>
+                            )}
                         </div>
+                    </div>
                     )}
                 </td>
                 <td className="text-right py-4" onClick={(e) => e.stopPropagation()}>
@@ -175,7 +189,15 @@ export default function ParticipantRow({ person, activeConfId }) {
                                                         ))}
                                                     </ul>
                                                     <div className="mt-2 pt-2 border-t border-slate-200/60 flex justify-between items-baseline">
-                                                        <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date).toLocaleDateString()} via {pay.method || 'ndef'}</span>
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date).toLocaleDateString()} via {pay.method || 'ndef'}</span>
+                                                            {(() => {
+                                                                const effectiveBalance = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
+                                                                return effectiveBalance > 0 && (
+                                                                    <span className="text-[9px] text-red-500 font-bold">Unpaid: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(effectiveBalance)}</span>
+                                                                );
+                                                            })()}
+                                                        </div>
                                                         <span className="text-xs font-bold text-[var(--foreground)]">{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(pay.amount)}</span>
                                                     </div>
                                                 </div>

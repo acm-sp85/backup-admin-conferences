@@ -86,14 +86,32 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
             />
           </div>
         </td>
-        <td>
-          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-            person.payment_status === 'paid' ? 'bg-[#34c759]/10 text-[#34c759]' :
-            person.payment_status === 'pending' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
-            'bg-[#ff3b30]/10 text-[#ff3b30]'
-          }`}>
-            {person.payment_status || 'Unknown'}
+        <td className="text-center">
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold">
+            {person.ticket_count ?? 0}
           </span>
+        </td>
+        <td>
+          <div className="flex flex-col gap-1">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit ${
+              person.dinner_debt > 0 ? 'bg-[#ff3b30]/10 text-[#ff3b30]' :
+              person.payment_status === 'paid' ? 'bg-[#34c759]/10 text-[#34c759]' :
+              person.payment_status === 'pending' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
+              'bg-[#ff3b30]/10 text-[#ff3b30]'
+            }`}>
+              {person.dinner_debt > 0 ? 'Unpaid' : person.payment_status || 'Unknown'}
+            </span>
+            {person.dinner_debt > 0 ? (
+              <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
+                <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
+              </div>
+            ) : (
+              <div className="text-[11px] font-bold text-[var(--foreground)]">
+                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.amount_paid)}
+              </div>
+            )}
+          </div>
         </td>
         <td>
           <div className="text-[13px] font-medium">{person.dietary_preference}</div>
@@ -216,12 +234,20 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                   </div>
                   <div className="mt-4 pt-3 border-t-2 border-slate-100 flex justify-between items-center">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--foreground)]">Total Combined</span>
-                    <span className="text-sm font-black text-[#0071e3]">
-                      {new Intl.NumberFormat('de-DE', { 
-                        style: 'currency', 
-                        currency: person.currency || 'EUR' 
-                      }).format(person.all_payments?.reduce((sum, p) => p.status === 'paid' ? sum + Number(p.amount) : sum, 0))}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-sm font-black text-[#0071e3]">
+                        {new Intl.NumberFormat('de-DE', { 
+                          style: 'currency', 
+                          currency: person.currency || 'EUR' 
+                        }).format(person.all_payments?.reduce((sum, p) => p.status === 'paid' ? sum + Number(p.amount) : sum, 0))}
+                      </div>
+                      {person.dinner_debt > 0 && (
+                        <div className="text-[10px] text-red-600 font-bold flex items-center justify-end gap-1 mt-0.5">
+                          <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                          Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

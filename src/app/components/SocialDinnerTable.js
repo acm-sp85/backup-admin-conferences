@@ -147,10 +147,16 @@ export default function SocialDinnerTable({ attendees, userRole }) {
               Conference <SortIcon column="conference" />
             </th>
             <th 
-              className="cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => handleSort('payment_status')}
+              className="cursor-pointer hover:bg-slate-50 transition-colors text-center"
+              onClick={() => handleSort('ticket_count')}
             >
-              Payment <SortIcon column="payment_status" />
+              # Tickets <SortIcon column="ticket_count" />
+            </th>
+            <th 
+              className="cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => handleSort('dinner_debt')}
+            >
+              Payment / Debt <SortIcon column="dinner_debt" />
             </th>
             <th 
               className="cursor-pointer hover:bg-slate-50 transition-colors"

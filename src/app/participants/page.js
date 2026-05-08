@@ -13,13 +13,13 @@ export default async function ParticipantsPage({ searchParams }) {
     redirect(session ? '/voting' : '/login');
   }
 
-  const { search, conference, status } = await searchParams;
+  const { search, conference, status, sortBy = 'created_at', order = 'desc' } = await searchParams;
 
   const conferences = await query('SELECT id, acronym FROM conferences ORDER BY acronym ASC');
   const activeConf = conferences.find(c => c.acronym === conference);
   const activeConfId = activeConf?.id;
 
-  // 1. Fetch participants with their registration summary
+  // 1. Fetch participants
   let sql = `
     SELECT 
       p.*, 
@@ -81,6 +81,10 @@ export default async function ParticipantsPage({ searchParams }) {
     
     // Summary data for the row
     const total_paid = pPayments.reduce((sum, pay) => pay.status === 'paid' ? sum + Number(pay.amount) : sum, 0);
+    const total_debt = pPayments.reduce((sum, pay) => {
+      const balance = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
+      return sum + balance;
+    }, 0);
     const payment_statuses = [...new Set(pPayments.map(pay => pay.status))].join(', ');
     const conference_tokens = pRegs.map(r => `${r.acronym}:${r.check_in_token || ''}`).join('|');
     
@@ -90,24 +94,60 @@ export default async function ParticipantsPage({ searchParams }) {
     return {
       ...p,
       total_paid,
+      total_debt,
       payment_statuses,
       conference_tokens,
       cluster_for_review: primaryReg?.cluster_for_review,
-      all_payments_json: JSON.stringify(pPayments) // We stringify here so the component can JSON.parse it back
+      all_payments_json: JSON.stringify(pPayments) 
     };
   });
 
-  // 5. Filter by payment status if requested (since we now have the data in JS)
+  // 5. Filter and Sort
   let filteredParticipants = participants;
   if (status) {
     if (status === 'paid') {
-      filteredParticipants = participants.filter(p => p.payment_statuses.includes('paid') && !p.payment_statuses.includes('pending'));
+      filteredParticipants = participants.filter(p => 
+        p.payment_statuses.toLowerCase().includes('paid') && 
+        !p.payment_statuses.toLowerCase().includes('pending') &&
+        p.total_debt <= 0
+      );
     } else if (status === 'pending') {
-      filteredParticipants = participants.filter(p => p.payment_statuses.includes('pending'));
+      filteredParticipants = participants.filter(p => 
+        p.payment_statuses.toLowerCase().includes('pending') || 
+        p.total_debt > 0
+      );
     } else if (status === 'none') {
       filteredParticipants = participants.filter(p => !p.payment_statuses);
     }
   }
+
+  // Apply Sorting
+  filteredParticipants.sort((a, b) => {
+    let valA, valB;
+    switch (sortBy) {
+      case 'name': valA = a.name; valB = b.name; break;
+      case 'email': valA = a.email; valB = b.email; break;
+      case 'paid': valA = a.total_paid; valB = b.total_paid; break;
+      case 'debt': valA = a.total_debt; valB = b.total_debt; break;
+      case 'created_at': valA = new Date(a.created_at); valB = new Date(b.created_at); break;
+      default: valA = new Date(a.created_at); valB = new Date(b.created_at);
+    }
+    
+    if (valA < valB) return order === 'asc' ? -1 : 1;
+    if (valA > valB) return order === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const getSortUrl = (field) => {
+    const newOrder = sortBy === field && order === 'asc' ? 'desc' : 'asc';
+    const params = new URLSearchParams({ search: search || '', conference: conference || '', status: status || '', sortBy: field, order: newOrder });
+    return `?${params.toString()}`;
+  };
+
+  const SortIcon = ({ field }) => {
+    if (sortBy !== field) return <span className="opacity-20 ml-1">↕</span>;
+    return <span className="ml-1 text-indigo-600">{order === 'asc' ? '↑' : '↓'}</span>;
+  };
 
   return (
     <DashboardLayout>
@@ -127,11 +167,16 @@ export default async function ParticipantsPage({ searchParams }) {
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
+              <th><a href={getSortUrl('name')} className="hover:text-indigo-600 flex items-center">Name <SortIcon field="name" /></a></th>
+              <th><a href={getSortUrl('email')} className="hover:text-indigo-600 flex items-center">Email <SortIcon field="email" /></a></th>
               <th>Conferences</th>
-              <th>Payment</th>
-              <th className="text-right">Actions</th>
+              <th>
+                <div className="flex gap-4">
+                  <a href={getSortUrl('paid')} className="hover:text-indigo-600 flex items-center">Paid <SortIcon field="paid" /></a>
+                  <a href={getSortUrl('debt')} className="hover:text-indigo-600 flex items-center text-red-500">Debt <SortIcon field="debt" /></a>
+                </div>
+              </th>
+              <th className="text-right"><a href={getSortUrl('created_at')} className="hover:text-indigo-600 flex items-center justify-end">Date <SortIcon field="created_at" /></a></th>
             </tr>
           </thead>
           <tbody>
