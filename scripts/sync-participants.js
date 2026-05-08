@@ -50,7 +50,7 @@ async function syncParticipants() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         registration_id INT NOT NULL,
         amount DECIMAL(10,2),
-        balance DECIMAL(10,2) DEFAULT 0.00,
+        balance DECIMAL(10,2) DEFAULT NULL,
         currency VARCHAR(10) DEFAULT 'EUR',
         status VARCHAR(50),
         payment_method VARCHAR(50),
@@ -62,6 +62,19 @@ async function syncParticipants() {
         tickets_info JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT fk_registration FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 0.1 Ensure Graveyard table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS sync_graveyard (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        entity_type VARCHAR(50) NOT NULL,
+        original_id INT,
+        mongo_id VARCHAR(100),
+        conference_id INT,
+        data JSON NOT NULL,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
@@ -133,6 +146,10 @@ async function syncParticipants() {
     const paymentSet = new Set(existingPayments.map(p => p.mongo_id));
     // ---------------------------------------
 
+    const seenRegistrationIds = new Set();
+    const seenPaymentMongoIds = new Set();
+    const seenSessionMongoIds = new Set();
+
     // 2. SYNC PARTICIPANTS
     const partFilter = mongoParticipantsView.includes(targetConferenceAcronym) ? {} : { conference: targetConferenceAcronym };
     const records = await mongoDb.collection(mongoParticipantsView).find(partFilter).toArray();
@@ -174,17 +191,21 @@ async function syncParticipants() {
       }
 
       // Ensure Registration link exists
-      if (!registrationMap.has(participantId)) {
+      let regId = registrationMap.get(participantId);
+      if (!regId) {
         try {
           const checkInToken = crypto.randomBytes(16).toString('hex');
           const [regRes] = await mariadb.execute(
             'INSERT INTO registrations (participant_id, conference_id, status, check_in_token) VALUES (?, ?, ?, ?)', 
             [participantId, conferenceId, 'Registered', checkInToken]
           );
-          registrationMap.set(participantId, regRes.insertId); // Update cache
+          regId = regRes.insertId;
+          registrationMap.set(participantId, regId); // Update cache
           registrationCount++;
         } catch (err) { console.error('Registration link error:', err.message); }
       }
+      
+      if (regId) seenRegistrationIds.add(regId);
     }
 
     // 3. SYNC PAYMENTS
@@ -208,6 +229,7 @@ async function syncParticipants() {
 
       if (registrationId) {
         const mongoId = pay._id.toString();
+        seenPaymentMongoIds.add(mongoId);
         
         try {
           const invoiceCode = pay.code || null;
@@ -254,7 +276,6 @@ async function syncParticipants() {
 
     // 4. SYNC PROGRAM
     console.log(`📥 Fetching program from [${mongoProgramView}]...`);
-    // Filter by conference if not already implicit in the view name
     const progFilter = mongoProgramView.includes(targetConferenceAcronym) ? {} : { conference: targetConferenceAcronym };
     const programRecords = await mongoDb.collection(mongoProgramView).find(progFilter).toArray();
     console.log(`📅 Found ${programRecords.length} sessions in MongoDB`);
@@ -264,6 +285,7 @@ async function syncParticipants() {
 
     for (const session of programRecords) {
         const mongoId = session._id.toString();
+        seenSessionMongoIds.add(mongoId);
         
         // Insert or Update Session
         const [res] = await mariadb.execute(`
@@ -293,7 +315,6 @@ async function syncParticipants() {
         sessionCount++;
 
         // Sync Slots for this session
-        // Clear existing slots first to ensure we have a fresh list (since slots don't have stable mongo IDs usually)
         await mariadb.execute('DELETE FROM program_slots WHERE session_id = ?', [sessionId]);
 
         if (session.full_slots && Array.isArray(session.full_slots)) {
@@ -313,6 +334,72 @@ async function syncParticipants() {
             }
         }
     }
+
+    // --- CLEANUP PHASE (The Mirror logic) ---
+    console.log('🧹 Starting cleanup of stale records...');
+
+    // A. Delete stale registrations
+    if (seenRegistrationIds.size > 0) {
+        const ids = Array.from(seenRegistrationIds).join(',');
+        
+        // Archive first
+        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
+                ['registration', row.id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
+    }
+
+    // B. Delete stale payments (for this conference)
+    if (seenPaymentMongoIds.size > 0) {
+        const mongoIds = Array.from(seenPaymentMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive first
+        const [toArchive] = await mariadb.execute(`
+            SELECT p.* FROM payments p 
+            JOIN registrations r ON p.registration_id = r.id
+            WHERE r.conference_id = ? AND p.mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['payment', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delPays] = await mariadb.execute(`
+            DELETE FROM payments 
+            WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
+            AND mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        if (delPays.affectedRows > 0) console.log(`🗑️  Archived and removed ${delPays.affectedRows} stale payments`);
+    }
+
+    // C. Delete stale program sessions
+    if (seenSessionMongoIds.size > 0) {
+        const mongoIds = Array.from(seenSessionMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive first
+        const [toArchive] = await mariadb.execute(`SELECT * FROM program_sessions WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['session', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delSessions] = await mariadb.execute(`
+            DELETE FROM program_sessions 
+            WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        if (delSessions.affectedRows > 0) console.log(`🗑️  Archived and removed ${delSessions.affectedRows} stale program sessions`);
+    }
+    // ----------------------------------------
 
     console.log(`
 ✨ Sync Summary for ${targetConferenceAcronym}:

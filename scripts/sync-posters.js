@@ -55,11 +55,26 @@ async function syncPosters() {
 
     const mongoDb = mongoClient.db(mongoDbName);
 
+    // 0. Ensure Graveyard table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS sync_graveyard (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        entity_type VARCHAR(50) NOT NULL,
+        original_id INT,
+        mongo_id VARCHAR(100),
+        conference_id INT,
+        data JSON NOT NULL,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     // --- PRE-FETCH DATA FOR OPTIMIZATION ---
     console.log('📡 Pre-fetching existing posters...');
     const [existingPosters] = await mariadb.execute('SELECT mongo_id FROM posters WHERE conference_id = ?', [conferenceId]);
     const posterSet = new Set(existingPosters.map(p => p.mongo_id));
     // ---------------------------------------
+
+    const seenPosterMongoIds = new Set();
 
     // 2. SYNC POSTERS
     const records = await mongoDb.collection(mongoPostersView).find({}).toArray();
@@ -70,6 +85,8 @@ async function syncPosters() {
 
     for (const record of records) {
       const mongoId = record._id.toString();
+      seenPosterMongoIds.add(mongoId);
+
       const title = record.title || 'Untitled Poster';
       const code = record.code || null;
       const authors = record.authors ? JSON.stringify(record.authors) : '[]';
@@ -91,6 +108,28 @@ async function syncPosters() {
         updateCount++;
       }
     }
+
+    // --- CLEANUP PHASE ---
+    console.log('🧹 Cleaning up stale posters...');
+    if (seenPosterMongoIds.size > 0) {
+        const mongoIds = Array.from(seenPosterMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive
+        const [toArchive] = await mariadb.execute(`SELECT * FROM posters WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['poster', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delRes] = await mariadb.execute(`
+            DELETE FROM posters 
+            WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        if (delRes.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRes.affectedRows} stale posters`);
+    }
+    // ---------------------
 
     console.log(`
 ✨ Sync Summary for ${targetConferenceAcronym}:

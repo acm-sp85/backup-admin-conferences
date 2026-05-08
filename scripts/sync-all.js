@@ -56,6 +56,19 @@ async function syncAll() {
 
     const mongoDb = mongoClient.db(mongoDbName);
 
+    // 0. Ensure Graveyard table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS sync_graveyard (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        entity_type VARCHAR(50) NOT NULL,
+        original_id INT,
+        mongo_id VARCHAR(100),
+        conference_id INT,
+        data JSON NOT NULL,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     // 1. Ensure Conference exists
     let conferenceId = await ensureConference(mariadb, targetConferenceAcronym, targetConferenceName);
 
@@ -66,6 +79,13 @@ async function syncAll() {
 
     const [existingRegs] = await mariadb.execute('SELECT id, participant_id FROM registrations WHERE conference_id = ?', [conferenceId]);
     const registrationMap = new Map(existingRegs.map(r => [r.participant_id, r.id]));
+
+    // --- TRACKING FOR MIRROR SYNC ---
+    const seenRegistrationIds = new Set();
+    const seenPaymentMongoIds = new Set();
+    const seenPosterMongoIds = new Set();
+    const seenSessionMongoIds = new Set();
+    // --------------------------------
 
     // --- EXECUTE SYNC MODULES ---
     
@@ -111,6 +131,9 @@ async function syncAll() {
           registrationMap.set(participantId, regRes.insertId);
           summary.registrations++;
         }
+        
+        const regId = registrationMap.get(participantId);
+        if (regId) seenRegistrationIds.add(regId);
       }
     });
 
@@ -133,6 +156,7 @@ async function syncAll() {
 
         if (registrationId) {
           const mongoId = pay._id.toString();
+          seenPaymentMongoIds.add(mongoId);
           await mariadb.execute(`
             INSERT INTO payments (
               registration_id, amount, balance, currency, status, payment_method, mongo_id,
@@ -162,6 +186,7 @@ async function syncAll() {
       console.log(`🖼️  Processing ${records.length} posters...`);
       for (const record of records) {
         const mongoId = record._id.toString();
+        seenPosterMongoIds.add(mongoId);
         if (!posterSet.has(mongoId)) {
           await mariadb.execute(
             'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content, toc) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -185,6 +210,7 @@ async function syncAll() {
       console.log(`📅 Processing ${records.length} sessions...`);
       for (const session of records) {
         const mongoId = session._id.toString();
+        seenSessionMongoIds.add(mongoId);
         const [res] = await mariadb.execute(`
           INSERT INTO program_sessions (conference_id, session_name, full_session_name, start_time, end_time, mongo_id)
           VALUES (?, ?, ?, ?, ?, ?)
@@ -211,6 +237,82 @@ async function syncAll() {
         }
       }
     });
+
+    // --- CLEANUP PHASE (Mirror Logic) ---
+    console.log('\n🧹 Starting cleanup of stale records...');
+    
+    if (seenRegistrationIds.size > 0) {
+        const ids = Array.from(seenRegistrationIds).join(',');
+        
+        // Archive
+        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
+                ['registration', row.id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
+    }
+
+    if (seenPaymentMongoIds.size > 0) {
+        const mongoIds = Array.from(seenPaymentMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive
+        const [toArchive] = await mariadb.execute(`
+            SELECT p.* FROM payments p 
+            JOIN registrations r ON p.registration_id = r.id
+            WHERE r.conference_id = ? AND p.mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['payment', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delPays] = await mariadb.execute(`
+            DELETE FROM payments 
+            WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
+            AND mongo_id NOT IN (${mongoIds})
+        `, [conferenceId]);
+        if (delPays.affectedRows > 0) console.log(`🗑️  Archived and removed ${delPays.affectedRows} stale payments`);
+    }
+
+    if (seenPosterMongoIds.size > 0) {
+        const mongoIds = Array.from(seenPosterMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive
+        const [toArchive] = await mariadb.execute(`SELECT * FROM posters WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['poster', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delPosters] = await mariadb.execute(`DELETE FROM posters WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        if (delPosters.affectedRows > 0) console.log(`🗑️  Archived and removed ${delPosters.affectedRows} stale posters`);
+    }
+
+    if (seenSessionMongoIds.size > 0) {
+        const mongoIds = Array.from(seenSessionMongoIds).map(id => `'${id}'`).join(',');
+        
+        // Archive
+        const [toArchive] = await mariadb.execute(`SELECT * FROM program_sessions WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        for (const row of toArchive) {
+            await mariadb.execute(
+                'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                ['session', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+            );
+        }
+
+        const [delSessions] = await mariadb.execute(`DELETE FROM program_sessions WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+        if (delSessions.affectedRows > 0) console.log(`🗑️  Archived and removed ${delSessions.affectedRows} stale program sessions`);
+    }
+    // ------------------------------------
 
     printSummary(targetConferenceAcronym);
 
