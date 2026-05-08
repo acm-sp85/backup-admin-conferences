@@ -120,8 +120,18 @@ export async function resetVotingResults(conferenceId) {
         // 1. Clear the scores and vote tallies on the posters
         await query('UPDATE posters SET votes_received = NULL, points = 0 WHERE conference_id = ?', [conferenceId]);
         
-        // 2. Clear the "has voted" flag and the votes JSON for all participants in this conference
+        // 2. Clear the "has voted" flag and the votes JSON for all registrations in this conference
         await query('UPDATE registrations SET has_voted = 0, votes = NULL WHERE conference_id = ?', [conferenceId]);
+
+        // 3. Clear the "has voted" flag in the users table for all people registered to this conference
+        // We match by email between participants and users
+        await query(`
+            UPDATE users u
+            JOIN participants p ON u.email = p.email
+            JOIN registrations r ON p.id = r.participant_id
+            SET u.has_voted = 0, u.votes = NULL
+            WHERE r.conference_id = ?
+        `, [conferenceId]);
 
         revalidatePath('/posters');
         revalidatePath('/voting');
