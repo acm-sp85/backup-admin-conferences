@@ -28,7 +28,7 @@ export const getBranding = (conf) => {
 
     return {
         name: conf?.name || 'SCITO Admin',
-        email: conf?.email || 'info@scito.org',
+        email: conf?.email || 'fundacio@scito.org',
         accentColor: conf?.accent_color || '#007aff',
         logo: formatUrl(conf?.logo_url || 'https://www.nanoge.org/img/logo-nanoge.png'),
         banner: formatUrl(conf?.banner_url || 'https://www.nanoge.org/img/cabecera2.png'),
