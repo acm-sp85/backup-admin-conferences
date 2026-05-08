@@ -16,8 +16,36 @@ export default async function VotingPage() {
   const [user] = await query('SELECT id, role, cluster_for_review, has_voted, votes FROM users WHERE id = ?', [session.id]);
   if (!user) redirect('/login');
 
-  // IF ADMIN: Show management UI
-  if (user.role === 'admin' || user.role === 'superadmin') {
+  const clustersIds = typeof user.cluster_for_review === 'string' 
+    ? JSON.parse(user.cluster_for_review) 
+    : (user.cluster_for_review || []);
+  
+  const hasAssignedClusters = clustersIds && clustersIds.length > 0;
+  const isStaff = user.role === 'admin' || user.role === 'superadmin';
+
+  // 2. Fetch clusters that are active (if any)
+  let activeClusters = [];
+  if (hasAssignedClusters) {
+    const clustersIdsString = clustersIds.join(',');
+    activeClusters = await query(`
+        SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email, conf.voting_instructions
+        FROM clusters c 
+        JOIN conferences conf ON c.conference_id = conf.id 
+        WHERE conf.voting_window_open = 1 AND c.id IN (${clustersIdsString})
+    `);
+  }
+
+  // LOGIC:
+  // If user is Staff AND has NO active clusters to vote on -> Show Management UI
+  // If user is Staff AND HAS active clusters -> Show Voting UI
+  // If user is regular Voter -> Show Voting UI (or "No clusters" / "Closed")
+
+  if (isStaff && (activeClusters.length === 0 || !hasAssignedClusters)) {
+    // Check if they have ANY clusters assigned (even if voting is closed)
+    // If they have clusters but voting is closed, we might still want to show them management
+    // OR we show them the "Voting Closed" message with a button to Dashboard.
+    
+    // For now, let's keep it simple: Staff with no active votes = Management
     const conferences = await query('SELECT * FROM conferences ORDER BY name ASC');
     const allClusters = await query('SELECT * FROM clusters ORDER BY name ASC');
     
@@ -31,17 +59,15 @@ export default async function VotingPage() {
         <ParticipantVotingManager 
           conferences={conferences} 
           allClusters={allClusters} 
+          userRole={user.role}
         />
       </DashboardLayout>
     );
   }
 
-  // IF REGULAR USER: Existing voting logic
-  const clustersIds = typeof user.cluster_for_review === 'string' 
-    ? JSON.parse(user.cluster_for_review) 
-    : (user.cluster_for_review || []);
+  // VOTING UI FLOW (for everyone else or staff with active votes)
   
-  if (!clustersIds || clustersIds.length === 0) {
+  if (!hasAssignedClusters) {
     return (
       <DashboardLayout>
         <div className="max-w-md mx-auto mt-20 text-center">
@@ -51,15 +77,6 @@ export default async function VotingPage() {
       </DashboardLayout>
     );
   }
-
-  // 2. Fetch clusters that are active
-  const clustersIdsString = clustersIds.join(',');
-  const activeClusters = await query(`
-    SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email, conf.voting_instructions
-    FROM clusters c 
-    JOIN conferences conf ON c.conference_id = conf.id 
-    WHERE conf.voting_window_open = 1 AND c.id IN (${clustersIdsString})
-  `);
 
   if (activeClusters.length === 0) {
     return (
@@ -72,25 +89,22 @@ export default async function VotingPage() {
     );
   }
 
-  const activeConferenceIds = [...new Set(activeClusters.map(c => c.conference_id))];
   const posters = await query(`
     SELECT * FROM posters 
     WHERE cluster_id IN (${clustersIds.join(',')})
   `);
 
-  const isVoter = user.role === 'user';
-
   return (
     <DashboardLayout>
-      <header className={`mb-6 ${isVoter ? 'flex justify-between items-start' : ''}`}>
+      <header className="mb-6 flex justify-between items-start">
         <div>
-          <h2 className="text-xl font-semibold">{isVoter ? 'Poster Voting' : 'Voting Management'}</h2>
+          <h2 className="text-xl font-semibold">Poster Voting</h2>
           <p className="text-[var(--muted)] text-xs mt-0.5">
-            {isVoter ? (activeClusters[0]?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)') : 'Select a conference to manage participant voting clusters'}
+            {activeClusters[0]?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}
           </p>
         </div>
         
-        {isVoter && (
+        {user.role === 'user' && (
           <form action={logout}>
              <button type="submit" className="text-[11px] font-semibold text-[#ff3b30] cursor-pointer">
                Sign Out
@@ -99,7 +113,7 @@ export default async function VotingPage() {
         )}
       </header>
 
-      {isVoter && !!user.has_voted && (
+      {!!user.has_voted && (
         <div className="card p-4 mb-4 border-amber-200 bg-amber-50">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-amber-600">✓</span>
@@ -114,22 +128,14 @@ export default async function VotingPage() {
         </div>
       )}
 
-      {isVoter ? (
-        <VotingForm 
-          activeClusters={activeClusters} 
-          posters={posters} 
-          initialVotes={typeof user.votes === 'string' ? JSON.parse(user.votes) : (user.votes || {})} 
-          userId={user.id}
-          conferenceEmail={activeClusters[0]?.conference_email}
-          hasVoted={!!user.has_voted}
-        />
-      ) : (
-        <ParticipantVotingManager 
-          conferences={conferences} 
-          allClusters={allClusters} 
-          userRole={user.role}
-        />
-      )}
+      <VotingForm 
+        activeClusters={activeClusters} 
+        posters={posters} 
+        initialVotes={typeof user.votes === 'string' ? JSON.parse(user.votes) : (user.votes || {})} 
+        userId={user.id}
+        conferenceEmail={activeClusters[0]?.conference_email}
+        hasVoted={!!user.has_voted}
+      />
     </DashboardLayout>
   );
 }
