@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { searchConferenceParticipants, getVotersForConference, updateParticipantClusters, removeVoter, sendVoterInvite } from '../actions/participantVoting';
+import { resetParticipantVotes } from '../actions/posters';
 import ParticipantClusterSelect from './ParticipantClusterSelect';
 
 export default function ParticipantVotingManager({ conferences, allClusters }) {
@@ -12,6 +13,7 @@ export default function ParticipantVotingManager({ conferences, allClusters }) {
     const [loading, setLoading] = useState(false);
 
     const [inviteSending, setInviteSending] = useState(null);
+    const [resettingId, setResettingId] = useState(null);
 
     const fetchVoters = async () => {
         if (!selectedConference) return;
@@ -56,6 +58,19 @@ export default function ParticipantVotingManager({ conferences, allClusters }) {
             alert(res.error);
         }
         setInviteSending(null);
+    };
+
+    const handleResetVotes = async (participantId) => {
+        if (!confirm('RESET votes for this user? This will remove their points from all posters and allow them to vote again.')) return;
+        setResettingId(participantId);
+        const res = await resetParticipantVotes(participantId, selectedConference);
+        if (res.success) {
+            alert('Votes reset successfully!');
+            await fetchVoters();
+        } else {
+            alert(res.error);
+        }
+        setResettingId(null);
     };
 
     const filteredClusters = allClusters.filter(c => c.conference_id == selectedConference);
@@ -166,6 +181,18 @@ export default function ParticipantVotingManager({ conferences, allClusters }) {
                                                     <div className="w-3.5 h-3.5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
                                                 ) : (
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                                                )}
+                                            </button>
+                                            <button 
+                                                onClick={() => handleResetVotes(p.id)}
+                                                disabled={resettingId === p.id}
+                                                className={`p-1.5 rounded-md transition-all ${resettingId === p.id ? 'opacity-50' : 'text-amber-500 hover:bg-amber-50'}`}
+                                                title="Reset User Votes"
+                                            >
+                                                {resettingId === p.id ? (
+                                                    <div className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                                                ) : (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                                                 )}
                                             </button>
                                             <button 

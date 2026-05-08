@@ -2,12 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import { getVoteDetails } from '../actions/results';
+import { resetParticipantVotes } from '../actions/posters';
 
-export default function VoteDetailsModal({ isOpen, onClose, poster }) {
+export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId }) {
     const [details, setDetails] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isResetting, setIsResetting] = useState(null);
     const [debug, setDebug] = useState('');
     const [error, setError] = useState('');
+
+    const handleResetVote = async (voter) => {
+        if (!confirm(`Are you sure you want to RESET votes for ${voter.name}? This will remove their points from the rankings and allow them to vote again.`)) return;
+        
+        setIsResetting(voter.id);
+        try {
+            const res = await resetParticipantVotes(voter.id, conferenceId);
+            if (res.success) {
+                // Refresh local details
+                setDetails(prev => prev.filter(v => v.voter.id !== voter.id));
+                alert('Participant votes reset successfully.');
+            } else {
+                alert('Error: ' + res.error);
+            }
+        } catch (e) {
+            alert('Error resetting votes: ' + e.message);
+        } finally {
+            setIsResetting(null);
+        }
+    };
 
     useEffect(() => {
         if (isOpen && poster) {
@@ -91,12 +113,28 @@ export default function VoteDetailsModal({ isOpen, onClose, poster }) {
                                         </div>
                                         <div className="text-[10px] text-slate-400 truncate">{vote.voter.email}</div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Recorded</div>
-                                        <div className="text-[10px] font-medium text-slate-600">
-                                            {new Date(vote.timestamp).toLocaleDateString()}
-                                            <span className="block opacity-50 text-[9px]">{new Date(vote.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <div className="text-right shrink-0 flex items-center gap-4">
+                                        <div className="text-right">
+                                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Recorded</div>
+                                            <div className="text-[10px] font-medium text-slate-600">
+                                                {new Date(vote.timestamp).toLocaleDateString()}
+                                                <span className="block opacity-50 text-[9px]">{new Date(vote.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
                                         </div>
+                                        {vote.voter.type === 'participant' && (
+                                            <button
+                                                onClick={() => handleResetVote(vote.voter)}
+                                                disabled={isResetting === vote.voter.id}
+                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                                                title="Reset this user's votes"
+                                            >
+                                                {isResetting === vote.voter.id ? (
+                                                    <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                                                ) : (
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                )}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

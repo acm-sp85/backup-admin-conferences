@@ -174,7 +174,11 @@ export default function VotingResults({ conferences, userRole }) {
             <VoteDetailsModal 
                 isOpen={!!selectedPosterDetails} 
                 poster={selectedPosterDetails}
-                onClose={() => setSelectedPosterDetails(null)}
+                conferenceId={selectedConference}
+                onClose={() => {
+                    setSelectedPosterDetails(null);
+                    fetchData();
+                }}
             />
         </div>
     );

@@ -50,34 +50,38 @@ export async function getVoteDetails(posterId) {
             console.warn('[VOTE_DEBUG] Registration scan failed:', e.message);
         }
 
-        const userIds = Object.keys(votes);
+        const userIds = Object.keys(votes).filter(id => id && id !== 'null' && id !== 'undefined');
         if (userIds.length === 0) {
             return { 
                 success: true, 
                 details: [], 
-                debug: `No keys found in votes. Raw content was: ${JSON.stringify(poster?.votes_received)}` 
+                debug: `No valid keys found in votes.` 
             };
         }
 
         // 3. Resolve Identities
         let identities = {};
         try {
-            // Fetch raw columns and combine in JS for maximum compatibility
+            // mysql2 needs the array wrapped in another array for IN (?)
             const participants = await query('SELECT id, firstName, lastName, email FROM participants WHERE id IN (?)', [userIds]);
-            const admins = await query('SELECT id, firstName, lastName, email, role FROM users WHERE id IN (?)', [userIds]);
-
-            console.log(`[VOTE_DEBUG] Found ${participants.length} participants and ${admins.length} admins`);
+            const users = await query('SELECT id, firstName, lastName, email, role FROM users WHERE id IN (?) OR email IN (SELECT email FROM participants WHERE id IN (?))', [userIds, userIds]);
 
             participants.forEach(p => {
-                const name = `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.email || "Unnamed Participant";
-                identities[p.id] = { ...p, name, type: "participant" };
-                identities[String(p.id)] = { ...p, name, type: "participant" };
+                const name = `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.email || `Participant ${p.id}`;
+                identities[String(p.id)] = { id: p.id, name, email: p.email, type: "participant" };
             });
 
-            admins.forEach(a => {
-                const name = `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email || "Unnamed Admin";
-                identities[a.id] = { ...a, name, type: "admin" };
-                identities[String(a.id)] = { ...a, name, type: "admin" };
+            users.forEach(u => {
+                const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || `User ${u.id}`;
+                // If this user matches an email of a participant we already found, 
+                // we prefer the user identity but keep the ID mapping
+                identities[String(u.id)] = { id: u.id, name, email: u.email, type: u.role || "voter" };
+                
+                // Also map by participant ID if they are linked by email
+                const linkedParticipant = participants.find(p => p.email === u.email);
+                if (linkedParticipant) {
+                    identities[String(linkedParticipant.id)] = { id: linkedParticipant.id, name, email: u.email, type: u.role || "voter" };
+                }
             });
         } catch (e) {
             console.warn('[VOTE_DEBUG] Identity resolution failed:', e.message);
@@ -92,7 +96,7 @@ export async function getVoteDetails(posterId) {
             return {
                 value,
                 timestamp,
-                voter: identities[uid] || { name: `Unknown Voter (ID: ${uid})`, email: 'N/A', type: 'unknown' }
+                voter: identities[String(uid)] || { id: uid, name: `Unknown (ID: ${uid})`, email: 'Email not found', type: 'unknown' }
             };
         }).sort((a, b) => {
             if (!a.timestamp) return 1;

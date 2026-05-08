@@ -141,3 +141,98 @@ export async function resetVotingResults(conferenceId) {
         throw new Error('Failed to reset voting results');
     }
 }
+
+export async function resetParticipantVotes(participantId, conferenceId) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        // 1. Get the current votes for this participant in this conference
+        const [reg] = await query(
+            'SELECT votes, participant_id FROM registrations WHERE participant_id = ? AND conference_id = ?',
+            [participantId, conferenceId]
+        );
+
+        if (!reg || !reg.votes) {
+            // Already reset or never voted
+            return { success: true };
+        }
+
+        let userVotes = {};
+        try {
+            userVotes = typeof reg.votes === 'string' ? JSON.parse(reg.votes) : reg.votes;
+        } catch (e) { userVotes = {}; }
+
+        // 2. We need to find the User ID used as the key in posters table
+        // The submission logic uses the login ID. We'll find it by email.
+        const [participant] = await query('SELECT email FROM participants WHERE id = ?', [participantId]);
+        const [user] = await query('SELECT id FROM users WHERE email = ?', [participant.email]);
+        const voterKey = user ? user.id : participantId; // Fallback to participantId
+
+        // 3. Update each poster to subtract these points
+        const { getConnection } = require('@/lib/db');
+        const pool = await getConnection();
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            for (const [posterId, score] of Object.entries(userVotes)) {
+                const [rows] = await connection.execute(
+                    'SELECT votes_received, points FROM posters WHERE id = ? FOR UPDATE',
+                    [posterId]
+                );
+                const poster = rows[0];
+
+                if (poster) {
+                    let votesReceived = {};
+                    try {
+                        votesReceived = typeof poster.votes_received === 'string' 
+                            ? JSON.parse(poster.votes_received) 
+                            : (poster.votes_received || {});
+                    } catch (e) {}
+
+                    if (votesReceived[voterKey]) {
+                        const oldScore = votesReceived[voterKey];
+                        const newPoints = Math.max(0, poster.points - oldScore);
+                        delete votesReceived[voterKey];
+
+                        await connection.execute(
+                            'UPDATE posters SET votes_received = ?, points = ? WHERE id = ?',
+                            [JSON.stringify(votesReceived), newPoints, posterId]
+                        );
+                    }
+                }
+            }
+
+            // 4. Clear the flags in registrations and users
+            await connection.execute(
+                'UPDATE registrations SET has_voted = 0, votes = NULL WHERE participant_id = ? AND conference_id = ?',
+                [participantId, conferenceId]
+            );
+
+            if (user) {
+                await connection.execute(
+                    'UPDATE users SET has_voted = 0, votes = NULL WHERE id = ?',
+                    [user.id]
+                );
+            }
+
+            await connection.commit();
+        } catch (txnError) {
+            await connection.rollback();
+            throw txnError;
+        } finally {
+            connection.release();
+        }
+
+        revalidatePath('/voting');
+        revalidatePath('/posters');
+        return { success: true };
+    } catch (error) {
+        console.error('Reset participant votes error:', error);
+        return { error: 'Failed to reset votes: ' + error.message };
+    }
+}
