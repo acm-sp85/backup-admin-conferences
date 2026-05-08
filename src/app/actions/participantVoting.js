@@ -121,7 +121,8 @@ export async function getParticipantByToken(token) {
             c.acronym as conference_acronym, 
             c.email as conference_email,
             c.voting_window_open,
-            c.voting_validation_enabled
+            c.voting_validation_enabled,
+            c.voting_instructions
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id

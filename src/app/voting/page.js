@@ -55,7 +55,7 @@ export default async function VotingPage() {
   // 2. Fetch clusters that are active
   const clustersIdsString = clustersIds.join(',');
   const activeClusters = await query(`
-    SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email
+    SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email, conf.voting_instructions
     FROM clusters c 
     JOIN conferences conf ON c.conference_id = conf.id 
     WHERE conf.voting_window_open = 1 AND c.id IN (${clustersIdsString})
@@ -86,7 +86,7 @@ export default async function VotingPage() {
         <div>
           <h2 className="text-xl font-semibold">{isVoter ? 'Poster Voting' : 'Voting Management'}</h2>
           <p className="text-[var(--muted)] text-xs mt-0.5">
-            {isVoter ? 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)' : 'Select a conference to manage participant voting clusters'}
+            {isVoter ? (activeClusters[0]?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)') : 'Select a conference to manage participant voting clusters'}
           </p>
         </div>
         

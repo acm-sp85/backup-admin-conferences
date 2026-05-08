@@ -76,7 +76,9 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                             {participant.conference_acronym} Voting Portal
                         </div>
                         <h2 className="text-4xl font-black text-slate-900">Welcome, {participant.name}</h2>
-                        <p className="text-slate-500 mt-2 text-lg italic">Please rank the following posters from 1 to 10.</p>
+                        <p className="text-slate-500 mt-2 text-lg italic">
+                            {participant.voting_instructions || 'Please rank the following posters from 1 to 10.'}
+                        </p>
                     </div>
                 </header>
 

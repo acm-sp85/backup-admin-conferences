@@ -175,6 +175,16 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         All posters need to be voted on to submit votes
                                     </label>
                                 </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Voting Portal Instructions</label>
+                                    <textarea 
+                                        name="voting_instructions"
+                                        defaultValue={conference?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}
+                                        placeholder="Rank your assigned posters from 1 to 10..."
+                                        className="w-full h-20 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                    />
+                                </div>
                             </div>
 
                                 {/* Right Column: Custom Email Templates */}
