@@ -52,13 +52,13 @@ export const renderHeader = (brand) => {
     }
 
     // Logo (Centered)
-    if (brand.logo) {
-        html += `
-            <div style="text-align: center; margin-bottom: 24px; padding-top: ${brand.banner ? '0' : '20px'};">
-                <img src="${brand.logo}" alt="${brand.name} Logo" style="max-height: 60px; max-width: 200px;" />
-            </div>
-        `;
-    }
+    // if (brand.logo) {
+    //     html += `
+    //         <div style="text-align: center; margin-bottom: 24px; padding-top: ${brand.banner ? '0' : '20px'};">
+    //             <img src="${brand.logo}" alt="${brand.name} Logo" style="max-height: 60px; max-width: 200px;" />
+    //         </div>
+    //     `;
+    // }
 
     return html;
 };
@@ -74,7 +74,7 @@ export const emailTemplates = {
             html: `
               <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
                 ${renderHeader(brand)}
-                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Login to ${brand.name} Poster Voting System</h2>
+                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">Login to ${brand.name} System</h2>
                 <p style="font-size: 14px; color: #666; margin-bottom: 24px;">Click the button below to sign in to your account. This link expires in 15 minutes.</p>
                 <a href="${magicLink}" style="display: block; background: ${brand.accentColor}; color: white; text-align: center; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Sign In</a>
                 <p style="font-size: 11px; color: #999; margin-top: 24px; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
