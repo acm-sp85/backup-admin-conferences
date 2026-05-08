@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { submitVotes } from '../actions/voting';
 
-export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false }) {
+export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false, votingValidationEnabled = true }) {
   const [votes, setVotes] = useState(initialVotes || {});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -43,12 +43,15 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
     setSuccess('');
     setMissingPosterIds([]);
 
-    const missing = posters.filter(p => !votes[p.id]).map(p => p.id);
-    if (missing.length > 0) {
-        setMissingPosterIds(missing);
-        setError(`Please submit a vote for all posters. You have ${missing.length} poster(s) left to rate.`);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
+    // Only validate that all posters are rated if the conference requires it
+    if (votingValidationEnabled) {
+        const missing = posters.filter(p => !votes[p.id]).map(p => p.id);
+        if (missing.length > 0) {
+            setMissingPosterIds(missing);
+            setError(`Please submit a vote for all posters. You have ${missing.length} poster(s) left to rate.`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
     }
     
     startTransition(async () => {

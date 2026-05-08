@@ -162,6 +162,19 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         />
                                     </div>
                                 </div>
+
+                                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                                    <input 
+                                        id="voting_validation_enabled"
+                                        name="voting_validation_enabled"
+                                        type="checkbox" 
+                                        defaultChecked={conference ? !!conference.voting_validation_enabled : true}
+                                        className="w-5 h-5 rounded-lg text-blue-600 focus:ring-blue-500 border-slate-300"
+                                    />
+                                    <label htmlFor="voting_validation_enabled" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                        All posters need to be voted on to submit votes
+                                    </label>
+                                </div>
                             </div>
 
                                 {/* Right Column: Custom Email Templates */}

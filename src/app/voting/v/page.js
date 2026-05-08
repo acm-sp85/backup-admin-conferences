@@ -104,6 +104,7 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                         conferenceEmail={participant.conference_email}
                         isParticipant={true}
                         hasVoted={participant.has_voted}
+                        votingValidationEnabled={!!participant.voting_validation_enabled}
                     />
                 </div>
                 
