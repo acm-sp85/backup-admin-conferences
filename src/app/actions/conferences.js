@@ -105,7 +105,7 @@ export async function toggleEmailsEnabled(conferenceId, currentStatus) {
 
 export async function updateConference(id, formData) {
     const session = await verifySession();
-    if (!session || session.role !== 'superadmin') {
+    if (!session || (session.role !== 'superadmin' && session.role !== 'admin')) {
         return { error: 'Unauthorized' };
     }
 
