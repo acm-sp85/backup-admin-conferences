@@ -36,12 +36,13 @@ export default async function ProgramPrintPage({ params }) {
                     backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    padding: config.padding || '60px',
+                    // Aggressively reduced side padding to 15px to maximize X-axis space
+                    padding: config.padding || '30px 15px 120px 15px', 
                     position: 'relative',
                     boxSizing: 'border-box'
                 }}
             >
-                <div id="print-content" className="flex flex-col h-full">
+                <div id="print-content" className="flex flex-col h-full mt-6 mb-24">
                     {/* Header Section */}
                     <div className="mb-12">
                         <div 

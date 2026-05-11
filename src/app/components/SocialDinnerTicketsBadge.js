@@ -15,7 +15,7 @@ export default function SocialDinnerTicketsBadge({ participantName, conferenceAc
         );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin-conferencias.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.smart-conference.org';
     const sanitizedBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 
     return (
