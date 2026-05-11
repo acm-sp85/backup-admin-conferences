@@ -30,7 +30,7 @@ export async function sendParticipantCheckinQR(registrationId) {
     if (!participant) throw new Error('Participant not found');
     if (!participant.token) throw new Error('No QR token found. Please run Sync first.');
 
-    if (!participant.emails_enabled && session.role !== 'superadmin') {
+    if (!participant.emails_enabled) {
         throw new Error('Communication is currently LOCKED for this conference. Please enable it in Conference Settings first.');
     }
 
