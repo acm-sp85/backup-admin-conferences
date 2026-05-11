@@ -12,13 +12,15 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     const [templates, setTemplates] = useState({
         magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
         posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
-        socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference)
+        socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference),
+        emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference)
     });
 
     const [viewMode, setViewMode] = useState({
         magicLink: 'preview',
         posterVotingInvite: 'preview',
-        socialDinnerTickets: 'preview'
+        socialDinnerTickets: 'preview',
+        emailCheckin: 'preview'
     });
 
     useEffect(() => {
@@ -27,7 +29,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
             setTemplates({
                 magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
                 posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
-                socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference)
+                socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference),
+                emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference)
             });
         }
     }, [isOpen, conference]);
@@ -286,6 +289,36 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             />
                                         )}
                                         <p className="text-[9px] text-slate-400 px-1 italic">Use {"${name}"} placeholder. QRs are appended automatically.</p>
+                                    </div>
+
+                                    {/* Template Block: Participant Check-in */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center px-1">
+                                            <label className="text-[10px] font-bold text-slate-500">Check-in Email Body</label>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setViewMode(v => ({ ...v, emailCheckin: v.emailCheckin === 'preview' ? 'html' : 'preview' }))}
+                                                className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                                            >
+                                                {viewMode.emailCheckin === 'preview' ? 'Edit HTML' : 'View Preview'}
+                                            </button>
+                                        </div>
+                                        
+                                        <input type="hidden" name="email_checkin_body" value={templates.emailCheckin} />
+                                        {viewMode.emailCheckin === 'preview' ? (
+                                            <div 
+                                                className="w-full h-40 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container"
+                                                dangerouslySetInnerHTML={{ __html: templates.emailCheckin.replace(/\${name}/g, 'John Doe').replace(/\${conference}/g, conference?.name || 'Conference') }}
+                                            />
+                                        ) : (
+                                            <textarea 
+                                                value={templates.emailCheckin}
+                                                onChange={(e) => setTemplates(t => ({ ...t, emailCheckin: e.target.value }))}
+                                                placeholder="Use ${name} and ${conference} placeholders."
+                                                className="w-full h-40 p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                            />
+                                        )}
+                                        <p className="text-[9px] text-slate-400 px-1 italic">Use {"${name}"} and {"${conference}"} placeholders. QR is appended automatically.</p>
                                     </div>
                                 </div>
                         </div>

@@ -126,7 +126,8 @@ export async function getParticipantByToken(token) {
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id
-        WHERE r.check_in_token = ?
+        JOIN participant_qr_tokens t ON r.id = t.registration_id
+        WHERE t.token = ?
     `, [token]);
 
     if (row && typeof row.cluster_for_review === 'string') {

@@ -23,7 +23,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, voting_validation_enabled, voting_instructions, emails_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -34,6 +34,7 @@ export async function createConference(formData) {
               formData.get('email_magic_link_body') || null,
               formData.get('email_poster_voting_invite_body') || null,
               formData.get('email_social_dinner_tickets_body') || null,
+              formData.get('email_checkin_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
               formData.get('voting_instructions') || null,
               formData.get('emails_enabled') === 'on' ? 1 : 0
@@ -122,7 +123,7 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -133,6 +134,7 @@ export async function updateConference(id, formData) {
               formData.get('email_magic_link_body') || null,
               formData.get('email_poster_voting_invite_body') || null,
               formData.get('email_social_dinner_tickets_body') || null,
+              formData.get('email_checkin_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
               formData.get('voting_instructions') || null,
               formData.get('emails_enabled') === 'on' ? 1 : 0,

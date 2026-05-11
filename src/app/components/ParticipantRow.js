@@ -3,9 +3,33 @@
 import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { sendParticipantCheckinQR } from '../actions/participants-qr';
 
 export default function ParticipantRow({ person, activeConfId }) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isSendingQR, setIsSendingQR] = useState(false);
+
+    const handleSendQR = async (e) => {
+        e.stopPropagation();
+        if (!person.primary_registration_id) {
+            alert('No registration found for this participant in this conference context.');
+            return;
+        }
+        if (!confirm(`Send Check-in QR to ${person.email}?`)) return;
+
+        setIsSendingQR(true);
+        try {
+            const res = await sendParticipantCheckinQR(person.primary_registration_id);
+            if (res.success) {
+                alert('QR Email sent successfully!');
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setIsSendingQR(false);
+        }
+    };
 
     const statuses = person.payment_statuses ? person.payment_statuses.toLowerCase().split(', ') : [];
     // Parse all payments from the JSON array
@@ -47,7 +71,11 @@ export default function ParticipantRow({ person, activeConfId }) {
                         </span>
                     </div>
                     <div className="flex flex-col mt-0.5">
-                        <div className="text-[10px] text-[var(--muted)]">{person.registration_type || 'Standard'}</div>
+                        <div className="text-[10px] text-[var(--muted)] flex items-center gap-2">
+                            {person.registration_type || 'Standard'}
+                            {person.qr_email_sent_at && <Mail className="w-2.5 h-2.5 text-blue-500" title="QR Sent" />}
+                            {person.qr_scanned_at && <CheckCircle2 className="w-2.5 h-2.5 text-green-500" title="Checked In" />}
+                        </div>
                         {latestPayment?.group && (
                             <div className="text-[9px] text-indigo-500 font-bold uppercase tracking-wider mt-0.5">{latestPayment.group}</div>
                         )}
@@ -143,6 +171,29 @@ export default function ParticipantRow({ person, activeConfId }) {
                                             <div className="flex justify-between items-center py-2 border-b border-slate-100">
                                                 <span className="text-[var(--muted)]">Registration Date</span>
                                                 <span className="font-medium">{new Date(person.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 space-y-3">
+                                            <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2">Check-in Actions</div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button 
+                                                    onClick={handleSendQR}
+                                                    disabled={isSendingQR || !person.qr_token}
+                                                    className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-bold hover:bg-black transition-colors disabled:opacity-50"
+                                                >
+                                                    {isSendingQR ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                                                    {person.qr_email_sent_at ? 'Resend Check-in QR' : 'Send Check-in QR'}
+                                                </button>
+                                                {!person.qr_token && (
+                                                    <p className="text-[9px] text-amber-600 font-medium italic">Please run "Sync QR" to generate tokens first.</p>
+                                                )}
+                                                {person.qr_scanned_at && (
+                                                    <div className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 rounded-xl text-[10px] font-bold border border-green-100">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        Checked In: {new Date(person.qr_scanned_at).toLocaleString()}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

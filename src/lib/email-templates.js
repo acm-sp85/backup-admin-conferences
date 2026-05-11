@@ -172,6 +172,38 @@ export const emailTemplates = {
                 </div>
             `
         };
+    },
+
+    /**
+     * Participant Check-in QR (General)
+     */
+    emailCheckin: ({ name, conference, token }) => {
+        const brand = getBranding(conference);
+        const checkinBody = conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference);
+        
+        // Inject variables into the custom body if they exist as placeholders
+        const htmlBody = checkinBody
+            .replace(/\${name}/g, name)
+            .replace(/\${conference}/g, brand.name);
+
+        return {
+            subject: `Your Check-in QR Code - ${brand.name}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    ${renderHeader(brand)}
+                    ${htmlBody}
+                    
+                    <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+                        <img src="${brand.baseUrl}/api/qr/participants/${token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+                        <p style="margin: 5px 0; font-size: 12px; color: #86868b;">Show this QR code at the registration desk.</p>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                        This is an automated message from ${brand.name}. For support, contact ${brand.email}.
+                    </p>
+                </div>
+            `
+        };
     }
 };
 
@@ -238,6 +270,12 @@ export const getDefaultEmailBody = (type, conference) => {
 `.replace('\\${renderHeader(brand)}', renderHeader(brand))
  .replace('\\${brand.name}', brand.name)
  .replace('\\${brand.email}', brand.email);
+
+        case 'emailCheckin':
+            return `
+<h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
+<p>We are looking forward to seeing you at <strong>\${conference}</strong>. Below is your personal QR code for a faster check-in at the registration desk.</p>
+`.trim();
 
         default:
             return '';

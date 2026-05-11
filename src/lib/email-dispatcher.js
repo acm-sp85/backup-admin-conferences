@@ -15,7 +15,8 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   const columnMap = {
     magicLink: 'email_magic_link_body',
     posterVotingInvite: 'email_poster_voting_invite_body',
-    socialDinnerTickets: 'email_social_dinner_tickets_body'
+    socialDinnerTickets: 'email_social_dinner_tickets_body',
+    emailCheckin: 'email_checkin_body'
   };
 
   const bodyKey = columnMap[type];
@@ -74,6 +75,23 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
      if (qrHtml) {
         html = html.replace('</div>', qrHtml + '</div>');
      }
+  }
+
+  // 4. Fallback for participant check-in
+  if (type === 'emailCheckin' && !html.includes('api/qr/participants')) {
+      const qrHtml = `
+        <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+            <img src="${brand.baseUrl}/api/qr/participants/${placeholders.token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+            <p style="margin: 5px 0; font-size: 12px; color: #86868b;">Show this QR code at the registration desk.</p>
+        </div>
+      `;
+      // Append before the last div or just append
+      if (html.includes('</div>')) {
+          const lastIdx = html.lastIndexOf('</div>');
+          html = html.substring(0, lastIdx) + qrHtml + html.substring(lastIdx);
+      } else {
+          html += qrHtml;
+      }
   }
 
   // Sanitize

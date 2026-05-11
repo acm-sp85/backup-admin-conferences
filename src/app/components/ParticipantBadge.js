@@ -7,9 +7,7 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
 
     if (!token) return null;
 
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-        `${window.location.origin}/check-in/${token}`
-    )}`;
+    const qrUrl = `/api/qr/participants/${token}`;
 
     return (
         <>

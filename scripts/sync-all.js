@@ -146,17 +146,31 @@ async function syncAll() {
         }
 
         if (!registrationMap.has(participantId)) {
-          const checkInToken = crypto.randomBytes(16).toString('hex');
           const [regRes] = await mariadb.execute(
-            'INSERT INTO registrations (participant_id, conference_id, status, check_in_token) VALUES (?, ?, ?, ?)', 
-            [participantId, conferenceId, 'Registered', checkInToken]
+            'INSERT INTO registrations (participant_id, conference_id, status) VALUES (?, ?, ?)', 
+            [participantId, conferenceId, 'Registered']
           );
           registrationMap.set(participantId, regRes.insertId);
           summary.registrations++;
         }
         
         const regId = registrationMap.get(participantId);
-        if (regId) seenRegistrationIds.add(regId);
+        if (regId) {
+          seenRegistrationIds.add(regId);
+          
+          // --- NEW: Generate Participant QR Token automatically ---
+          const [existingQR] = await mariadb.execute(
+            'SELECT id FROM participant_qr_tokens WHERE registration_id = ?',
+            [regId]
+          );
+          if (!existingQR.length) {
+            const token = crypto.randomBytes(24).toString('hex');
+            await mariadb.execute(
+              'INSERT INTO participant_qr_tokens (registration_id, token) VALUES (?, ?)',
+              [regId, token]
+            );
+          }
+        }
       }
     });
 
