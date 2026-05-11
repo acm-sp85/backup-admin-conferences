@@ -110,3 +110,41 @@ export async function resetParticipantCheckin(registrationId) {
     revalidatePath('/participants');
     return { success: true };
 }
+
+export async function getBadgeConfig(conferenceId) {
+    const [conf] = await query('SELECT badge_config, badge_bg FROM conferences WHERE id = ?', [conferenceId]);
+    
+    let config = {
+        nameSize: '24px',
+        nameColor: '#000000',
+        instSize: '16px',
+        instColor: '#666666',
+        qrSize: '120px',
+        padding: '10mm'
+    };
+
+    if (conf?.badge_config) {
+        try {
+            config = typeof conf.badge_config === 'string' 
+                ? JSON.parse(conf.badge_config) 
+                : conf.badge_config;
+        } catch (e) { }
+    }
+
+    return { config, bgUrl: conf?.badge_bg };
+}
+
+export async function updateBadgeConfig(conferenceId, config, bgUrl) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    await query(
+        'UPDATE conferences SET badge_config = ?, badge_bg = ? WHERE id = ?',
+        [JSON.stringify(config), bgUrl, conferenceId]
+    );
+
+    revalidatePath('/participants');
+    return { success: true };
+}

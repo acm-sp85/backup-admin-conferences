@@ -94,7 +94,8 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
             <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-h-[52px]">
                 <div className="flex items-center gap-3">
                     {selectedIds.size > 0 ? (
-                        <button 
+                        <div className="flex items-center gap-2">
+                            <button 
                             onClick={handleBulkEmail}
                             disabled={isSendingBulk}
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
@@ -102,6 +103,17 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                             {isSendingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                             Send Check-in QRs ({selectedIds.size})
                         </button>
+                        <button 
+                            onClick={() => {
+                                const ids = Array.from(selectedIds).join(',');
+                                window.open(`/participants/print?registrationIds=${ids}&conferenceId=${activeConfId}`, '_blank');
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-semibold shadow-lg shadow-slate-200 transition-all animate-in fade-in zoom-in duration-200"
+                        >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            Print Badges ({selectedIds.size})
+                        </button>
+                    </div>
                     ) : (
                         <div className="text-[10px] text-slate-400 font-medium px-1 flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />

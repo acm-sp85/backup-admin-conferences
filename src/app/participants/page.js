@@ -93,7 +93,7 @@ export default async function ParticipantsPage({ searchParams }) {
       return sum + balance;
     }, 0);
     const payment_statuses = [...new Set(pPayments.map(pay => pay.status))].join(', ');
-    const conference_tokens = pRegs.map(r => `${r.acronym}:${r.qr_token || ''}`).join('|');
+    const conference_tokens = pRegs.map(r => `${r.acronym}:${r.qr_token || ''}:${r.id}:${r.conference_id}`).join('|');
     
     return {
       ...p,

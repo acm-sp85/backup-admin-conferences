@@ -71,8 +71,8 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
     const hasNoPayments = statuses.length === 0;
 
     const confTokens = person.conference_tokens ? person.conference_tokens.split('|').map(item => {
-        const [acronym, token] = item.split(':');
-        return { acronym, token };
+        const [acronym, token, registrationId, conferenceId] = item.split(':');
+        return { acronym, token, registrationId, conferenceId };
     }) : [];
 
     return (
@@ -110,12 +110,15 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                 <td className="text-[var(--muted)] py-4">{person.email}</td>
                 <td className="py-4">
                     <div className="flex flex-wrap gap-1">
-                        {confTokens.length > 0 ? confTokens.map(({ acronym, token }) => (
+                        {confTokens.length > 0 ? confTokens.map(({ acronym, token, registrationId, conferenceId }) => (
                             <ParticipantBadge 
                                 key={acronym} 
                                 participantName={person.name} 
                                 conferenceAcronym={acronym} 
                                 token={token} 
+                                registrationId={registrationId}
+                                conferenceId={conferenceId}
+                                institution={person.regInstitution || person.institution}
                             />
                         )) : (
                             <span className="text-[var(--muted)] text-[10px]">—</span>

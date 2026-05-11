@@ -23,6 +23,15 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         emailCheckin: 'preview'
     });
 
+    const [badgeConfig, setBadgeConfig] = useState(conference?.badge_config ? (typeof conference.badge_config === 'string' ? JSON.parse(conference.badge_config) : conference.badge_config) : {
+        nameSize: '28px',
+        nameColor: '#000000',
+        instSize: '14px',
+        instColor: '#666666',
+        qrSize: '35mm',
+        padding: '10mm'
+    });
+
     useEffect(() => {
         if (isOpen) {
             setAccentColor(conference?.accent_color || '#007aff');
@@ -31,6 +40,14 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
                 socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference),
                 emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference)
+            });
+            setBadgeConfig(conference?.badge_config ? (typeof conference.badge_config === 'string' ? JSON.parse(conference.badge_config) : conference.badge_config) : {
+                nameSize: '28px',
+                nameColor: '#000000',
+                instSize: '14px',
+                instColor: '#666666',
+                qrSize: '35mm',
+                padding: '10mm'
             });
         }
     }, [isOpen, conference]);
@@ -192,6 +209,106 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         placeholder="Rank your assigned posters from 1 to 10..."
                                         className="w-full h-20 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
                                     />
+                                </div>
+
+                                <div className="space-y-4 pt-4">
+                                    <div className="pb-2 border-b border-slate-50 mb-2 flex justify-between items-center">
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Badge Settings (80x98mm)</label>
+                                    </div>
+                                    
+                                    <input type="hidden" name="badge_config" value={JSON.stringify(badgeConfig)} />
+                                    
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Badge Background URL</label>
+                                            <input 
+                                                name="badge_bg"
+                                                type="url" 
+                                                defaultValue={conference?.badge_bg || ''}
+                                                placeholder="https://..."
+                                                className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Font Size</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={badgeConfig.nameSize}
+                                                    onChange={(e) => setBadgeConfig({ ...badgeConfig, nameSize: e.target.value })}
+                                                    className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Color</label>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="color" 
+                                                        value={badgeConfig.nameColor}
+                                                        onChange={(e) => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })}
+                                                        className="h-10 w-10 bg-slate-50 border border-slate-100 rounded-lg cursor-pointer"
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        value={badgeConfig.nameColor}
+                                                        onChange={(e) => setBadgeConfig({ ...badgeConfig, nameColor: e.target.value })}
+                                                        className="flex-1 h-10 px-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Inst. Font Size</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={badgeConfig.instSize}
+                                                    onChange={(e) => setBadgeConfig({ ...badgeConfig, instSize: e.target.value })}
+                                                    className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Inst. Color</label>
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        type="color" 
+                                                        value={badgeConfig.instColor}
+                                                        onChange={(e) => setBadgeConfig({ ...badgeConfig, instColor: e.target.value })}
+                                                        className="h-10 w-10 bg-slate-50 border border-slate-100 rounded-lg cursor-pointer"
+                                                    />
+                                                    <input 
+                                                        type="text" 
+                                                        value={badgeConfig.instColor}
+                                                        onChange={(e) => setBadgeConfig({ ...badgeConfig, instColor: e.target.value })}
+                                                        className="flex-1 h-10 px-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">QR Size</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={badgeConfig.qrSize}
+                                                    onChange={(e) => setBadgeConfig({ ...badgeConfig, qrSize: e.target.value })}
+                                                    className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px]"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Padding</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={badgeConfig.padding}
+                                                    onChange={(e) => setBadgeConfig({ ...badgeConfig, padding: e.target.value })}
+                                                    className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
