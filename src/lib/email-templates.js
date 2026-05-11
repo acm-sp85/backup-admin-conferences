@@ -16,7 +16,7 @@ export const EMAIL_CONFIG = {
  * HELPER: Safe defaults for conference data
  */
 export const getBranding = (conf) => {
-    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.smart-conference.org';
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.smart-conference.org' || 'https://smart-conference.org';
     if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
 
     const formatUrl = (url) => {

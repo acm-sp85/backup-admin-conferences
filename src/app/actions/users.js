@@ -56,7 +56,7 @@ export async function inviteUser(prevState, formData) {
         }, '48h');
         
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                        (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' : 
+                        (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' || 'https://smart-conference.org' : 
                          process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
                          'http://localhost:3000');
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
