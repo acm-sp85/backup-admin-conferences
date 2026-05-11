@@ -38,6 +38,7 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     accentColor: brand.accentColor,
     logoUrl: brand.logo,
     bannerUrl: brand.banner,
+    conference: brand.name, // Add this for consistency with emailCheckin default body
     // Support legacy/intuitive ${brand.xxx} syntax by flattening
     'brand.name': brand.name,
     'brand.email': brand.email,

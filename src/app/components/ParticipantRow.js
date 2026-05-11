@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
-import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
-import { sendParticipantCheckinQR } from '../actions/participants-qr';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { sendParticipantCheckinQR, resetParticipantCheckin } from '../actions/participants-qr';
 
-export default function ParticipantRow({ person, activeConfId }) {
+export default function ParticipantRow({ person, activeConfId, userRole, selected, onSelect }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSendingQR, setIsSendingQR] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -28,6 +29,23 @@ export default function ParticipantRow({ person, activeConfId }) {
             alert(error.message);
         } finally {
             setIsSendingQR(false);
+        }
+    };
+    
+    const handleResetCheckin = async (e) => {
+        e.stopPropagation();
+        if (!confirm('Are you sure you want to RESET the check-in status for this participant? This will allow them to be scanned again.')) return;
+        
+        setIsResetting(true);
+        try {
+            const res = await resetParticipantCheckin(person.primary_registration_id);
+            if (res.success) {
+                alert('Check-in status reset successfully!');
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -61,8 +79,16 @@ export default function ParticipantRow({ person, activeConfId }) {
         <>
             <tr 
                 onClick={() => setIsExpanded(!isExpanded)} 
-                className={`cursor-pointer transition-colors border-b border-slate-100 ${isExpanded ? 'bg-slate-50/80' : 'hover:bg-slate-50/50'}`}
+                className={`cursor-pointer transition-colors border-b border-slate-100 ${isExpanded ? 'bg-slate-50/80' : 'hover:bg-slate-50/50'} ${selected ? 'bg-indigo-50/50' : ''}`}
             >
+                <td className="py-4" onClick={(e) => e.stopPropagation()}>
+                    <input 
+                        type="checkbox" 
+                        checked={selected}
+                        onChange={onSelect}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 ml-1"
+                    />
+                </td>
                 <td className="py-4">
                     <div className="flex items-center gap-2">
                         <div className="font-medium text-[var(--foreground)]">{person.name}</div>
@@ -139,7 +165,7 @@ export default function ParticipantRow({ person, activeConfId }) {
             </tr>
             {isExpanded && (
                 <tr className="bg-slate-50/80 border-0">
-                    <td colSpan="5" className="pb-6 pt-0">
+                    <td colSpan="6" className="pb-6 pt-0">
                         <div className="mx-4 p-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-2 gap-8">
                                 <div>
@@ -193,6 +219,17 @@ export default function ParticipantRow({ person, activeConfId }) {
                                                         <CheckCircle2 className="w-3 h-3" />
                                                         Checked In: {new Date(person.qr_scanned_at).toLocaleString()}
                                                     </div>
+                                                )}
+                                                {userRole === 'superadmin' && person.qr_scanned_at && (
+                                                    <button 
+                                                        onClick={handleResetCheckin}
+                                                        disabled={isResetting}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-colors border border-red-100 disabled:opacity-50"
+                                                        title="Superadmin: Reset Check-in Status"
+                                                    >
+                                                        {isResetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                        Reset Check-in
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>

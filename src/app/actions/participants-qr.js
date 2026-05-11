@@ -100,13 +100,13 @@ export async function validateParticipantTicket(token) {
     };
 }
 
-export async function resetParticipantCheckin(ticketId) {
+export async function resetParticipantCheckin(registrationId) {
     const session = await verifySession();
     if (!session || session.role !== 'superadmin') {
         throw new Error('Unauthorized: Only superadmins can reset scans.');
     }
 
-    await query('UPDATE participant_qr_tokens SET scanned_at = NULL WHERE id = ?', [ticketId]);
+    await query('UPDATE participant_qr_tokens SET scanned_at = NULL WHERE registration_id = ?', [registrationId]);
     revalidatePath('/participants');
     return { success: true };
 }

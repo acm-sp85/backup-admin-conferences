@@ -184,7 +184,8 @@ export const emailTemplates = {
         // Inject variables into the custom body if they exist as placeholders
         const htmlBody = checkinBody
             .replace(/\${name}/g, name)
-            .replace(/\${conference}/g, brand.name);
+            .replace(/\${conference}/g, brand.name)
+            .replace(/\${renderHeader\(brand\)}/g, renderHeader(brand));
 
         return {
             subject: `Your Check-in QR Code - ${brand.name}`,
@@ -273,9 +274,12 @@ export const getDefaultEmailBody = (type, conference) => {
 
         case 'emailCheckin':
             return `
-<h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
-<p>We are looking forward to seeing you at <strong>\${conference}</strong>. Below is your personal QR code for a faster check-in at the registration desk.</p>
-`.trim();
+<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+    \${renderHeader(brand)}
+    <h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
+    <p>We are looking forward to seeing you at <strong>\${conference}</strong>. Below is your personal QR code for a faster check-in at the registration desk.</p>
+</div>`.replace('\\${renderHeader(brand)}', renderHeader(brand))
+  .replace('\\${conference}', brand.name);
 
         default:
             return '';

@@ -4,6 +4,7 @@ import ParticipantBadge from '../components/ParticipantBadge';
 import ParticipantsFilter from '../components/ParticipantsFilter';
 import ParticipantVoterToggle from '../components/ParticipantVoterToggle';
 import ParticipantRow from '../components/ParticipantRow';
+import ParticipantsTable from '../components/ParticipantsTable';
 import { verifySession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -145,17 +146,6 @@ export default async function ParticipantsPage({ searchParams }) {
     return 0;
   });
 
-  const getSortUrl = (field) => {
-    const newOrder = sortBy === field && order === 'asc' ? 'desc' : 'asc';
-    const params = new URLSearchParams({ search: search || '', conference: conference || '', status: status || '', sortBy: field, order: newOrder });
-    return `?${params.toString()}`;
-  };
-
-  const SortIcon = ({ field }) => {
-    if (sortBy !== field) return <span className="opacity-20 ml-1">↕</span>;
-    return <span className="ml-1 text-indigo-600">{order === 'asc' ? '↑' : '↓'}</span>;
-  };
-
   return (
     <DashboardLayout>
       <header className="mb-6 flex justify-between items-center">
@@ -179,39 +169,14 @@ export default async function ParticipantsPage({ searchParams }) {
 
       <ParticipantsFilter conferences={conferences} />
 
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th><a href={getSortUrl('name')} className="hover:text-indigo-600 flex items-center">Name <SortIcon field="name" /></a></th>
-              <th><a href={getSortUrl('email')} className="hover:text-indigo-600 flex items-center">Email <SortIcon field="email" /></a></th>
-              <th>Conferences</th>
-              <th>
-                <div className="flex gap-4">
-                  <a href={getSortUrl('paid')} className="hover:text-indigo-600 flex items-center">Paid <SortIcon field="paid" /></a>
-                  <a href={getSortUrl('debt')} className="hover:text-indigo-600 flex items-center text-red-500">Debt <SortIcon field="debt" /></a>
-                </div>
-              </th>
-              <th className="text-right"><a href={getSortUrl('created_at')} className="hover:text-indigo-600 flex items-center justify-end">Date <SortIcon field="created_at" /></a></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredParticipants.map((person) => (
-              <ParticipantRow 
-                key={person.id} 
-                person={person} 
-                activeConfId={activeConfId} 
-              />
-            ))}
-          </tbody>
-        </table>
-        
-        {participants.length === 0 && (
-          <div className="p-10 text-center text-[var(--muted)] text-xs">
-            No participants found.
-          </div>
-        )}
-      </div>
+      <ParticipantsTable 
+        participants={filteredParticipants} 
+        activeConfId={activeConfId} 
+        userRole={session.role}
+        sortBy={sortBy}
+        order={order}
+        searchParams={{ search, conference, status }}
+      />
     </DashboardLayout>
   );
 }
