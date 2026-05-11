@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import ParticipantRow from './ParticipantRow';
 import { sendParticipantCheckinQR } from '../actions/participants-qr';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail, Download } from 'lucide-react';
 
 export default function ParticipantsTable({ participants, activeConfId, userRole, sortBy, order, searchParams }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
@@ -55,6 +55,40 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
         });
     };
 
+    const handleDownloadCSV = () => {
+        const headers = ["Name", "Email", "Registration Type", "Check-in Status", "Check-in Time", "Payment Status", "Total Paid", "Total Debt"];
+        const rows = participants.map(p => {
+            const checkinStatus = p.qr_scanned_at ? "Checked In" : "Not Checked In";
+            const checkinTime = p.qr_scanned_at ? new Date(p.qr_scanned_at).toLocaleString() : "";
+            const paymentStatus = p.payment_statuses || "None";
+            
+            return [
+                p.name,
+                p.email,
+                p.registration_type || "Standard",
+                checkinStatus,
+                checkinTime,
+                paymentStatus,
+                p.total_paid,
+                p.total_debt
+            ];
+        });
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `participants_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-h-[52px]">
@@ -74,6 +108,15 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                             Select participants to send bulk check-in emails
                         </div>
                     )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={handleDownloadCSV}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        Download CSV
+                    </button>
                 </div>
             </div>
 
