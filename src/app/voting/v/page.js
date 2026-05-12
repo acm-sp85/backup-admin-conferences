@@ -111,7 +111,7 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                 </div>
                 
                 <footer className="mt-16 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
-                    &copy; {new Date().getFullYear()} SCITO Admin Dashboard &bull; Secure Voting Portal
+                    &copy; {new Date().getFullYear()} Smart Conferences Admin Dashboard &bull; Secure Voting Portal
                 </footer>
             </div>
         </div>

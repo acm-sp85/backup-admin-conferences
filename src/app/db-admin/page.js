@@ -68,7 +68,7 @@ export default function DbAdminPage() {
       <header className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-            SCITO DB Manager
+            Smart Conferences DB Manager
           </h1>
           <p className="text-slate-400">Manage your MariaDB instance</p>
         </div>

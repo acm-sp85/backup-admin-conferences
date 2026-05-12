@@ -143,7 +143,7 @@ export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId
                 </div>
 
                 <div className="p-4 bg-slate-50 border-t border-slate-100 text-center shrink-0">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Integrity Report • SCITO Admin</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Integrity Report • Smart Conferences Admin</span>
                 </div>
             </div>
         </div>

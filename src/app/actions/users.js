@@ -68,7 +68,7 @@ export async function inviteUser(prevState, formData) {
         let conference = null;
         // Only use conference-specific branding if it's a regular user
         if (role === 'user') {
-            const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+            const results = await query('SELECT * FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SmartConferences']);
             conference = results[0];
         }
 

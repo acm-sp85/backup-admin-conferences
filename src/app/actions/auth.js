@@ -65,7 +65,7 @@ export async function requestMagicLink(prevState, formData) {
       // Only use conference-specific branding if the user is a regular 'user' (voter)
       // and we have a specific conference acronym defined in the environment.
       if (user.role === 'user') {
-        const results = await query('SELECT id FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SCITO']);
+        const results = await query('SELECT id FROM conferences WHERE acronym = ?', [process.env.CONFERENCE_ACRONYM || 'SmartConferences']);
         conferenceId = results[0]?.id;
       }
 
