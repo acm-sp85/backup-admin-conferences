@@ -120,7 +120,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                           {poster.title}
                         </h4>
                         {poster.code && (
-                          <span className="text-[10px] font-bold text-[var(--accent)] bg-[var(--accent-light)] px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md shadow-sm font-mono tracking-tighter">
                             {poster.code}
                           </span>
                         )}
@@ -195,7 +195,9 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                     <div className="flex justify-between items-start gap-4 mb-4">
                         <div className="flex-1">
                             {selectedPoster.code && (
-                                <div className="text-[10px] font-bold text-[var(--accent)] mb-1 uppercase tracking-widest">{selectedPoster.code}</div>
+                                <div className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--accent)] text-white text-[12px] font-black mb-2 shadow-lg shadow-[var(--accent)]/20 uppercase tracking-widest font-mono">
+                                    {selectedPoster.code}
+                                </div>
                             )}
                             <h3 className="text-lg font-bold leading-tight">{selectedPoster.title}</h3>
                         </div>

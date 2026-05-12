@@ -60,7 +60,7 @@ export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId
                     <div className="flex justify-between items-start gap-4">
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">{poster?.code}</span>
+                                <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md shadow-sm font-mono tracking-tighter">{poster?.code}</span>
                                 <h3 className="text-lg font-bold text-slate-900 truncate">Vote Accountability</h3>
                             </div>
                             <p className="text-[11px] text-slate-400 font-medium truncate">{poster?.title}</p>

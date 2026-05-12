@@ -133,7 +133,7 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                                         </td>
                                         <td>
                                             {poster.code ? (
-                                                <span className="badge" style={{background:'var(--accent-light)', color:'var(--accent)', fontFamily:'monospace'}}>
+                                                <span className="text-[11px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md shadow-sm font-mono tracking-tighter">
                                                     {poster.code}
                                                 </span>
                                             ) : '—'}
