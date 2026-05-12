@@ -327,6 +327,21 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                                 </div>
                             )}
 
+                            {selectedPoster.toc && selectedPoster.toc !== 'null' && (
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Graphical Abstract (TOC)</label>
+                                    <a 
+                                        href={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1.5 bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100 w-fit transition-colors hover:bg-blue-50"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        View TOC Image
+                                    </a>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Abstract / Content</label>
                                 <div 
