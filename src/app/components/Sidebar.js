@@ -26,7 +26,7 @@ export default function Sidebar({ userRole }) {
       <div className="px-5 py-5">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-7 h-7 bg-[#0071e3] rounded-md flex items-center justify-center text-white text-xs font-bold">S</div>
-          <span className="text-[13px] font-semibold text-white tracking-tight">Smart Conferences Admin</span>
+          <span className="text-[13px] font-semibold text-white tracking-tight">Smart Conference Admin</span>
         </Link>
       </div>
 

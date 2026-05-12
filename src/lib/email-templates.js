@@ -7,9 +7,9 @@
 
 export const EMAIL_CONFIG = {
     // IMPORTANT: Ensure the domain below is verified in https://resend.com/domains
-    from: 'Smart Conferences Admin <no-reply@smart-conferences.org>',
-    fromConferences: 'Smart Conferences <no-reply@smart-conferences.org>',
-    fromVoting: 'Smart Conferences Voting <no-reply@smart-conferences.org>',
+    from: 'Smart Conference Admin <no-reply@smart-conferences.org>',
+    fromConferences: 'Smart Conference <no-reply@smart-conferences.org>',
+    fromVoting: 'Smart Conference Voting <no-reply@smart-conferences.org>',
 };
 
 /**
@@ -27,7 +27,7 @@ export const getBranding = (conf) => {
     };
 
     return {
-        name: conf?.name || 'Smart Conferences Admin',
+        name: conf?.name || 'Smart Conference Admin',
         email: conf?.email || 'fundacio@scito.org',
         accentColor: conf?.accent_color || '#007aff',
         logo: formatUrl(conf?.logo_url || 'https://www.nanoge.org/img/logo-nanoge.png'),

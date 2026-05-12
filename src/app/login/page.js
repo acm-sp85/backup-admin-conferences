@@ -38,7 +38,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center text-white text-sm font-bold mx-auto mb-4">
               S
             </div>
-            <h1 className="text-lg font-semibold">Smart Conferences Admin</h1>
+            <h1 className="text-lg font-semibold">Smart Conference Admin</h1>
             <p className="text-[var(--muted)] text-xs mt-1">Sign in to manage conferences</p>
           </header>
 
@@ -78,7 +78,7 @@ export default function LoginPage() {
         
         <footer className="mt-6 text-center">
           <p className="text-[var(--muted)] text-[10px] uppercase tracking-widest font-medium">
-            &copy; 2026 Smart Conferences
+            &copy; 2026 Smart Conference
           </p>
         </footer>
       </div>

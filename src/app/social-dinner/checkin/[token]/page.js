@@ -55,7 +55,7 @@ export default async function CheckInPage({ params }) {
 
                     <div className="pt-6 border-t border-slate-100">
                         <p className="text-[10px] text-center text-slate-400 italic">
-                            Smart Conferences Social Dinner Validation System
+                            Smart Conference Social Dinner Validation System
                         </p>
                     </div>
                 </div>
