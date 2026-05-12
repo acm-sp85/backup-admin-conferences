@@ -7,9 +7,9 @@
 
 export const EMAIL_CONFIG = {
     // IMPORTANT: Ensure the domain below is verified in https://resend.com/domains
-    from: 'Smart Conference Admin <no-reply@smart-conferences.org>',
-    fromConferences: 'Smart Conference <no-reply@smart-conferences.org>',
-    fromVoting: 'Smart Conference Voting <no-reply@smart-conferences.org>',
+    from: 'Smart Conference Admin <no-reply@smart-conference.org>',
+    fromConferences: 'Smart Conference <no-reply@smart-conference.org>',
+    fromVoting: 'Smart Conference Voting <no-reply@smart-conference.org>',
 };
 
 /**
