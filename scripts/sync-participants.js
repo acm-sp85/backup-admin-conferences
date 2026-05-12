@@ -403,12 +403,16 @@ async function syncParticipants() {
 
         if (session.full_slots && Array.isArray(session.full_slots)) {
             for (const slot of session.full_slots) {
+                let slotType = slot.type || 'oral';
+                if (slotType === 'invSession') slotType = 'Invited Speaker Session';
+                if (slotType === 'invSpeaker') slotType = 'Invited Speaker';
+
                 await mariadb.execute(`
                     INSERT INTO program_slots (session_id, type, title, presenter_name, start_time, end_time)
                     VALUES (?, ?, ?, ?, ?, ?)
                 `, [
                     sessionId,
-                    slot.type || 'oral',
+                    slotType,
                     slot.title || null,
                     slot.presenter_name || null,
                     slot.start_time ? new Date(slot.start_time) : null,

@@ -296,10 +296,14 @@ async function syncAll() {
         await mariadb.execute('DELETE FROM program_slots WHERE session_id = ?', [sessionId]);
         if (session.full_slots && Array.isArray(session.full_slots)) {
           for (const slot of session.full_slots) {
+            let slotType = slot.type || 'oral';
+            if (slotType === 'invSession') slotType = 'Invited Speaker Session';
+            if (slotType === 'invSpeaker') slotType = 'Invited Speaker';
+
             await mariadb.execute(`
               INSERT INTO program_slots (session_id, type, title, presenter_name, start_time, end_time)
               VALUES (?, ?, ?, ?, ?, ?)
-            `, [sessionId, slot.type || 'oral', slot.title || null, slot.presenter_name || null,
+            `, [sessionId, slotType, slot.title || null, slot.presenter_name || null,
                 slot.start_time ? new Date(slot.start_time) : null,
                 slot.end_time ? new Date(slot.end_time) : null]);
             summary.slots++;
