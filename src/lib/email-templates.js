@@ -153,7 +153,7 @@ export const emailTemplates = {
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${name || 'Voter'},<br><br>
                         You have been invited to participate in the poster voting process for <strong>${brand.name}</strong>. 
-                        Please use the link below to access your assigned clusters and cast your votes.
+                        Please use the link below to access your assigned posters and cast your votes.
                     </p>
                     <div style="margin: 30px 0;">
                         <a href="${magicLink}" style="background-color: ${brand.accentColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
@@ -237,7 +237,7 @@ export const getDefaultEmailBody = (type, conference) => {
     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
         Hello \${name},<br><br>
         You have been invited to participate in the poster voting process for <strong>\${brand.name}</strong>. 
-        Please use the link below to access your assigned clusters and cast your votes.
+        Please use the link below to access your assigned posters and cast your votes.
     </p>
     <div style="margin: 30px 0;">
         <a href="\${magicLink}" style="background-color: \${brand.accentColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
