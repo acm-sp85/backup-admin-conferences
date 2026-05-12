@@ -1,5 +1,11 @@
 import { query } from '@/lib/db';
 import { getConferenceConfig } from '@/app/actions/program';
+import { League_Spartan } from 'next/font/google';
+
+const leagueSpartan = League_Spartan({ 
+    subsets: ['latin'],
+    display: 'swap',
+});
 
 export default async function ProgramPrintAllPage({ searchParams }) {
     const { conferenceId } = await searchParams;
@@ -35,31 +41,31 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                 return (
                     <div 
                         key={session.id}
-                        className="bg-white text-black shadow-2xl overflow-hidden print:shadow-none print:m-0 mb-10 print:mb-0 session-page"
+                        className={`bg-white text-black shadow-2xl overflow-hidden print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
                         style={{ 
                             width: '210mm',
                             height: '297mm',
                             backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
-                            padding: config.padding || '60px',
+                            padding: config.padding || '30px 15px 120px 15px', 
                             position: 'relative',
                             boxSizing: 'border-box',
                             breakAfter: 'page'
                         }}
                     >
-                        <div className="print-content flex flex-col h-full">
+                        <div className="print-content flex flex-col h-full mt-6">
                             {/* Header Section */}
                             <div className="mb-12">
-                                <div 
-                                    className="font-bold uppercase tracking-widest mb-4 opacity-70"
-                                    style={{ fontSize: '16px', color: config.titleColor }}
-                                >
-                                    {conference.name} • {new Date(session.start_time).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                </div>
+                 <div 
+                            className="font-medium uppercase tracking-widest mb-1 mt-6 text-center"
+                            style={{ fontSize: '16px', color: config.titleColor }}
+                        >
+                           {new Date(session.start_time).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </div>
                                 
                                 <h1 
-                                    className="font-black leading-tight mb-2"
+                                    className="font-bold leading-tight mb-2"
                                     style={{ fontSize: config.titleSize || '48px' }}
                                 >
                                     {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
@@ -67,15 +73,15 @@ export default async function ProgramPrintAllPage({ searchParams }) {
 
                                 {session.full_session_name.includes('(Chair:') && (
                                     <div 
-                                        className="font-bold opacity-80 mb-6 italic"
-                                        style={{ fontSize: config.chairSize || '24px', color: config.titleColor }}
+                                        className="font-medium opacity-80 mb-2 italic"
+                                        style={{ fontSize: config.chairSize || '20px', color: config.titleColor }}
                                     >
                                         Chair: {session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
                                     </div>
                                 )}
 
                                 <div className="flex gap-4 items-center">
-                                    <div className=" text-white px-4 py-2 font-bold text-xl"
+                                    <div className=" text-white px-4 py-1 font-medium text-xl"
                                     style={{ backgroundColor: config.titleColor }}>
                                         {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
@@ -89,27 +95,27 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                         {sessionSlots.map((slot, idx) => (
                                             <tr key={idx} className="border-b border-black/10 last:border-0">
                                                 <td 
-                                                    className="py-6 pr-8 font-bold align-top whitespace-nowrap"
+                                                    className="py-1 pr-8 font-medium align-top whitespace-nowrap"
                                                     style={{ fontSize: config.contentSize, color: config.contentColor }}
                                                 >
                                                     {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </td>
-                                                <td className="py-6 align-top">
+                                                <td className="py-1 align-top">
                                                     <div 
-                                                        className="font-bold mb-1"
+                                                        className="font-semibold mb-1"
                                                         style={{ fontSize: config.contentSize, color: config.contentColor }}
                                                     >
                                                         {slot.title || '(No Title)'}
                                                     </div>
                                                     {slot.presenter_name && (
                                                         <div 
-                                                            className="font-medium opacity-80"
+                                                            className="font-normal opacity-80"
                                                             style={{ fontSize: `calc(${config.contentSize} * 0.8)` }}
                                                         >
                                                             {slot.presenter_name}
                                                         </div>
                                                     )}
-                                                    <div className="text-[10px] font-black uppercase tracking-widest mt-2"
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
                                                     style={{ color: config.titleColor }}>
                                                         {slot.type}
                                                     </div>
@@ -132,10 +138,11 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                     const tryScaleAll = () => {
                         pages.forEach(container => {
                             const content = container.querySelector('.print-content');
-                            const paddingX = (parseFloat(container.style.paddingLeft) || 60);
-                            const paddingY = (parseFloat(container.style.paddingTop) || 60);
-                            const availableHeight = container.offsetHeight - (paddingY * 2);
-                            const availableWidth = container.offsetWidth - (paddingX * 2);
+                            const style = window.getComputedStyle(container);
+                            const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+                            const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                            const availableHeight = container.offsetHeight - paddingY;
+                            const availableWidth = container.offsetWidth - paddingX;
                             
                             content.style.transform = 'none';
                             content.style.width = '100%';
