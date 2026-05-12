@@ -33,7 +33,7 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-[240px] bg-[#1d1d1f] flex flex-col transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:static md:w-[220px] md:flex
+        md:translate-x-0 md:fixed md:w-[220px] md:flex
       `}>
         {/* Brand & Close button */}
         <div className="px-5 py-5 flex items-center justify-between">
