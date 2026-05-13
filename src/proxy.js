@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   '/login',
   '/setup-password',
   '/api/auth/callback',
+  '/participants/checkin',
+  '/social-dinner/checkin',
 ];
 
 export default async function proxy(request) {

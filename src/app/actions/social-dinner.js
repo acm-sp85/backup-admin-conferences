@@ -162,7 +162,7 @@ export async function validateTicket(token) {
     if (!ticket) return { success: false, error: 'Invalid Token' };
 
     // Check for pending balance for the WHOLE registration
-    const [payments] = await query('SELECT amount, balance, status FROM payments WHERE registration_id = ?', [ticket.registration_id]);
+    const payments = await query('SELECT amount, balance, status FROM payments WHERE registration_id = ?', [ticket.registration_id]);
     const totalDebt = payments.reduce((sum, pay) => {
         const b = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
         return sum + b;
