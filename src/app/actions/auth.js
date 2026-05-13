@@ -105,6 +105,8 @@ export async function requestMagicLink(prevState, formData) {
     };
 
   } catch (error) {
+    // Next.js redirect() throws internally — must re-throw it
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
     console.error('Magic Link Error:', error);
     return { message: 'Something went wrong. Please try again later.' };
   }
