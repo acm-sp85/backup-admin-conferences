@@ -9,9 +9,12 @@ export async function GET(request, { params }) {
     }
 
     try {
-        // For participant check-in, the QR should probably point to a validation URL
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const validationUrl = `${appUrl}/participants/checkin/${token}`;
+        // Detect the base URL automatically if not set
+        const host = request.headers.get('host');
+        const protocol = host?.includes('localhost') ? 'http' : 'https';
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+        
+        const validationUrl = `${baseUrl}/participants/checkin/${token}`;
         
         const qrDataUrl = await generateQR(validationUrl);
         

@@ -88,10 +88,12 @@ export async function sendSocialDinnerQR(registrationId) {
     if (tickets.length === 0) throw new Error('No tickets found. Please run Sync first.');
 
     // Generate QRs
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const host = (await import('next/headers')).headers().get('host');
+    const protocol = host?.includes('localhost') ? 'http' : 'https';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     
     const qrCodes = await Promise.all(tickets.map(async (t) => {
-        const validationUrl = `${appUrl}/social-dinner/checkin/${t.token}`;
+        const validationUrl = `${baseUrl}/social-dinner/checkin/${t.token}`;
         const qrBase64 = await generateQR(validationUrl);
         
         // Parse dietary preference
