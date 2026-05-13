@@ -156,8 +156,8 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
     if (!conferenceId) return { error: 'Conference ID is required' };
 
-    // Rate limiting: 50 invites per hour per admin
-    const { success, resetAt } = await checkRateLimit(`admin-${session.userId}`, 'invite', 50, 3600);
+    // Rate limiting: 1000 invites per hour per admin (bulk friendly)
+    const { success, resetAt } = await checkRateLimit(`admin-${session.userId}`, 'invite', 1000, 3600);
     if (!success) {
         return { error: `Invitation limit reached. Please try again after ${resetAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` };
     }

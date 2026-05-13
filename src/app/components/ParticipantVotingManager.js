@@ -12,12 +12,15 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
     const [loading, setLoading] = useState(false);
 
     const [inviteSending, setInviteSending] = useState(null);
+    const [isSendingBulk, setIsSendingBulk] = useState(false);
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const [resettingId, setResettingId] = useState(null);
 
     const fetchVoters = async () => {
         if (!selectedConference) return;
         const data = await getVotersForConference(selectedConference);
         setVoters(data);
+        setSelectedIds(new Set());
     };
 
     useEffect(() => { fetchVoters(); }, [selectedConference]);
@@ -70,6 +73,45 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
             alert(res.error);
         }
         setResettingId(null);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size > 0) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(voters.map(v => v.id)));
+        }
+    };
+
+    const toggleSelect = (id) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedIds(next);
+    };
+
+    const handleBulkInvite = async () => {
+        if (selectedIds.size === 0) return;
+        if (!confirm(`Send voting invitations to ${selectedIds.size} participants?`)) return;
+
+        setIsSendingBulk(true);
+        let success = 0;
+        let fail = 0;
+
+        for (const id of selectedIds) {
+            try {
+                const res = await sendVoterInvite(id, selectedConference);
+                if (res.success) success++; else fail++;
+                // Pace emails: wait 500ms
+                await new Promise(r => setTimeout(r, 500));
+            } catch (e) {
+                fail++;
+            }
+        }
+
+        alert(`Bulk invitations complete: ${success} successful, ${fail} failed.`);
+        setIsSendingBulk(false);
+        setSelectedIds(new Set());
     };
 
     const filteredClusters = allClusters.filter(c => c.conference_id == selectedConference);
@@ -126,8 +168,24 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
 
             {/* Voters List */}
             <div className="table-container">
-                <div className="bg-[#fafafa] border-b border-[var(--border)] px-3 py-2 flex justify-between items-center">
-                    <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Authorized Voters</span>
+                <div className="bg-[#fafafa] border-b border-[var(--border)] px-3 py-2 flex justify-between items-center h-12">
+                    <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Authorized Voters</span>
+                        {selectedIds.size > 0 && (
+                            <button 
+                                onClick={handleBulkInvite}
+                                disabled={isSendingBulk}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
+                            >
+                                {isSendingBulk ? (
+                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                                )}
+                                Send Invites ({selectedIds.size})
+                            </button>
+                        )}
+                    </div>
                     <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
                         Total Results: <strong className="text-[var(--foreground)] ml-1">{voters.length}</strong>
                     </div>
@@ -135,6 +193,14 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                 <table>
                     <thead>
                         <tr>
+                            <th className="w-10">
+                                <input 
+                                    type="checkbox"
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    checked={selectedIds.size === voters.length && voters.length > 0}
+                                    onChange={toggleSelectAll}
+                                />
+                            </th>
                             <th>Participant</th>
                             <th>Status</th>
                             <th>Clusters</th>
@@ -147,6 +213,14 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                         ) : (
                             voters.map(p => (
                                 <tr key={p.id}>
+                                    <td>
+                                        <input 
+                                            type="checkbox"
+                                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            checked={selectedIds.has(p.id)}
+                                            onChange={() => toggleSelect(p.id)}
+                                        />
+                                    </td>
                                     <td>
                                         <div className="font-medium text-[var(--foreground)]">{p.name}</div>
                                         <div className="text-[10px] text-[var(--muted)]">{p.email}</div>
