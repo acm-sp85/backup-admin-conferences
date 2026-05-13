@@ -46,6 +46,8 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                 try {
                     await sendParticipantCheckinQR(id);
                     success++;
+                    // Pace emails: wait 500ms between each
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 } catch (e) {
                     fail++;
                 }

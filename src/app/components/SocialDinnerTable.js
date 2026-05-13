@@ -50,6 +50,8 @@ export default function SocialDinnerTable({ attendees, userRole }) {
         try {
           await sendSocialDinnerQR(id);
           success++;
+          // Pace emails: wait 500ms between each
+          await new Promise(resolve => setTimeout(resolve, 500));
         } catch (e) {
           fail++;
         }
