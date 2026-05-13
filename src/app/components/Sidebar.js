@@ -18,7 +18,7 @@ const ADMIN_NAV = [
 
 const SETTINGS_NAV = { name: 'Settings', href: '/settings', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> };
 
-export default function Sidebar({ userRole, isOpen, onClose }) {
+export default function Sidebar({ userRole, userName, isOpen, onClose }) {
   const pathname = usePathname();
   
   let items = [...NAV];
@@ -86,9 +86,12 @@ export default function Sidebar({ userRole, isOpen, onClose }) {
         <div className="px-3 pb-4 pt-3 border-t border-white/[0.08]">
           <div className="flex items-center gap-2 px-3 py-2 mb-1">
             <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center text-[10px] font-bold text-[#aeaeb2] uppercase">
-              {userRole?.charAt(0)}
+              {(userName || userRole)?.charAt(0)}
             </div>
-            <span className="text-[11px] font-medium text-[#aeaeb2] capitalize">{userRole}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] font-medium text-[#aeaeb2] truncate">{userName || userRole}</span>
+              {userName && <span className="text-[9px] text-[#636366] capitalize">{userRole}</span>}
+            </div>
           </div>
           <form action={logout}>
             <button className="w-full flex items-center gap-2 px-3 py-[7px] rounded-md text-[11px] font-medium text-[#ff6b6b] hover:bg-[#ff6b6b]/10 transition-colors text-left">

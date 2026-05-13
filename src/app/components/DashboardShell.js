@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import MobileNavbar from './MobileNavbar';
 
-export default function DashboardShell({ children, userRole, isVoter }) {
+export default function DashboardShell({ children, userRole, userName, isVoter }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -13,7 +13,8 @@ export default function DashboardShell({ children, userRole, isVoter }) {
         <>
           <MobileNavbar onMenuClick={() => setIsSidebarOpen(true)} />
           <Sidebar 
-            userRole={userRole} 
+            userRole={userRole}
+            userName={userName}
             isOpen={isSidebarOpen} 
             onClose={() => setIsSidebarOpen(false)} 
           />
