@@ -3,6 +3,18 @@
 import { useState, useEffect } from 'react';
 import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility } from '../actions/program';
 
+const formatName = (name) => {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('-');
+};
+
 export default function ProgramManager({ conferences }) {
     const [selectedConfId, setSelectedConfId] = useState(conferences[0]?.id || '');
     const [program, setProgram] = useState([]);
@@ -149,7 +161,7 @@ export default function ProgramManager({ conferences }) {
                                                 {session.full_session_name.includes('(Chair:') && (
                                                     <div className="text-[11px] text-slate-500 italic mt-0.5 flex items-center gap-1.5">
                                                         <div className="w-1 h-1 rounded-full bg-slate-300" />
-                                                        Chair: {session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                                                        Chair: {formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
                                                     </div>
                                                 )}
                                             </div>
@@ -203,7 +215,7 @@ export default function ProgramManager({ conferences }) {
                                                         <div className="flex-1">
                                                             <div className="font-bold text-slate-800">{slot.title || '(No Title)'}</div>
                                                             {slot.presenter_name && (
-                                                                <div className="text-slate-500 mt-0.5">Presenter: <span className="font-medium text-slate-700">{slot.presenter_name}</span></div>
+                                                                <div className="text-slate-500 mt-0.5">Presenter: <span className="font-medium text-slate-700">{formatName(slot.presenter_name)}</span></div>
                                                             )}
                                                             <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
                                                         </div>

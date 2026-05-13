@@ -7,6 +7,18 @@ const leagueSpartan = League_Spartan({
     display: 'swap',
 });
 
+const formatName = (name) => {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('-');
+};
+
 export default async function ProgramPrintAllPage({ searchParams }) {
     const { conferenceId } = await searchParams;
 
@@ -76,7 +88,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                         className="font-medium opacity-80 mb-2 italic"
                                         style={{ fontSize: config.chairSize || '20px', color: config.titleColor }}
                                     >
-                                        Chair: {session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                                        Chair: {formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
                                     </div>
                                 )}
 
@@ -112,7 +124,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                                             className="font-normal opacity-80"
                                                             style={{ fontSize: `calc(${config.contentSize} * 0.8)` }}
                                                         >
-                                                            {slot.presenter_name}
+                                                            {formatName(slot.presenter_name)}
                                                         </div>
                                                     )}
                                                     <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
