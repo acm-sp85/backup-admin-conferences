@@ -62,6 +62,21 @@ export async function sendParticipantCheckinQR(registrationId) {
     return { success: true };
 }
 
+export async function manualCheckinParticipant(registrationId) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    await query(
+        'UPDATE participant_qr_tokens SET scanned_at = NOW(), is_manual = 1 WHERE registration_id = ? AND scanned_at IS NULL',
+        [registrationId]
+    );
+
+    revalidatePath('/participants');
+    return { success: true };
+}
+
 export async function validateParticipantTicket(token) {
     const session = await verifySession();
     if (!session) throw new Error('Unauthorized');
@@ -87,8 +102,8 @@ export async function validateParticipantTicket(token) {
     if (totalDebt > 0) {
         return {
             success: false,
-            error: 'Pending Balance',
             hasDebt: true,
+            error: 'Pending Balance',
             debtAmount: totalDebt,
             attendee: `${ticket.firstName} ${ticket.lastName}`,
             email: ticket.email,
@@ -126,7 +141,7 @@ export async function resetParticipantCheckin(registrationId) {
         throw new Error('Unauthorized: Only superadmins can reset scans.');
     }
 
-    await query('UPDATE participant_qr_tokens SET scanned_at = NULL WHERE registration_id = ?', [registrationId]);
+    await query('UPDATE participant_qr_tokens SET scanned_at = NULL, is_manual = 0 WHERE registration_id = ?', [registrationId]);
     revalidatePath('/participants');
     return { success: true };
 }

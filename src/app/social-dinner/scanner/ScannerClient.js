@@ -140,14 +140,14 @@ export default function ScannerClient() {
                         onClick={resetScanner}
                         className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-200 cursor-pointer ${
                             scanResult.loading ? 'bg-slate-900/80' :
-                            scanResult.success && scanResult.paymentStatus === 'paid' ? 'bg-green-600/95' : 
-                            scanResult.success && scanResult.paymentStatus !== 'paid' ? 'bg-amber-500/95' : 
+                            scanResult.success && !scanResult.hasDebt ? 'bg-green-600/95' : 
+                            scanResult.hasDebt ? 'bg-amber-500/95' : 
                             'bg-red-600/95'
                         }`}
                     >
                         {scanResult.loading ? (
                             <RefreshCw className="w-16 h-16 text-white animate-spin mb-4" />
-                        ) : scanResult.success ? (
+                        ) : (scanResult.success || scanResult.hasDebt) ? (
                             <>
                                 {scanResult.paymentStatus === 'paid' ? (
                                     <CheckCircle2 className="w-24 h-24 text-white mb-6 animate-bounce" />

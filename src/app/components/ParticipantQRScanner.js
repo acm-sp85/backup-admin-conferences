@@ -138,18 +138,23 @@ export default function ParticipantQRScanner() {
                         onClick={resetScanner}
                         className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-200 cursor-pointer ${
                             scanResult.loading ? 'bg-slate-900/80' :
+                            scanResult.hasDebt ? 'bg-amber-500/95' :
                             scanResult.success ? 'bg-green-600/95' : 
                             'bg-red-600/95'
                         }`}
                     >
                         {scanResult.loading ? (
                             <RefreshCw className="w-16 h-16 text-white animate-spin mb-4" />
-                        ) : scanResult.success ? (
+                        ) : (scanResult.success || scanResult.hasDebt) ? (
                             <>
-                                <CheckCircle2 className="w-24 h-24 text-white mb-6 animate-bounce" />
+                                {scanResult.hasDebt ? (
+                                    <RefreshCw className="w-24 h-24 text-white mb-6 animate-spin-slow" />
+                                ) : (
+                                    <CheckCircle2 className="w-24 h-24 text-white mb-6 animate-bounce" />
+                                )}
                                 
                                 <h3 className="text-3xl font-black text-white mb-2 uppercase tracking-tight">
-                                    Checked In!
+                                    {scanResult.hasDebt ? 'PAYMENT INCIDENCE' : 'Checked In!'}
                                 </h3>
                                 
                                 <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 w-full">
@@ -162,6 +167,11 @@ export default function ParticipantQRScanner() {
                                             <ClipboardCheck className="w-4 h-4" />
                                             {scanResult.acronym}
                                         </div>
+                                        {scanResult.hasDebt && (
+                                            <div className="mt-2 px-3 py-1 bg-white/30 rounded-lg text-white font-black text-[10px] uppercase tracking-tighter">
+                                                STATUS: PENDING BALANCE (${scanResult.debtAmount})
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 

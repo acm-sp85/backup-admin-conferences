@@ -1,13 +1,14 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { Mail, CheckCircle2, Loader2, QrCode as QrIcon } from 'lucide-react';
-import { sendSocialDinnerQR, resetTicketScan } from '../actions/social-dinner';
+import { sendSocialDinnerQR, resetTicketScan, manualCheckinSocialDinner } from '../actions/social-dinner';
 import SocialDinnerTicketsBadge from './SocialDinnerTicketsBadge';
 
 export default function SocialDinnerRow({ person, selected, onSelect, userRole }) {
   const [expanded, setExpanded] = useState(false);
   const [isSending, startSending] = useTransition();
   const [isResetting, startResetting] = useTransition();
+  const [isCheckingIn, startCheckingIn] = useTransition();
 
   const handleResetScan = (e, ticketId) => {
     e.stopPropagation();
@@ -30,6 +31,19 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
         alert('Email sent successfully!');
       } catch (e) {
         alert('Failed to send email: ' + e.message);
+      }
+    });
+  };
+
+  const handleManualCheckin = (e, ticketId, index) => {
+    e.stopPropagation();
+    if (!confirm(`Manually check-in Ticket T${index+1} for ${person.name}?`)) return;
+    startCheckingIn(async () => {
+      try {
+        await manualCheckinSocialDinner(ticketId);
+        alert('Ticket checked in successfully!');
+      } catch (e) {
+        alert('Failed to check in: ' + e.message);
       }
     });
   };
@@ -78,6 +92,13 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
           <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">
             {person.conference}
           </span>
+        </td>
+        <td className="text-center">
+          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            person.tickets_status?.some(t => t.scanned_at) ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
+          }`}>
+            {person.tickets_status?.filter(t => t.scanned_at).length || 0} / {person.tickets_status?.length || 0}
+          </div>
         </td>
         <td className="text-center">
           <SocialDinnerTicketsBadge 
@@ -161,6 +182,16 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                               <div key={i} className="flex items-center gap-1.5" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
                                 <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
                                 <span className="text-[10px] text-slate-400">T{i+1}</span>
+                                {t.is_manual && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-100">MANUAL</span>}
+                                {!t.scanned_at && (
+                                  <button
+                                    onClick={(e) => handleManualCheckin(e, t.id, i)}
+                                    disabled={isCheckingIn}
+                                    className="ml-1 text-[9px] text-green-600 hover:text-green-700 font-bold underline disabled:opacity-50"
+                                  >
+                                    Check-in
+                                  </button>
+                                )}
                                 {t.scanned_at && userRole === 'superadmin' && (
                                   <button
                                     onClick={(e) => handleResetScan(e, t.id)}

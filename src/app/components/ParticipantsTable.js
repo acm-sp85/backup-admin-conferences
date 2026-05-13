@@ -151,6 +151,7 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                             </th>
                             <th><a href={getSortUrl('name')} className="hover:text-indigo-600 flex items-center">Name <SortIcon field="name" /></a></th>
                             <th><a href={getSortUrl('email')} className="hover:text-indigo-600 flex items-center">Email <SortIcon field="email" /></a></th>
+                            <th><a href={getSortUrl('checkin')} className="hover:text-indigo-600 flex items-center">CHECKED-IN <SortIcon field="checkin" /></a></th>
                             <th>Conferences</th>
                             <th>
                                 <div className="flex gap-4">

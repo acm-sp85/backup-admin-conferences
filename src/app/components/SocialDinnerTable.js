@@ -60,12 +60,17 @@ export default function SocialDinnerTable({ attendees, userRole }) {
   };
 
   const sortedAttendees = [...attendees].sort((a, b) => {
-    let aVal = a[sortConfig.key] || '';
-    let bVal = b[sortConfig.key] || '';
-
-    // Handle string comparisons case-insensitively if applicable
-    if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-    if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    let aVal, bVal;
+    
+    if (sortConfig.key === 'scanned') {
+      aVal = a.tickets_status?.filter(t => t.scanned_at).length || 0;
+      bVal = b.tickets_status?.filter(t => t.scanned_at).length || 0;
+    } else {
+      aVal = a[sortConfig.key] || '';
+      bVal = b[sortConfig.key] || '';
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+    }
 
     if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -133,6 +138,12 @@ export default function SocialDinnerTable({ attendees, userRole }) {
               onClick={() => handleSort('conference')}
             >
               Conference <SortIcon column="conference" />
+            </th>
+            <th 
+              className="cursor-pointer hover:bg-slate-50 transition-colors text-center"
+              onClick={() => handleSort('scanned')}
+            >
+              Scanned <SortIcon column="scanned" />
             </th>
             <th 
               className="cursor-pointer hover:bg-slate-50 transition-colors text-center"

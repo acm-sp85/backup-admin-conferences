@@ -4,12 +4,13 @@ import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
 import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
-import { sendParticipantCheckinQR, resetParticipantCheckin } from '../actions/participants-qr';
+import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant } from '../actions/participants-qr';
 
 export default function ParticipantRow({ person, activeConfId, userRole, selected, onSelect }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSendingQR, setIsSendingQR] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
+    const [isCheckingIn, setIsCheckingIn] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -46,6 +47,23 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
             alert(error.message);
         } finally {
             setIsResetting(false);
+        }
+    };
+    
+    const handleManualCheckin = async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Manually check-in ${person.name}?`)) return;
+        
+        setIsCheckingIn(true);
+        try {
+            const res = await manualCheckinParticipant(person.primary_registration_id);
+            if (res.success) {
+                alert('Checked in successfully!');
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setIsCheckingIn(false);
         }
     };
 
@@ -100,7 +118,6 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                         <div className="text-[10px] text-[var(--muted)] flex items-center gap-2">
                             {person.registration_type || 'Standard'}
                             {person.qr_email_sent_at && <Mail className="w-2.5 h-2.5 text-blue-500" title="QR Sent" />}
-                            {person.qr_scanned_at && <CheckCircle2 className="w-2.5 h-2.5 text-green-500" title="Checked In" />}
                         </div>
                         {latestPayment?.group && (
                             <div className="text-[9px] text-indigo-500 font-bold uppercase tracking-wider mt-0.5">{latestPayment.group}</div>
@@ -108,6 +125,19 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                     </div>
                 </td>
                 <td className="text-[var(--muted)] py-4">{person.email}</td>
+                <td className="py-4">
+                    <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        person.qr_scanned_at ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
+                    }`}>
+                        {person.qr_scanned_at ? (
+                            <>
+                                <CheckCircle2 className="w-2.5 h-2.5" />
+                                {new Date(person.qr_scanned_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                                {person.qr_is_manual ? <span className="ml-1 text-[8px] opacity-70 bg-green-200/50 px-1 rounded">MANUAL</span> : null}
+                            </>
+                        ) : 'Not Yet'}
+                    </div>
+                </td>
                 <td className="py-4">
                     <div className="flex flex-wrap gap-1">
                         {confTokens.length > 0 ? confTokens.map(({ acronym, token, registrationId, conferenceId }) => (
@@ -214,6 +244,16 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                     {isSendingQR ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                                                     {person.qr_email_sent_at ? 'Resend Check-in QR' : 'Send Check-in QR'}
                                                 </button>
+                                                {!person.qr_scanned_at && (
+                                                    <button 
+                                                        onClick={handleManualCheckin}
+                                                        disabled={isCheckingIn}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-xl text-[10px] font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
+                                                    >
+                                                        {isCheckingIn ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                                        Manual Check-in
+                                                    </button>
+                                                )}
                                                 {!person.qr_token && (
                                                     <p className="text-[9px] text-amber-600 font-medium italic">Please run "Sync QR" to generate tokens first.</p>
                                                 )}

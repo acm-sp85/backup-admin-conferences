@@ -145,6 +145,21 @@ export async function sendSocialDinnerQR(registrationId) {
     return { success: true };
 }
 
+export async function manualCheckinSocialDinner(ticketId) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    await query(
+        'UPDATE social_dinner_tickets SET scanned_at = NOW(), is_manual = 1 WHERE id = ? AND scanned_at IS NULL',
+        [ticketId]
+    );
+
+    revalidatePath('/social-dinner');
+    return { success: true };
+}
+
 export async function validateTicket(token) {
     const session = await verifySession();
     if (!session) throw new Error('Unauthorized');
@@ -171,12 +186,13 @@ export async function validateTicket(token) {
     if (totalDebt > 0) {
         return {
             success: false,
-            error: 'Pending Balance',
             hasDebt: true,
+            error: 'Pending Balance',
             debtAmount: totalDebt,
             attendee: `${ticket.firstName} ${ticket.lastName}`,
             email: ticket.email,
-            conference: ticket.conference
+            conference: ticket.conference,
+            paymentStatus: ticket.payment_status
         };
     }
 
@@ -220,7 +236,7 @@ export async function resetTicketScan(ticketId) {
         throw new Error('Unauthorized: Only superadmins can reset scans.');
     }
 
-    await query('UPDATE social_dinner_tickets SET scanned_at = NULL WHERE id = ?', [ticketId]);
+    await query('UPDATE social_dinner_tickets SET scanned_at = NULL, is_manual = 0 WHERE id = ?', [ticketId]);
     revalidatePath('/social-dinner');
     return { success: true };
 }

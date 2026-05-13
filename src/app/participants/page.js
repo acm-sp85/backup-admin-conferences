@@ -64,7 +64,7 @@ export default async function ParticipantsPage({ searchParams }) {
 
   // 2. Fetch all registrations for these participants
   const registrations = await query(`
-    SELECT r.*, c.acronym, t.email_sent_at as qr_email_sent_at, t.scanned_at as qr_scanned_at, t.token as qr_token
+    SELECT r.*, c.acronym, t.email_sent_at as qr_email_sent_at, t.scanned_at as qr_scanned_at, t.token as qr_token, t.is_manual as qr_is_manual
     FROM registrations r
     JOIN conferences c ON r.conference_id = c.id
     LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
@@ -104,6 +104,7 @@ export default async function ParticipantsPage({ searchParams }) {
       primary_registration_id: primaryReg?.id,
       qr_email_sent_at: primaryReg?.qr_email_sent_at,
       qr_scanned_at: primaryReg?.qr_scanned_at,
+      qr_is_manual: primaryReg?.qr_is_manual,
       qr_token: primaryReg?.qr_token,
       cluster_for_review: primaryReg?.cluster_for_review,
       all_payments_json: JSON.stringify(pPayments) 
@@ -129,6 +130,9 @@ export default async function ParticipantsPage({ searchParams }) {
     }
   }
 
+  const totalCheckedIn = filteredParticipants.filter(p => p.qr_scanned_at).length;
+  const totalManual = filteredParticipants.filter(p => p.qr_scanned_at && p.qr_is_manual).length;
+
   // Apply Sorting
   filteredParticipants.sort((a, b) => {
     let valA, valB;
@@ -137,6 +141,7 @@ export default async function ParticipantsPage({ searchParams }) {
       case 'email': valA = a.email; valB = b.email; break;
       case 'paid': valA = a.total_paid; valB = b.total_paid; break;
       case 'debt': valA = a.total_debt; valB = b.total_debt; break;
+      case 'checkin': valA = a.qr_scanned_at ? 1 : 0; valB = b.qr_scanned_at ? 1 : 0; break;
       case 'created_at': valA = new Date(a.created_at); valB = new Date(b.created_at); break;
       default: valA = new Date(a.created_at); valB = new Date(b.created_at);
     }
@@ -164,6 +169,14 @@ export default async function ParticipantsPage({ searchParams }) {
           <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
             Total Results: <strong className="text-[var(--foreground)] ml-1">{filteredParticipants.length}</strong>
           </div>
+          <div className="text-xs bg-indigo-50 px-3 py-1.5 rounded-full text-indigo-600 font-medium border border-indigo-100">
+            Checked-in: <strong className="text-indigo-700 ml-1">{totalCheckedIn}</strong>
+          </div>
+          {totalManual > 0 && (
+            <div className="text-xs bg-amber-50 px-3 py-1.5 rounded-full text-amber-600 font-medium border border-amber-100">
+              Manual: <strong className="text-amber-700 ml-1">{totalManual}</strong>
+            </div>
+          )}
         </div>
       </header>
 

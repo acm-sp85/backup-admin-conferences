@@ -67,7 +67,7 @@ export default async function SocialDinnerPage({ searchParams }) {
 
   // 3. Fetch all tickets for these registrations
   const tickets = await query(`
-    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at
+    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at, is_manual
     FROM social_dinner_tickets
     WHERE registration_id IN (${registrationIds.join(',')})
   `);
@@ -153,6 +153,9 @@ export default async function SocialDinnerPage({ searchParams }) {
   const totalScanned = attendees.reduce((sum, a) => {
     return sum + (a.tickets_status?.filter(t => t.scanned_at).length || 0);
   }, 0);
+  const totalManual = attendees.reduce((sum, a) => {
+    return sum + (a.tickets_status?.filter(t => t.scanned_at && t.is_manual).length || 0);
+  }, 0);
 
   return (
     <DashboardLayout>
@@ -181,6 +184,11 @@ export default async function SocialDinnerPage({ searchParams }) {
             <div className="text-[10px] bg-indigo-50 px-3 py-1.5 rounded-full text-indigo-600 font-medium border border-indigo-100">
               Scanned: <strong className="text-indigo-700 ml-1">{totalScanned} / {totalTickets}</strong>
             </div>
+            {totalManual > 0 && (
+              <div className="text-[10px] bg-amber-50 px-3 py-1.5 rounded-full text-amber-600 font-medium border border-amber-100">
+                Manual: <strong className="text-amber-700 ml-1">{totalManual}</strong>
+              </div>
+            )}
             <div className="text-[10px] bg-green-50 px-3 py-1.5 rounded-full text-green-600 font-medium border border-green-100">
               Paid: <strong className="text-green-700 ml-1">{totalPaid}</strong>
             </div>
