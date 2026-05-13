@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
+import ParticipantQRBadge from './ParticipantQRBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
 import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant } from '../actions/participants-qr';
@@ -141,15 +142,23 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                 <td className="py-4">
                     <div className="flex flex-wrap gap-1">
                         {confTokens.length > 0 ? confTokens.map(({ acronym, token, registrationId, conferenceId }) => (
-                            <ParticipantBadge 
-                                key={acronym} 
-                                participantName={person.name} 
-                                conferenceAcronym={acronym} 
-                                token={token} 
-                                registrationId={registrationId}
-                                conferenceId={conferenceId}
-                                institution={person.regInstitution || person.institution}
-                            />
+                            <div key={acronym} className="flex items-center gap-1">
+                                <ParticipantBadge 
+                                    participantName={person.name} 
+                                    conferenceAcronym={acronym} 
+                                    token={token} 
+                                    registrationId={registrationId}
+                                    conferenceId={conferenceId}
+                                    institution={person.regInstitution || person.institution}
+                                />
+                                <ParticipantQRBadge 
+                                    participantName={person.name}
+                                    conferenceAcronym={acronym}
+                                    token={token}
+                                    registrationId={registrationId}
+                                    conferenceId={conferenceId}
+                                />
+                            </div>
                         )) : (
                             <span className="text-[var(--muted)] text-[10px]">—</span>
                         )}
