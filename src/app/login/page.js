@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { requestMagicLink } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState(requestMagicLink, undefined);
+  const [hasPassword, setHasPassword] = useState(false);
 
   if (state?.success) {
     return (
@@ -60,6 +61,24 @@ export default function LoginPage() {
               )}
             </div>
 
+            <div>
+              <label htmlFor="password" className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                <span>Password</span>
+                <span className="text-[9px] text-[#aeaeb2] font-normal lowercase tracking-normal">Optional (Admins only)</span>
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                onChange={(e) => setHasPassword(e.target.value.length > 0)}
+                className="input-base w-full"
+                placeholder="••••••••"
+              />
+              {state?.errors?.password && (
+                <p className="text-[#ff3b30] text-[11px] mt-1.5 font-medium">{state.errors.password}</p>
+              )}
+            </div>
+
             {state?.message && (
               <div className="card p-3 text-center" style={{borderColor:'#ff3b30', background:'#fff5f5'}}>
                 <p className="text-[#ff3b30] text-[11px] font-medium">{state.message}</p>
@@ -69,9 +88,9 @@ export default function LoginPage() {
             <button
               disabled={pending}
               type="submit"
-              className="btn-primary w-full text-center py-2.5 mt-2 disabled:opacity-60"
+              className="btn-primary w-full text-center py-2.5 mt-2 disabled:opacity-60 transition-all"
             >
-              {pending ? 'Sending Link...' : 'Send Login Link'}
+              {pending ? (hasPassword ? 'Logging in...' : 'Sending Link...') : (hasPassword ? 'Login' : 'Send Login Link')}
             </button>
           </form>
         </div>

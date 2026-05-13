@@ -1,5 +1,6 @@
 import { decrypt, createSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { query } from '@/lib/db';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -13,6 +14,13 @@ export async function GET(request) {
 
   if (!payload || payload.type !== 'magic-link') {
     redirect('/login?error=invalid_token');
+  }
+
+  if (payload.role === 'admin' || payload.role === 'superadmin') {
+    const [user] = await query('SELECT password FROM users WHERE id = ?', [payload.userId]);
+    if (user && !user.password) {
+      redirect(`/setup-password?token=${token}`);
+    }
   }
 
   // Convert the temporary magic-link token into a standard session

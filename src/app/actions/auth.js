@@ -1,7 +1,7 @@
 'use server';
 
 import { query } from '@/lib/db';
-import { createSession, deleteSession, encrypt } from '@/lib/auth';
+import { createSession, deleteSession, encrypt, decrypt, verifySession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -40,10 +40,24 @@ export async function requestMagicLink(prevState, formData) {
 
   try {
     // 1. Check if user exists
-    const users = await query('SELECT id, email, role FROM users WHERE email = ?', [email]);
+    const users = await query('SELECT id, email, role, password FROM users WHERE email = ?', [email]);
     const user = users[0];
+    const password = formData.get('password')?.toString();
 
     if (user) {
+      if (password && (user.role === 'admin' || user.role === 'superadmin')) {
+        const bcrypt = require('bcryptjs');
+        if (!user.password) {
+          return { message: 'No password set. Please use the magic link first to setup.' };
+        }
+        const isValid = await bcrypt.compare(password, user.password);
+        if (isValid) {
+          await createSession(user.id, user.role);
+          redirect('/');
+        } else {
+          return { errors: { password: 'Invalid password.' } };
+        }
+      }
       // 2. Generate short-lived magic token (15 mins)
       const token = await encrypt({ 
         userId: user.id, 
@@ -99,4 +113,61 @@ export async function requestMagicLink(prevState, formData) {
 export async function logout() {
   await deleteSession();
   redirect('/');
+}
+
+export async function setupAdminPassword(token, formData) {
+  const password = formData.get('password')?.toString();
+  const confirmPassword = formData.get('confirmPassword')?.toString();
+
+  if (!password || password.length < 8) {
+    return { error: 'Password must be at least 8 characters long.' };
+  }
+  if (password !== confirmPassword) {
+    return { error: 'Passwords do not match.' };
+  }
+
+  const payload = await decrypt(token);
+  if (!payload || payload.type !== 'magic-link' || (payload.role !== 'admin' && payload.role !== 'superadmin')) {
+    return { error: 'Invalid or expired token.' };
+  }
+
+  try {
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, payload.userId]);
+
+    await createSession(payload.userId, payload.role);
+  } catch (error) {
+    console.error('Setup Password Error:', error);
+    return { error: 'Failed to set password.' };
+  }
+
+  redirect('/');
+}
+
+export async function updatePassword(prevState, formData) {
+  const session = await verifySession();
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    return { error: 'Unauthorized' };
+  }
+
+  const password = formData.get('password')?.toString();
+  const confirmPassword = formData.get('confirmPassword')?.toString();
+
+  if (!password || password.length < 8) {
+    return { error: 'Password must be at least 8 characters long.' };
+  }
+  if (password !== confirmPassword) {
+    return { error: 'Passwords do not match.' };
+  }
+
+  try {
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, session.userId]);
+    return { success: true, message: 'Password updated successfully.' };
+  } catch (error) {
+    console.error('Update Password Error:', error);
+    return { error: 'Failed to update password.' };
+  }
 }
