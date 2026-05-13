@@ -1,6 +1,18 @@
 import { query } from '@/lib/db';
 import { getConferenceConfig } from '@/app/actions/program';
 
+const formatName = (name) => {
+    if (!name) return '';
+    return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('-');
+};
+
 export default async function DownloadDocPage({ params }) {
     const { sessionId } = await params;
 
@@ -49,7 +61,7 @@ export default async function DownloadDocPage({ params }) {
             <div class="session-title">${session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}</div>
             ${session.full_session_name.includes('(Chair:') ? `
                 <div style="font-size: 16pt; font-style: italic; color: #555; margin-bottom: 15pt;">
-                    Chair: ${session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1]}
+                    Chair: ${formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
                 </div>
             ` : ''}
             <div class="time-box">
@@ -63,7 +75,7 @@ export default async function DownloadDocPage({ params }) {
                     <td class="slot-time">${new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                     <td>
                         <div class="slot-title">${slot.title || '(No Title)'}</div>
-                        ${slot.presenter_name ? `<div class="slot-presenter">${slot.presenter_name}</div>` : ''}
+                        ${slot.presenter_name ? `<div class="slot-presenter">${formatName(slot.presenter_name)}</div>` : ''}
                         <div class="slot-type">${slot.type}</div>
                     </td>
                 </tr>
