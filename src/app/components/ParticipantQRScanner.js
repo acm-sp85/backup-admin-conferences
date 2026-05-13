@@ -18,7 +18,11 @@ export default function ParticipantQRScanner() {
         const scanner = new window.Html5QrcodeScanner("reader", { 
             fps: 10, 
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
+            aspectRatio: 1.0,
+            videoConstraints: {
+                facingMode: "environment"
+            },
+            rememberLastUsedCamera: true
         });
 
         scanner.render(onScanSuccess, onScanFailure);
