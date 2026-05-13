@@ -13,7 +13,7 @@ export const getConnection = async () => {
             password: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.replace(/\\(\$)/g, '$1') : process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
             waitForConnections: true,
-            connectionLimit: 5, // Reduced from 10 to be safer on shared environments
+            connectionLimit: 20, // Increased from 5 to handle higher request limits
             queueLimit: 0,
             enableKeepAlive: true,
             keepAliveInitialDelay: 10000
