@@ -6,6 +6,7 @@ import { verifySession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { QrCode } from 'lucide-react';
+import { cookies } from 'next/headers';
 
 export default async function SocialDinnerPage({ searchParams }) {
   const session = await verifySession();
@@ -16,6 +17,29 @@ export default async function SocialDinnerPage({ searchParams }) {
   const { search, conference, showAll } = await searchParams;
   const isShowAll = showAll === 'true';
   const conferences = await query('SELECT id, acronym FROM conferences ORDER BY acronym ASC');
+
+  // Persistence: If no conference in URL, check cookie
+  if (!conference && conferences.length > 0) {
+    const cookieStore = await cookies();
+    const lastConference = cookieStore.get('last_conference')?.value;
+    
+    // Validate the cookie value exists in our conferences list
+    const validCookie = lastConference && conferences.some(c => c.acronym === lastConference);
+    
+    if (validCookie) {
+      const params = new URLSearchParams(Object.fromEntries(Object.entries(await searchParams).filter(([_, v]) => v !== undefined)));
+      params.set('conference', lastConference);
+      redirect(`/social-dinner?${params.toString()}`);
+    } else {
+      // Default to the latest conference if no valid cookie
+      const [latest] = await query('SELECT acronym FROM conferences ORDER BY id DESC LIMIT 1');
+      if (latest) {
+        const params = new URLSearchParams(Object.fromEntries(Object.entries(await searchParams).filter(([_, v]) => v !== undefined)));
+        params.set('conference', latest.acronym);
+        redirect(`/social-dinner?${params.toString()}`);
+      }
+    }
+  }
 
   // 1. Fetch basic participant and registration data
   let sql = `

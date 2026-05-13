@@ -7,7 +7,27 @@ import VotingResults from './VotingResults';
 
 export default function UnifiedPostersView({ conferences, allClusters, userRole }) {
     const [activeTab, setActiveTab] = useState('posters');
-    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
+    
+    // Initialize from cookie if available
+    const [selectedConference, setSelectedConference] = useState(() => {
+        if (typeof document !== 'undefined') {
+            const match = document.cookie.match(/(?:^|; )last_conference=([^;]*)/);
+            const acronym = match ? decodeURIComponent(match[1]) : null;
+            if (acronym) {
+                const found = conferences.find(c => c.acronym === acronym);
+                if (found) return found.id;
+            }
+        }
+        return conferences[0]?.id || '';
+    });
+
+    const handleConferenceChange = (id) => {
+        setSelectedConference(id);
+        const acronym = conferences.find(c => c.id == id)?.acronym;
+        if (acronym) {
+            document.cookie = `last_conference=${acronym}; path=/; max-age=31536000`;
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -58,21 +78,21 @@ export default function UnifiedPostersView({ conferences, allClusters, userRole 
                     <PosterManager 
                         conferences={conferences} 
                         selectedConference={selectedConference}
-                        onConferenceChange={setSelectedConference}
+                        onConferenceChange={handleConferenceChange}
                     />
                 ) : activeTab === 'voting' ? (
                     <ParticipantVotingManager 
                         conferences={conferences} 
                         allClusters={allClusters}
                         selectedConference={selectedConference}
-                        onConferenceChange={setSelectedConference}
+                        onConferenceChange={handleConferenceChange}
                     />
                 ) : (
                     <VotingResults 
                         conferences={conferences} 
                         userRole={userRole}
                         selectedConference={selectedConference}
-                        onConferenceChange={setSelectedConference}
+                        onConferenceChange={handleConferenceChange}
                     />
                 )}
             </div>

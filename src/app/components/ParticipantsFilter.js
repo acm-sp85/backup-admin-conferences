@@ -23,7 +23,13 @@ export default function ParticipantsFilter({ conferences }) {
   const updateFilters = (s, c, st) => {
     const params = new URLSearchParams(searchParams);
     if (s) params.set('search', s); else params.delete('search');
-    if (c) params.set('conference', c); else params.delete('conference');
+    if (c) {
+      params.set('conference', c);
+      document.cookie = `last_conference=${c}; path=/; max-age=31536000`;
+    } else {
+      params.delete('conference');
+      document.cookie = `last_conference=; path=/; max-age=0`;
+    }
     if (st) params.set('status', st); else params.delete('status');
 
     startTransition(() => {

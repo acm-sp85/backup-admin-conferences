@@ -16,7 +16,27 @@ const formatName = (name) => {
 };
 
 export default function ProgramManager({ conferences }) {
-    const [selectedConfId, setSelectedConfId] = useState(conferences[0]?.id || '');
+    // Initialize from cookie if available
+    const [selectedConfId, setSelectedConfId] = useState(() => {
+        if (typeof document !== 'undefined') {
+            const match = document.cookie.match(/(?:^|; )last_conference=([^;]*)/);
+            const acronym = match ? decodeURIComponent(match[1]) : null;
+            if (acronym) {
+                const found = conferences.find(c => c.acronym === acronym);
+                if (found) return found.id;
+            }
+        }
+        return conferences[0]?.id || '';
+    });
+
+    const handleConferenceChange = (id) => {
+        setSelectedConfId(id);
+        const acronym = conferences.find(c => c.id == id)?.acronym;
+        if (acronym) {
+            document.cookie = `last_conference=${acronym}; path=/; max-age=31536000`;
+        }
+    };
+
     const [program, setProgram] = useState([]);
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState(null);
@@ -89,7 +109,7 @@ export default function ProgramManager({ conferences }) {
                     <select 
                         className="bg-slate-50 border border-slate-200 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500"
                         value={selectedConfId}
-                        onChange={(e) => setSelectedConfId(e.target.value)}
+                        onChange={(e) => handleConferenceChange(e.target.value)}
                     >
                         {conferences.map(c => (
                             <option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>
