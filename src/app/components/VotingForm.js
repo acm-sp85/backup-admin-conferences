@@ -233,9 +233,13 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                                         className="w-full h-32 md:h-40 cursor-pointer overflow-hidden"
                                     >
                                         <img 
-                                            src={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`} 
+                                            src={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`} 
                                             alt="TOC" 
                                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-[10px] text-slate-400">Preview Unavailable</div>';
+                                            }}
                                         />
                                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-all">
                                             <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-900 shadow-lg translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all">
@@ -245,7 +249,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                                     </div>
                                     <div className="absolute top-2 right-2 flex gap-1">
                                         <a 
-                                            href={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`}
+                                            href={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             onClick={(e) => e.stopPropagation()}
@@ -291,9 +295,12 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
           >
               <div className="relative w-full h-full flex items-center justify-center">
                   <img 
-                      src={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`} 
+                      src={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`} 
                       alt="TOC Full" 
                       className="max-w-[95vw] max-h-[95vh] object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+                      onError={(e) => {
+                        e.target.parentElement.innerHTML = '<div class="text-white text-sm">Image could not be loaded directly.</div>';
+                      }}
                   />
                   <div className="absolute top-4 right-4 text-white/50 text-[11px] font-medium tracking-widest uppercase">
                       Click anywhere to close

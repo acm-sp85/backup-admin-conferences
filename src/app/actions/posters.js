@@ -11,9 +11,10 @@ export async function getPostersForConference(conferenceId) {
     }
 
     return await query(`
-        SELECT p.*, c.name as cluster_name, c.color as cluster_color
+        SELECT p.*, c.name as cluster_name, c.color as cluster_color, conf.base_url
         FROM posters p 
         LEFT JOIN clusters c ON p.cluster_id = c.id 
+        JOIN conferences conf ON p.conference_id = conf.id
         WHERE p.conference_id = ? 
         ORDER BY p.code ASC, p.title ASC
     `, [conferenceId]);

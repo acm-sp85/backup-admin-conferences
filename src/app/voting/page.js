@@ -90,8 +90,10 @@ export default async function VotingPage() {
   }
 
   const posters = await query(`
-    SELECT * FROM posters 
-    WHERE cluster_id IN (${clustersIds.join(',')})
+    SELECT p.*, conf.base_url 
+    FROM posters p
+    JOIN conferences conf ON p.conference_id = conf.id
+    WHERE p.cluster_id IN (${clustersIds.join(',')})
   `);
 
   return (

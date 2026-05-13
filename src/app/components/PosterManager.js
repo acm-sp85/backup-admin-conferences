@@ -15,6 +15,7 @@ export default function PosterManager({ conferences, selectedConference, onConfe
     const [sortConfig, setSortConfig] = useState({ key: 'code', direction: 'asc' });
 
     const [selectedPoster, setSelectedPoster] = useState(null);
+    const [isTocExpanded, setIsTocExpanded] = useState(false);
 
     const fetchData = async () => {
         if (!selectedConference) return;
@@ -328,17 +329,30 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                             )}
 
                             {selectedPoster.toc && selectedPoster.toc !== 'null' && (
-                                <div>
-                                    <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-2">Graphical Abstract (TOC)</label>
-                                    <a 
-                                        href={`https://www.nanoge.org/static/abstracts/${selectedPoster.toc}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-semibold text-[var(--accent)] hover:underline inline-flex items-center gap-1.5 bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100 w-fit transition-colors hover:bg-blue-50"
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1">Graphical Abstract (TOC)</label>
+                                    <div 
+                                        className="relative group rounded-xl border border-[var(--border)] overflow-hidden bg-slate-50 cursor-zoom-in"
+                                        onClick={() => setIsTocExpanded(true)}
                                     >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                        View TOC Image
-                                    </a>
+                                        <img 
+                                            src={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`}
+                                            alt="Graphical Abstract"
+                                            className="w-full max-h-64 object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.02]"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'block';
+                                            }}
+                                        />
+                                        <div className="hidden p-4 text-center text-[10px] text-[var(--muted)] italic">
+                                            Preview unavailable. <a href={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`} target="_blank" className="text-[var(--accent)] underline">Open directly</a>
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center">
+                                            <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-900 shadow-lg opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                                                Click to zoom
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -372,6 +386,24 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                             >
                                 Close
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Full Screen TOC Overlay */}
+            {isTocExpanded && selectedPoster && selectedPoster.toc && (
+                <div 
+                    onClick={() => setIsTocExpanded(false)}
+                    className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-300"
+                >
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <img 
+                            src={`${selectedPoster.base_url || 'https://www.nanoge.org/static/abstracts/'}${selectedPoster.toc}`} 
+                            alt="TOC Full" 
+                            className="max-w-[95vw] max-h-[95vh] object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+                        />
+                        <div className="absolute top-4 right-4 text-white/50 text-[11px] font-medium tracking-widest uppercase">
+                            Click anywhere to close
                         </div>
                     </div>
                 </div>

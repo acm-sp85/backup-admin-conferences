@@ -9,7 +9,7 @@ const SYNC_CONFIG = {
   mongoProgramView: `${ACRONYM} - Program`, 
   mongoPostersView: `${ACRONYM} - Posters`,
   targetConferenceAcronym: ACRONYM,
-  targetConferenceName: process.env.CONFERENCE_NAME || 'HOPV 2026',
+  targetConferenceName: process.env.CONFERENCE_NAME || 'Conference Name',
 };
 // -----------------------------
 
@@ -30,7 +30,7 @@ const summary = {
 
 async function syncAll() {
   const { targetConferenceAcronym, targetConferenceName } = SYNC_CONFIG;
-  const mongoDbName = process.env.MONGO_DB_NAME || 'nanoge-production';
+  const mongoDbName = 'scito-prod';
   const MONGO_URI = process.env.MONGO_URI;
 
   if (!MONGO_URI) {
@@ -38,7 +38,7 @@ async function syncAll() {
     process.exit(1);
   }
 
-  console.log(`🚀 Starting Master Sync for conference: ${targetConferenceAcronym}...`);
+  console.log(`🚀 Starting Master Sync for conference: ${targetConferenceAcronym} (Scito DB)...`);
 
   const mongoClient = new MongoClient(MONGO_URI);
   let mariadb;
@@ -105,7 +105,7 @@ async function syncAll() {
     } catch (e) { /* ignore duplicate */ }
 
     // 1. Ensure Conference exists
-    const baseUrl = 'https://www.nanoge.org/static/abstracts/';
+    const baseUrl = 'https://app.scitoevents.com/static/abstracts/';
     let conferenceId = await ensureConference(mariadb, targetConferenceAcronym, targetConferenceName, baseUrl);
 
     // 2. Pre-fetch existing data for optimization
@@ -463,7 +463,7 @@ async function runSyncModule(name, fn) {
 
 function printSummary(acronym) {
   console.log(`
-✨ Master Sync Summary for ${acronym}:
+✨ Master Sync Summary for ${acronym} (Scito DB):
 ----------------------------------
 👤 New Participants: ${summary.participants}
 🔗 New Registrations: ${summary.registrations}
