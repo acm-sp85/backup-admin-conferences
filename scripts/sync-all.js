@@ -85,7 +85,20 @@ async function syncAll() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 0.2 Ensure program_sessions has is_hidden column
+    // 0.2 Ensure participant_qr_tokens table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS participant_qr_tokens (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        registration_id INT NOT NULL,
+        token VARCHAR(48) NOT NULL UNIQUE,
+        email_sent_at DATETIME NULL,
+        scanned_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (registration_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 0.3 Ensure program_sessions has is_hidden column
     try {
       await mariadb.execute('ALTER TABLE program_sessions ADD COLUMN is_hidden TINYINT(1) DEFAULT 0');
       console.log('✅ Added is_hidden column to program_sessions');
@@ -158,12 +171,12 @@ async function syncAll() {
         if (regId) {
           seenRegistrationIds.add(regId);
           
-          // --- NEW: Generate Participant QR Token automatically ---
+          // --- Generate Participant QR Token if missing ---
           const [existingQR] = await mariadb.execute(
             'SELECT id FROM participant_qr_tokens WHERE registration_id = ?',
             [regId]
           );
-          if (!existingQR.length) {
+          if (existingQR.length === 0) {
             const token = crypto.randomBytes(24).toString('hex');
             await mariadb.execute(
               'INSERT INTO participant_qr_tokens (registration_id, token) VALUES (?, ?)',
