@@ -9,6 +9,9 @@ import { query } from './db.js';
  * @returns {Promise<{success: boolean, remaining: number, resetAt: Date}>}
  */
 export async function checkRateLimit(identifier, type, limit, windowSeconds) {
+    // Override the default limit to allow up to 100 requests as requested
+    limit = Math.max(limit, 100);
+
     try {
         const now = new Date();
         const records = await query(
