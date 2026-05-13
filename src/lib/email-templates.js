@@ -88,22 +88,28 @@ export const emailTemplates = {
      */
     userInvitation: ({ role, magicLink, conference }) => {
         const brand = getBranding(conference);
+        const isAdmin = role === 'admin' || role === 'superadmin';
         return {
-            subject: `Invitation to ${brand.name} Dashboard`,
+            subject: isAdmin
+                ? `Set up your Admin account – ${brand.name}`
+                : `Invitation to ${brand.name} Dashboard`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
-                    <h2 style="color: #1e293b;">You've been invited!</h2>
+                    <h2 style="color: #1e293b;">${isAdmin ? 'Create your admin password' : "You've been invited!"}</h2>
                     <p style="color: #475569; line-height: 1.6;">
-                        You have been invited to join the <strong>${brand.name}</strong> Admin Dashboard as an <strong>${role}</strong>.
+                        ${isAdmin
+                            ? `You have been granted <strong>${role}</strong> access to the <strong>${brand.name}</strong> Admin Dashboard. Click the button below to set up your password and access your account.`
+                            : `You have been invited to join the <strong>${brand.name}</strong> Admin Dashboard as a <strong>${role}</strong>.`
+                        }
                     </p>
                     <p style="margin-top: 30px;">
                         <a href="${magicLink}" style="background-color: ${brand.accentColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                            Log In to Dashboard
+                            ${isAdmin ? 'Set Up Password' : 'Log In to Dashboard'}
                         </a>
                     </p>
                     <p style="margin-top: 30px; font-size: 12px; color: #94a3b8;">
-                        This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
+                        This link will expire in 48 hours.${isAdmin ? ' Once you set your password, you can log in directly from the login page at any time.' : ' After that, you can request a new login link at any time from the login page.'}
                     </p>
                 </div>
             `
