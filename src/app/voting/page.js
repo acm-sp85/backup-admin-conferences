@@ -40,20 +40,43 @@ export default async function VotingPage() {
   // If user is Staff AND HAS active clusters -> Show Voting UI
   // If user is regular Voter -> Show Voting UI (or "No clusters" / "Closed")
 
+  const isVoter = user.role === 'user';
+
+  // 4. Define Shared Header for Voting UI
+  const votingHeader = (
+    <header className="mb-6 flex justify-between items-start">
+      <div>
+        <h2 className="text-xl font-semibold">Poster Voting</h2>
+        <p className="text-[var(--muted)] text-xs mt-0.5">
+          {activeClusters[0]?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}
+        </p>
+      </div>
+      
+      <form action={logout}>
+         <button type="submit" className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/5 px-3 py-1.5 rounded-lg border border-[#ff3b30]/10 hover:bg-[#ff3b30]/10 transition-colors uppercase tracking-tight">
+           Sign Out
+         </button>
+      </form>
+    </header>
+  );
+
   if (isStaff && (activeClusters.length === 0 || !hasAssignedClusters)) {
-    // Check if they have ANY clusters assigned (even if voting is closed)
-    // If they have clusters but voting is closed, we might still want to show them management
-    // OR we show them the "Voting Closed" message with a button to Dashboard.
-    
-    // For now, let's keep it simple: Staff with no active votes = Management
     const conferences = await query('SELECT * FROM conferences ORDER BY name ASC');
     const allClusters = await query('SELECT * FROM clusters ORDER BY name ASC');
     
     return (
       <DashboardLayout>
-        <header className="mb-6">
-          <h2 className="text-xl font-semibold">Voting Management</h2>
-          <p className="text-[var(--muted)] text-xs mt-0.5">Select a conference to manage participant voting clusters</p>
+        <header className="mb-6 flex justify-between items-start">
+          <div>
+            <h2 className="text-xl font-semibold">Voting Management</h2>
+            <p className="text-[var(--muted)] text-xs mt-0.5">Select a conference to manage participant voting clusters</p>
+          </div>
+          
+          <form action={logout}>
+            <button type="submit" className="text-[10px] font-bold text-[#ff3b30] bg-[#ff3b30]/5 px-3 py-1.5 rounded-lg border border-[#ff3b30]/10 hover:bg-[#ff3b30]/10 transition-colors uppercase tracking-tight">
+              Sign Out
+            </button>
+          </form>
         </header>
 
         <ParticipantVotingManager 
@@ -70,6 +93,7 @@ export default async function VotingPage() {
   if (!hasAssignedClusters) {
     return (
       <DashboardLayout>
+        {votingHeader}
         <div className="max-w-md mx-auto mt-20 text-center">
           <h2 className="text-lg font-semibold">No Clusters Assigned</h2>
           <p className="text-[var(--muted)] text-xs mt-1">You haven't been assigned any clusters for review yet.</p>
@@ -81,6 +105,7 @@ export default async function VotingPage() {
   if (activeClusters.length === 0) {
     return (
       <DashboardLayout>
+        {votingHeader}
         <div className="max-w-md mx-auto mt-20 text-center">
           <h2 className="text-lg font-semibold">Voting Closed</h2>
           <p className="text-[var(--muted)] text-xs mt-1">No active voting windows for your assigned clusters.</p>
@@ -98,22 +123,7 @@ export default async function VotingPage() {
 
   return (
     <DashboardLayout>
-      <header className="mb-6 flex justify-between items-start">
-        <div>
-          <h2 className="text-xl font-semibold">Poster Voting</h2>
-          <p className="text-[var(--muted)] text-xs mt-0.5">
-            {activeClusters[0]?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}
-          </p>
-        </div>
-        
-        {user.role === 'user' && (
-          <form action={logout}>
-             <button type="submit" className="text-[11px] font-semibold text-[#ff3b30] cursor-pointer">
-               Sign Out
-             </button>
-          </form>
-        )}
-      </header>
+      {votingHeader}
 
       {!!user.has_voted && (
         <div className="card p-4 mb-4 border-amber-200 bg-amber-50">

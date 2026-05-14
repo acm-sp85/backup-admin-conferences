@@ -2,6 +2,7 @@ import { query } from '@/lib/db';
 import { getParticipantByToken } from '../../actions/participantVoting';
 import VotingForm from '../../components/VotingForm';
 import { redirect } from 'next/navigation';
+import { logout } from '../../actions/auth';
 
 export default async function ParticipantVotingPortal({ searchParams }) {
     const { t: token } = await searchParams;
@@ -83,6 +84,12 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                             {participant.voting_instructions || 'Please rank the following posters from 1 to 10.'}
                         </p>
                     </div>
+
+                    <form action={logout}>
+                        <button type="submit" className="text-[12px] font-bold text-[#ff3b30] bg-white px-4 py-2 rounded-xl border border-[#ff3b30]/10 shadow-sm hover:bg-[#fff5f5] transition-colors">
+                            Sign Out
+                        </button>
+                    </form>
                 </header>
 
                 {participant.has_voted ? (
