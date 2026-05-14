@@ -28,7 +28,7 @@ export default async function VotingPage() {
   if (hasAssignedClusters) {
     const clustersIdsString = clustersIds.join(',');
     activeClusters = await query(`
-        SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email, conf.voting_instructions
+        SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id, conf.email as conference_email, conf.voting_instructions, conf.voting_validation_enabled
         FROM clusters c 
         JOIN conferences conf ON c.conference_id = conf.id 
         WHERE conf.voting_window_open = 1 AND c.id IN (${clustersIdsString})
@@ -135,8 +135,10 @@ export default async function VotingPage() {
         posters={posters} 
         initialVotes={typeof user.votes === 'string' ? JSON.parse(user.votes) : (user.votes || {})} 
         userId={user.id}
+        conferenceId={activeClusters[0]?.conference_id}
         conferenceEmail={activeClusters[0]?.conference_email}
         hasVoted={!!user.has_voted}
+        votingValidationEnabled={!!activeClusters[0]?.voting_validation_enabled}
       />
     </DashboardLayout>
   );
