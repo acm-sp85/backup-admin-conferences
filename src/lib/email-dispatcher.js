@@ -74,7 +74,12 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
      `).join('') || '';
      
      if (qrHtml) {
-        html = html.replace('</div>', qrHtml + '</div>');
+        if (html.includes('</div>')) {
+            const lastIdx = html.lastIndexOf('</div>');
+            html = html.substring(0, lastIdx) + qrHtml + html.substring(lastIdx);
+        } else {
+            html += qrHtml;
+        }
      }
   }
 

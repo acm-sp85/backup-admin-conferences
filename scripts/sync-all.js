@@ -69,14 +69,15 @@ async function syncAll() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 0.1 Ensure Social Dinner Tickets table exists
     await mariadb.execute(`
       CREATE TABLE IF NOT EXISTS social_dinner_tickets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         registration_id INT NOT NULL,
-        payment_id INT NOT NULL,
-        ticket_index INT NOT NULL,
+        payment_id INT DEFAULT NULL,
+        ticket_index INT DEFAULT NULL,
         token VARCHAR(100) UNIQUE NOT NULL,
+        is_manual TINYINT(1) DEFAULT 0,
+        is_hidden TINYINT(1) DEFAULT 0,
         email_sent_at TIMESTAMP NULL,
         scanned_at TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -421,6 +422,7 @@ async function syncAll() {
             DELETE FROM social_dinner_tickets 
             WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
             AND id NOT IN (${ids})
+            AND is_manual = 0
         `, [conferenceId]);
         if (delTickets.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTickets.affectedRows} stale dinner tickets`);
     }

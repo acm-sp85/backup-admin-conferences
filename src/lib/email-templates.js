@@ -131,15 +131,15 @@ export const emailTemplates = {
                     <p>Here are your tickets for the Social Dinner. Please show these QR codes at the entrance.</p>
                     
                     ${qrCodes.map((qc, idx) => `
-                        <div style="margin-bottom: 20px; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+                        <div style="margin-top: 20px; margin-bottom: 20px; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
                             <img src="${brand.baseUrl}/api/qr/${qc.token}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
                             <p style="margin: 5px 0; font-weight: bold; color: ${brand.accentColor};">Dietary: ${qc.dietary}</p>
                         </div>
                     `).join('')}
                     
-                    <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                        This is an automated message from ${brand.name}. For support, contact ${brand.email}.
-                    </p>
+                    // <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                    //     This is an automated message from ${brand.name}. For support, contact ${brand.email}.
+                    // </p>
                 </div>
             `
         };

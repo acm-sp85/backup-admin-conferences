@@ -2,13 +2,15 @@
 import { useState, useTransition } from 'react';
 import SocialDinnerRow from './SocialDinnerRow';
 import { syncSocialDinnerTickets, sendSocialDinnerQR } from '../actions/social-dinner';
-import { Loader2, Mail, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, RefreshCw, CheckCircle2, UserPlus } from 'lucide-react';
+import AddSocialDinnerParticipantModal from './AddSocialDinnerParticipantModal';
 
-export default function SocialDinnerTable({ attendees, userRole }) {
+export default function SocialDinnerTable({ attendees, userRole, conferenceAcronym }) {
   const [sortConfig, setSortConfig] = useState({ key: 'purchase_date', direction: 'desc' });
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [isSyncing, startSync] = useTransition();
   const [isSendingBulk, startSendingBulk] = useTransition();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSort = (key) => {
     setSortConfig(prev => ({
@@ -100,11 +102,34 @@ export default function SocialDinnerTable({ attendees, userRole }) {
           ) : (
             <div className="text-[10px] text-slate-400 font-medium px-1 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              Tickets are automatically synced with master database
+              Tickets are automatically synced with master database. You can also add participants manually.
             </div>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-semibold shadow-lg shadow-slate-200 transition-all"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Add Attendee
+          </button>
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+          >
+            {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Sync Now
+          </button>
+        </div>
       </div>
+
+      <AddSocialDinnerParticipantModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        conferenceAcronym={conferenceAcronym} 
+      />
 
       <div className="table-container">
         <table>

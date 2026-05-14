@@ -79,16 +79,17 @@ export async function sendSocialDinnerQR(registrationId) {
     if (!participant) throw new Error('Participant not found');
 
     const tickets = await query(`
-        SELECT t.token, t.id, p.tickets_info, t.ticket_index
+        SELECT t.token, t.id, p.tickets_info, t.ticket_index, t.is_manual
         FROM social_dinner_tickets t
-        JOIN payments p ON t.payment_id = p.id
-        WHERE t.registration_id = ?
+        LEFT JOIN payments p ON t.payment_id = p.id
+        WHERE t.registration_id = ? AND t.is_hidden = 0
     `, [registrationId]);
 
-    if (tickets.length === 0) throw new Error('No tickets found. Please run Sync first.');
+    if (tickets.length === 0) throw new Error('No dinner tickets found for this participant.');
 
     // Generate QRs
-    const host = (await import('next/headers')).headers().get('host');
+    const headersList = await (await import('next/headers')).headers();
+    const host = headersList.get('host');
     const protocol = host?.includes('localhost') ? 'http' : 'https';
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     
@@ -152,9 +153,47 @@ export async function manualCheckinSocialDinner(ticketId) {
     }
 
     await query(
-        'UPDATE social_dinner_tickets SET scanned_at = NOW(), is_manual = 1 WHERE id = ? AND scanned_at IS NULL',
+        'UPDATE social_dinner_tickets SET scanned_at = NOW() WHERE id = ? AND scanned_at IS NULL',
         [ticketId]
     );
+
+    revalidatePath('/social-dinner');
+    return { success: true };
+}
+
+export async function addManualSocialDinnerTicket(registrationId) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    const token = crypto.randomBytes(24).toString('hex');
+    await query(
+        'INSERT INTO social_dinner_tickets (registration_id, payment_id, ticket_index, token, is_manual) VALUES (?, NULL, NULL, ?, 1)',
+        [registrationId, token]
+    );
+
+    revalidatePath('/social-dinner');
+    return { success: true };
+}
+
+export async function removeSocialDinnerTicket(ticketId) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    // Check if it's a manual or sync ticket
+    const [ticket] = await query('SELECT is_manual, payment_id FROM social_dinner_tickets WHERE id = ?', [ticketId]);
+    if (!ticket) return { error: 'Ticket not found' };
+
+    if (ticket.payment_id === null) {
+        // Pure manual ticket - delete it
+        await query('DELETE FROM social_dinner_tickets WHERE id = ?', [ticketId]);
+    } else {
+        // Sync ticket - hide it and mark as manual to prevent sync from bringing it back or deleting it
+        await query('UPDATE social_dinner_tickets SET is_manual = 1, is_hidden = 1 WHERE id = ?', [ticketId]);
+    }
 
     revalidatePath('/social-dinner');
     return { success: true };
@@ -239,4 +278,24 @@ export async function resetTicketScan(ticketId) {
     await query('UPDATE social_dinner_tickets SET scanned_at = NULL, is_manual = 0 WHERE id = ?', [ticketId]);
     revalidatePath('/social-dinner');
     return { success: true };
+}
+
+export async function searchConferenceParticipants(conferenceAcronym, searchTerm) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    const participants = await query(`
+        SELECT p.id as participant_id, r.id as registration_id, 
+               CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
+               p.email
+        FROM participants p
+        JOIN registrations r ON p.id = r.participant_id
+        JOIN conferences c ON r.conference_id = c.id
+        WHERE c.acronym = ? AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ?)
+        LIMIT 10
+    `, [conferenceAcronym, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
+
+    return participants;
 }

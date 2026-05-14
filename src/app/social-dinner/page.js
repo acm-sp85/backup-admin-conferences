@@ -52,8 +52,10 @@ export default async function SocialDinnerPage({ searchParams }) {
     FROM participants p
     JOIN registrations r ON p.id = r.participant_id
     JOIN conferences c ON r.conference_id = c.id
-    WHERE r.id IN (
-      SELECT registration_id FROM payments WHERE tickets_info LIKE '%Social Dinner%'
+    WHERE (
+      r.id IN (SELECT registration_id FROM payments WHERE tickets_info LIKE '%Social Dinner%')
+      OR
+      r.id IN (SELECT registration_id FROM social_dinner_tickets WHERE is_hidden = 0)
     )
   `;
   const params = [];
@@ -91,9 +93,9 @@ export default async function SocialDinnerPage({ searchParams }) {
 
   // 3. Fetch all tickets for these registrations
   const tickets = await query(`
-    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at, is_manual
+    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at, is_manual, is_hidden
     FROM social_dinner_tickets
-    WHERE registration_id IN (${registrationIds.join(',')})
+    WHERE registration_id IN (${registrationIds.join(',')}) AND is_hidden = 0
   `);
 
   // 4. Join data in Javascript
@@ -131,8 +133,10 @@ export default async function SocialDinnerPage({ searchParams }) {
       }
     });
 
-    // Only add one row per participant if they have dinner tickets
-    if (dinnerTickets.length === 0) return;
+    // Only add one row per participant if they have dinner tickets (either from payments or manual)
+    const totalTicketCount = dinnerTickets.length + pTickets.filter(t => t.is_manual && t.is_hidden === 0).length;
+    
+    if (totalTicketCount === 0) return;
 
     const dinnerDebt = pPayments.reduce((sum, p) => {
       const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
@@ -144,6 +148,13 @@ export default async function SocialDinnerPage({ searchParams }) {
     dinnerTickets.forEach(t => {
       preferenceMap[t.dietary_preference] = (preferenceMap[t.dietary_preference] || 0) + 1;
     });
+    
+    // Manual tickets might not have dietary preference recorded in the same way yet
+    const manualCount = pTickets.filter(t => t.is_manual && t.is_hidden === 0).length;
+    if (manualCount > 0) {
+        preferenceMap['Manual/Added'] = (preferenceMap['Manual/Added'] || 0) + manualCount;
+    }
+
     const dietary_preference = Object.entries(preferenceMap)
       .map(([pref, count]) => count > 1 ? `${pref} ×${count}` : pref)
       .join(', ');
@@ -153,6 +164,7 @@ export default async function SocialDinnerPage({ searchParams }) {
       name: p.name,
       email: p.email,
       registration_id: p.registration_id,
+      participant_id: p.participant_id,
       conference: p.conference,
       dietary_preference,
       amount_paid: latestPayment?.amount || 0,
@@ -161,7 +173,7 @@ export default async function SocialDinnerPage({ searchParams }) {
       purchase_date: latestPayment?.date,
       payment_status: latestPayment?.status,
       dinner_debt: dinnerDebt,
-      ticket_count: dinnerTickets.length,
+      ticket_count: totalTicketCount,
       all_payments: pPayments,
       tickets_status: pTickets
     });
@@ -235,7 +247,7 @@ export default async function SocialDinnerPage({ searchParams }) {
 
       <SocialDinnerFilter conferences={conferences} attendees={attendees} />
 
-      <SocialDinnerTable attendees={attendees} userRole={session.role} />
+      <SocialDinnerTable attendees={attendees} userRole={session.role} conferenceAcronym={conference} />
     </DashboardLayout>
   );
 }

@@ -1,14 +1,44 @@
 'use client';
 import { useState, useTransition } from 'react';
 import { Mail, CheckCircle2, Loader2, QrCode as QrIcon } from 'lucide-react';
-import { sendSocialDinnerQR, resetTicketScan, manualCheckinSocialDinner } from '../actions/social-dinner';
+import { sendSocialDinnerQR, resetTicketScan, manualCheckinSocialDinner, addManualSocialDinnerTicket, removeSocialDinnerTicket } from '../actions/social-dinner';
 import SocialDinnerTicketsBadge from './SocialDinnerTicketsBadge';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function SocialDinnerRow({ person, selected, onSelect, userRole }) {
   const [expanded, setExpanded] = useState(false);
   const [isSending, startSending] = useTransition();
   const [isResetting, startResetting] = useTransition();
   const [isCheckingIn, startCheckingIn] = useTransition();
+  const [isModifying, startModifying] = useTransition();
+
+  const handleAddTicket = (e) => {
+    e.stopPropagation();
+    if (!confirm(`Add one manual Social Dinner ticket for ${person.name}?`)) return;
+    startModifying(async () => {
+      try {
+        await addManualSocialDinnerTicket(person.registration_id);
+      } catch (e) {
+        alert('Failed to add ticket: ' + e.message);
+      }
+    });
+  };
+
+  const handleRemoveTicket = (e, ticketId, isManual) => {
+    e.stopPropagation();
+    const msg = isManual 
+      ? 'Are you sure you want to delete this manual ticket?' 
+      : 'This is a sync-generated ticket. Removing it will hide it and prevent it from being re-synced. Continue?';
+    if (!confirm(msg)) return;
+    
+    startModifying(async () => {
+      try {
+        await removeSocialDinnerTicket(ticketId);
+      } catch (e) {
+        alert('Failed to remove ticket: ' + e.message);
+      }
+    });
+  };
 
   const handleResetScan = (e, ticketId) => {
     e.stopPropagation();
@@ -176,35 +206,59 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                     <div className="flex justify-between items-center py-2 border-b border-slate-100">
                       <span className="text-[11px] text-[var(--muted)] font-medium">Tickets Issued</span>
                       <span className="text-xs font-bold text-[var(--foreground)]">
-                        {tickets.length > 0 ? (
-                          <div className="flex gap-3">
-                            {tickets.map((t, i) => (
-                              <div key={i} className="flex items-center gap-1.5" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
-                                <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                <span className="text-[10px] text-slate-400">T{i+1}</span>
-                                {t.is_manual && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-100">MANUAL</span>}
-                                {!t.scanned_at && (
-                                  <button
-                                    onClick={(e) => handleManualCheckin(e, t.id, i)}
-                                    disabled={isCheckingIn}
-                                    className="ml-1 text-[9px] text-green-600 hover:text-green-700 font-bold underline disabled:opacity-50"
-                                  >
-                                    Check-in
-                                  </button>
-                                )}
-                                {t.scanned_at && userRole === 'superadmin' && (
-                                  <button
-                                    onClick={(e) => handleResetScan(e, t.id)}
-                                    disabled={isResetting}
-                                    className="ml-1 text-[9px] text-red-500 hover:text-red-700 font-bold underline disabled:opacity-50"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : 'Not synced'}
+                        <div className="flex flex-col gap-2">
+                          {tickets.length > 0 ? (
+                            <div className="flex flex-wrap gap-3">
+                              {tickets.map((t, i) => (
+                                <div key={i} className="flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
+                                  <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
+                                  <span className="text-[10px] text-slate-500 font-bold">T{i+1}</span>
+                                  {t.is_manual && !t.is_hidden && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-100">MANUAL</span>}
+                                  
+                                  <div className="flex items-center gap-2 ml-1">
+                                    {!t.scanned_at && (
+                                      <button
+                                        onClick={(e) => handleManualCheckin(e, t.id, i)}
+                                        disabled={isCheckingIn || isModifying}
+                                        className="text-[9px] text-green-600 hover:text-green-700 font-bold underline disabled:opacity-50"
+                                      >
+                                        Check-in
+                                      </button>
+                                    )}
+                                    {t.scanned_at && userRole === 'superadmin' && (
+                                      <button
+                                        onClick={(e) => handleResetScan(e, t.id)}
+                                        disabled={isResetting || isModifying}
+                                        className="text-[9px] text-red-500 hover:text-red-700 font-bold underline disabled:opacity-50"
+                                      >
+                                        Reset
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={(e) => handleRemoveTicket(e, t.id, t.is_manual && !t.payment_id)}
+                                      disabled={isModifying}
+                                      className="p-1 text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                                      title="Remove Ticket"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">No tickets found</span>
+                          )}
+                          
+                          <button
+                            onClick={handleAddTicket}
+                            disabled={isModifying}
+                            className="flex items-center gap-1.5 w-fit px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md text-[10px] font-bold border border-amber-200 transition-all disabled:opacity-50 mt-1"
+                          >
+                            <Plus className="w-2.5 h-2.5" />
+                            Add Manual Ticket
+                          </button>
+                        </div>
                       </span>
                     </div>
                   </div>
