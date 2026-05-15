@@ -231,7 +231,8 @@ export async function validateTicket(token) {
             attendee: `${ticket.firstName} ${ticket.lastName}`,
             email: ticket.email,
             conference: ticket.conference,
-            paymentStatus: ticket.payment_status
+            paymentStatus: ticket.payment_status,
+            isManual: !!ticket.is_manual
         };
     }
 
@@ -265,7 +266,8 @@ export async function validateTicket(token) {
         email: ticket.email,
         conference: ticket.conference,
         dietary,
-        paymentStatus: ticket.payment_status
+        paymentStatus: ticket.payment_status,
+        isManual: !!ticket.is_manual
     };
 }
 

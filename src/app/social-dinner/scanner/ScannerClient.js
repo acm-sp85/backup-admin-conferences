@@ -156,7 +156,7 @@ export default function ScannerClient() {
                                 )}
                                 
                                 <h3 className="text-3xl font-black text-white mb-2">
-                                    {scanResult.paymentStatus === 'paid' ? 'VALID TICKET' : 'PAYMENT INCIDENCE'}
+                                    {scanResult.paymentStatus === 'paid' ? 'VALID TICKET' : (scanResult.isManual ? '' : 'PAYMENT INCIDENCE')}
                                 </h3>
                                 
                                 <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 w-full">
@@ -169,7 +169,7 @@ export default function ScannerClient() {
                                             <Utensils className="w-4 h-4" />
                                             {scanResult.dietary}
                                         </div>
-                                        {scanResult.paymentStatus !== 'paid' && (
+                                        {scanResult.paymentStatus !== 'paid' && !scanResult.isManual && (
                                             <div className="mt-2 px-3 py-1 bg-white/30 rounded-lg text-white font-black text-xs uppercase tracking-tighter">
                                                 STATUS: {scanResult.paymentStatus || 'UNKNOWN'}
                                             </div>
