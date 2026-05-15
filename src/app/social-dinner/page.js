@@ -48,6 +48,7 @@ export default async function SocialDinnerPage({ searchParams }) {
       CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name,
       p.email, 
       r.id as registration_id,
+      r.is_guest,
       c.acronym as conference
     FROM participants p
     JOIN registrations r ON p.id = r.participant_id
@@ -166,6 +167,7 @@ export default async function SocialDinnerPage({ searchParams }) {
       registration_id: p.registration_id,
       participant_id: p.participant_id,
       conference: p.conference,
+      is_guest: !!p.is_guest,
       dietary_preference,
       amount_paid: latestPayment?.amount || 0,
       currency: latestCurrency,

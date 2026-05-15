@@ -65,10 +65,16 @@ export default async function ParticipantsPage({ searchParams }) {
     sql += ` AND p.id IN (
       SELECT participant_id FROM registrations r2 
       JOIN conferences c2 ON r2.conference_id = c2.id 
-      WHERE c2.acronym = ?
+      WHERE c2.acronym = ? AND r2.is_guest = 0
     )`;
     params.push(conference);
+  } else {
+    // When no conference filter, still exclude anyone who only exists as a guest
+    sql += ` AND p.id NOT IN (
+      SELECT DISTINCT participant_id FROM registrations WHERE is_guest = 1
+    )`;
   }
+
 
   sql += ` ORDER BY p.created_at DESC`;
 

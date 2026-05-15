@@ -102,6 +102,9 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
           <div className="flex items-center gap-2">
             <div className="font-medium text-[13px]">{person.name}</div>
             <div className="flex gap-1">
+              {person.is_guest && (
+                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-100 text-violet-600 border border-violet-200">GUEST</span>
+              )}
               {allScanned ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-500" title="All tickets scanned" />
               ) : someScanned ? (
@@ -139,23 +142,31 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
         </td>
         <td>
           <div className="flex flex-col gap-1">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit ${
-              person.dinner_debt > 0 ? 'bg-[#ff3b30]/10 text-[#ff3b30]' :
-              person.payment_status === 'paid' ? 'bg-[#34c759]/10 text-[#34c759]' :
-              person.payment_status === 'pending' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
-              'bg-[#ff3b30]/10 text-[#ff3b30]'
-            }`}>
-              {person.dinner_debt > 0 ? 'Unpaid' : person.payment_status || 'Unknown'}
-            </span>
-            {person.dinner_debt > 0 ? (
-              <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
-                <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
-              </div>
+            {person.is_guest ? (
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit bg-violet-50 text-violet-600 border border-violet-100">
+                External Guest
+              </span>
             ) : (
-              <div className="text-[11px] font-bold text-[var(--foreground)]">
-                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.amount_paid)}
-              </div>
+              <>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit ${
+                  person.dinner_debt > 0 ? 'bg-[#ff3b30]/10 text-[#ff3b30]' :
+                  person.payment_status === 'paid' ? 'bg-[#34c759]/10 text-[#34c759]' :
+                  person.payment_status === 'pending' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
+                  'bg-[#ff3b30]/10 text-[#ff3b30]'
+                }`}>
+                  {person.dinner_debt > 0 ? 'Unpaid' : person.payment_status || 'Unknown'}
+                </span>
+                {person.dinner_debt > 0 ? (
+                  <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
+                    <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                    Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-bold text-[var(--foreground)]">
+                    {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.amount_paid)}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </td>
@@ -264,7 +275,8 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                   </div>
                 </div>
 
-                {/* Right Column: Payment History & Tickets */}
+                {/* Right Column: Payment History (hidden for external guests) */}
+                {!person.is_guest && (
                 <div>
                   <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-4 flex items-center gap-1.5">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
@@ -330,6 +342,7 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                     </div>
                   </div>
                 </div>
+              )}
               </div>
             </div>
           </td>

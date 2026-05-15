@@ -209,7 +209,7 @@ export async function validateTicket(token) {
         JOIN registrations r ON t.registration_id = r.id
         JOIN participants p ON r.participant_id = p.id
         JOIN conferences c ON r.conference_id = c.id
-        JOIN payments pay ON t.payment_id = pay.id
+        LEFT JOIN payments pay ON t.payment_id = pay.id
         WHERE t.token = ?
     `, [token]);
 
@@ -298,4 +298,47 @@ export async function searchConferenceParticipants(conferenceAcronym, searchTerm
     `, [conferenceAcronym, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
 
     return participants;
+}
+
+export async function addGuestAndSocialDinnerTicket(name, email, conferenceAcronym) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedName || !trimmedEmail) throw new Error('Name and email are required.');
+
+    // Split name into first / last
+    const spaceIdx = trimmedName.indexOf(' ');
+    const firstName = spaceIdx === -1 ? trimmedName : trimmedName.slice(0, spaceIdx);
+    const lastName  = spaceIdx === -1 ? '' : trimmedName.slice(spaceIdx + 1);
+
+    const [conference] = await query('SELECT id FROM conferences WHERE acronym = ?', [conferenceAcronym]);
+    if (!conference) throw new Error('Conference not found');
+
+    // Create a minimal participant record
+    const pResult = await query(
+        'INSERT INTO participants (firstName, lastName, email) VALUES (?, ?, ?)',
+        [firstName, lastName, trimmedEmail]
+    );
+    const participantId = pResult.insertId;
+
+    // Create registration flagged as guest so it is hidden from participant metrics
+    const rResult = await query(
+        'INSERT INTO registrations (participant_id, conference_id, is_guest) VALUES (?, ?, 1)',
+        [participantId, conference.id]
+    );
+    const registrationId = rResult.insertId;
+
+    // Create one manual social dinner ticket
+    const token = crypto.randomBytes(24).toString('hex');
+    await query(
+        'INSERT INTO social_dinner_tickets (registration_id, payment_id, ticket_index, token, is_manual) VALUES (?, NULL, NULL, ?, 1)',
+        [registrationId, token]
+    );
+
+    revalidatePath('/social-dinner');
+    return { success: true };
 }

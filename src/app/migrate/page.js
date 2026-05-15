@@ -24,6 +24,13 @@ export default async function MigratePage() {
         results.push(`ℹ️ social_dinner_tickets: ${e.message}`);
     }
 
+    try {
+        await query(`ALTER TABLE registrations ADD COLUMN is_guest BOOLEAN NOT NULL DEFAULT 0`);
+        results.push('✅ Added is_guest to registrations');
+    } catch (e) {
+        results.push(`ℹ️ registrations.is_guest: ${e.message}`);
+    }
+
     return (
         <div className="p-10 font-mono text-sm">
             <h1 className="text-xl font-bold mb-4">Database Migration</h1>
