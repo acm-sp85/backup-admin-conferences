@@ -334,7 +334,7 @@ async function syncAll() {
         const ids = Array.from(seenRegistrationIds).join(',');
         
         // Archive
-        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
         for (const row of toArchive) {
             await mariadb.execute(
                 'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
@@ -342,7 +342,7 @@ async function syncAll() {
             );
         }
 
-        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
         if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
     }
 

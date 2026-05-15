@@ -320,19 +320,38 @@ export async function addGuestAndSocialDinnerTicket(name, email, conferenceAcron
     const [conference] = await query('SELECT id FROM conferences WHERE acronym = ?', [conferenceAcronym]);
     if (!conference) throw new Error('Conference not found');
 
-    // Create a minimal participant record
-    const pResult = await query(
-        'INSERT INTO participants (firstName, lastName, email) VALUES (?, ?, ?)',
-        [firstName, lastName, trimmedEmail]
-    );
-    const participantId = pResult.insertId;
+    // Check if participant already exists
+    let [participant] = await query('SELECT id FROM participants WHERE email = ?', [trimmedEmail]);
+    let participantId;
 
-    // Create registration flagged as guest so it is hidden from participant metrics
-    const rResult = await query(
-        'INSERT INTO registrations (participant_id, conference_id, is_guest) VALUES (?, ?, 1)',
-        [participantId, conference.id]
-    );
-    const registrationId = rResult.insertId;
+    if (participant) {
+        participantId = participant.id;
+        // Update name if it was empty or different? For now just use existing ID
+    } else {
+        // Create a minimal participant record
+        const pResult = await query(
+            'INSERT INTO participants (firstName, lastName, email) VALUES (?, ?, ?)',
+            [firstName, lastName, trimmedEmail]
+        );
+        participantId = pResult.insertId;
+    }
+
+    // Check if registration already exists for this conference
+    let [registration] = await query('SELECT id FROM registrations WHERE participant_id = ? AND conference_id = ?', [participantId, conference.id]);
+    let registrationId;
+
+    if (registration) {
+        registrationId = registration.id;
+        // Ensure it's marked as guest if it wasn't?
+        await query('UPDATE registrations SET is_guest = 1 WHERE id = ?', [registrationId]);
+    } else {
+        // Create registration flagged as guest so it is hidden from participant metrics
+        const rResult = await query(
+            'INSERT INTO registrations (participant_id, conference_id, is_guest) VALUES (?, ?, 1)',
+            [participantId, conference.id]
+        );
+        registrationId = rResult.insertId;
+    }
 
     // Create one manual social dinner ticket
     const token = crypto.randomBytes(24).toString('hex');

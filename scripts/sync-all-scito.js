@@ -74,16 +74,24 @@ async function syncAll() {
       CREATE TABLE IF NOT EXISTS social_dinner_tickets (
         id INT AUTO_INCREMENT PRIMARY KEY,
         registration_id INT NOT NULL,
-        payment_id INT NOT NULL,
-        ticket_index INT NOT NULL,
+        payment_id INT DEFAULT NULL,
+        ticket_index INT DEFAULT NULL,
         token VARCHAR(100) UNIQUE NOT NULL,
+        is_manual TINYINT(1) DEFAULT 0,
+        is_hidden TINYINT(1) DEFAULT 0,
         email_sent_at TIMESTAMP NULL,
         scanned_at TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT fk_ticket_registration FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE,
-        CONSTRAINT fk_ticket_payment FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+        CONSTRAINT fk_ticket_registration_scito FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE,
+        CONSTRAINT fk_ticket_payment_scito FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Ensure columns exist for older tables
+    try { await mariadb.execute('ALTER TABLE social_dinner_tickets ADD COLUMN is_manual TINYINT(1) DEFAULT 0'); } catch (e) {}
+    try { await mariadb.execute('ALTER TABLE social_dinner_tickets ADD COLUMN is_hidden TINYINT(1) DEFAULT 0'); } catch (e) {}
+    try { await mariadb.execute('ALTER TABLE social_dinner_tickets MODIFY payment_id INT DEFAULT NULL'); } catch (e) {}
+    try { await mariadb.execute('ALTER TABLE social_dinner_tickets MODIFY ticket_index INT DEFAULT NULL'); } catch (e) {}
 
     // 0.2 Ensure participant_qr_tokens table exists
     await mariadb.execute(`
@@ -333,7 +341,7 @@ async function syncAll() {
         const ids = Array.from(seenRegistrationIds).join(',');
         
         // Archive
-        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
         for (const row of toArchive) {
             await mariadb.execute(
                 'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
@@ -341,7 +349,7 @@ async function syncAll() {
             );
         }
 
-        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND id NOT IN (${ids})`, [conferenceId]);
+        const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
         if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
     }
 
@@ -421,6 +429,7 @@ async function syncAll() {
             DELETE FROM social_dinner_tickets 
             WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
             AND id NOT IN (${ids})
+            AND is_manual = 0
         `, [conferenceId]);
         if (delTickets.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTickets.affectedRows} stale dinner tickets`);
     }
