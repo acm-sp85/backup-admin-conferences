@@ -26,7 +26,7 @@ export default function SocialDinnerFilter({ conferences, attendees }) {
       a.amount_paid,
       a.currency,
       a.invoice_code,
-      new Date(a.purchase_date).toLocaleDateString()
+      new Date(a.purchase_date + 'Z').toLocaleDateString('en-GB')
     ]);
     
     const csvContent = [

@@ -221,9 +221,14 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                           {tickets.length > 0 ? (
                             <div className="flex flex-wrap gap-3">
                               {tickets.map((t, i) => (
-                                <div key={i} className="flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at).toLocaleString()}` : 'Not scanned'}>
+                                <div key={i} className="flex items-center gap-1.5 p-1.5 bg-slate-50 rounded-lg border border-slate-100" title={t.scanned_at ? `Scanned at ${new Date(t.scanned_at + 'Z').toLocaleString([], { hour12: false })}` : 'Not scanned'}>
                                   <div className={`w-2 h-2 rounded-full ${t.scanned_at ? 'bg-green-500' : 'bg-slate-300'}`} />
                                   <span className="text-[10px] text-slate-500 font-bold">T{i+1}</span>
+                                  {t.scanned_at && (
+                                    <span className="text-[9px] text-green-600 font-medium ml-1">
+                                      {new Date(t.scanned_at + 'Z').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })} {new Date(t.scanned_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                    </span>
+                                  )}
                                   {t.is_manual && !t.is_hidden && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-100">MANUAL</span>}
                                   
                                   <div className="flex items-center gap-2 ml-1">
@@ -314,7 +319,7 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
                           </ul>
                           <div className="mt-2 pt-2 border-t border-slate-200/60 flex justify-between items-baseline">
                             <span className="text-[8px] text-[var(--muted)] italic">
-                              {new Date(pay.date).toLocaleDateString('en-GB')} via {pay.method || 'Unknown'}
+                              {new Date(pay.date + 'Z').toLocaleDateString('en-GB')} via {pay.method || 'Unknown'}
                             </span>
                             <span className="text-xs font-bold text-[var(--foreground)]">
                               {new Intl.NumberFormat('de-DE', { style: 'currency', currency: pay.currency || 'EUR' }).format(pay.amount)}

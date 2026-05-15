@@ -169,7 +169,7 @@ export default function ProgramManager({ conferences }) {
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1.5">
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                                                        {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                                     </span>
                                                     {!!session.is_hidden && (
                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
@@ -230,7 +230,7 @@ export default function ProgramManager({ conferences }) {
                                                 {session.slots?.map((slot, idx) => (
                                                     <li key={idx} className="flex gap-4 text-xs">
                                                         <span className="text-slate-400 font-mono w-20 flex-shrink-0">
-                                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                                         </span>
                                                         <div className="flex-1">
                                                             <div className="font-bold text-slate-800">{slot.title || '(No Title)'}</div>

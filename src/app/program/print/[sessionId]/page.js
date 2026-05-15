@@ -88,7 +88,7 @@ export default async function ProgramPrintPage({ params }) {
                         <div className="flex gap-4 items-center">
                             <div className=" text-white px-4 py-2 font-medium text-xl"
                             style={{ backgroundColor: config.titleColor }}>
-                                {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                             </div>
                             {/* <div className="text-2xl font-bold opacity-80 italic">
                                 {session.session_name}
@@ -106,7 +106,7 @@ export default async function ProgramPrintPage({ params }) {
                                             className="py-1 pr-8 font-medium align-top whitespace-nowrap"
                                             style={{ fontSize: config.contentSize, color: config.contentColor }}
                                         >
-                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                         </td>
                                         <td className="py-1 align-top">
                                             <div 

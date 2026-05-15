@@ -133,7 +133,9 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                         {person.qr_scanned_at ? (
                             <>
                                 <CheckCircle2 className="w-2.5 h-2.5" />
-                                {new Date(person.qr_scanned_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                                <span className="text-[9px]">
+                                    {new Date(person.qr_scanned_at + 'Z').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })} {new Date(person.qr_scanned_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                </span>
                                 {person.qr_is_manual ? <span className="ml-1 text-[8px] opacity-70 bg-green-200/50 px-1 rounded">MANUAL</span> : null}
                             </>
                         ) : 'Not Yet'}
@@ -238,7 +240,7 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                             </div>
                                             <div className="flex justify-between items-center py-2 border-b border-slate-100">
                                                 <span className="text-[var(--muted)]">Registration Date</span>
-                                                <span className="font-medium">{new Date(person.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                                                <span className="font-medium">{new Date(person.created_at + 'Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                             </div>
                                         </div>
 
@@ -269,7 +271,7 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                 {person.qr_scanned_at && (
                                                     <div className="flex items-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 rounded-xl text-[10px] font-bold border border-green-100">
                                                         <CheckCircle2 className="w-3 h-3" />
-                                                        Checked In: {new Date(person.qr_scanned_at).toLocaleString()}
+                                                        Checked In: {new Date(person.qr_scanned_at + 'Z').toLocaleString([], { hour12: false })}
                                                     </div>
                                                 )}
                                                 {userRole === 'superadmin' && person.qr_scanned_at && (
@@ -330,7 +332,7 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                     </ul>
                                                     <div className="mt-2 pt-2 border-t border-slate-200/60 flex justify-between items-baseline">
                                                         <div className="flex flex-col gap-0.5">
-                                                                                                                          <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date).toLocaleDateString()} via {pay.method || 'ndef'}</span>
+                                                            <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date + 'Z').toLocaleDateString()} via {pay.method || 'ndef'}</span>
                                                             {(() => {
                                                                 const effectiveBalance = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
                                                                 return effectiveBalance > 0 && (

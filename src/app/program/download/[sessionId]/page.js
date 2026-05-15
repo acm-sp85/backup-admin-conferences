@@ -65,14 +65,14 @@ export default async function DownloadDocPage({ params }) {
                 </div>
             ` : ''}
             <div class="time-box">
-                ${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                ${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
         </div>
 
         <table>
             ${slots.map(slot => `
                 <tr>
-                    <td class="slot-time">${new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td class="slot-time">${new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
                     <td>
                         <div class="slot-title">${slot.title || '(No Title)'}</div>
                         ${slot.presenter_name ? `<div class="slot-presenter">${formatName(slot.presenter_name)}</div>` : ''}

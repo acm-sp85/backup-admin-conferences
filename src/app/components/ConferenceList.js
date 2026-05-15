@@ -87,7 +87,7 @@ export default function ConferenceList({ initialConferences, userRole }) {
                   <span className="font-medium text-[var(--foreground)]">{conf.name}</span>
                 </td>
                 <td className="text-[var(--muted)] text-xs">
-                  {new Date(conf.created_at).toLocaleDateString()}
+                  {new Date(conf.created_at + 'Z').toLocaleDateString('en-GB')}
                 </td>
                 <td>
                   <div className="flex items-center gap-2">
