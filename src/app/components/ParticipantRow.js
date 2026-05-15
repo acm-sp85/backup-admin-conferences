@@ -330,7 +330,7 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                     </ul>
                                                     <div className="mt-2 pt-2 border-t border-slate-200/60 flex justify-between items-baseline">
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date).toLocaleDateString()} via {pay.method || 'ndef'}</span>
+                                                                                                                          <span className="text-[8px] text-[var(--muted)] italic">{new Date(pay.date).toLocaleDateString()} via {pay.method || 'ndef'}</span>
                                                             {(() => {
                                                                 const effectiveBalance = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
                                                                 return effectiveBalance > 0 && (

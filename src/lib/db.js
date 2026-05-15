@@ -16,7 +16,8 @@ export const getConnection = async () => {
             connectionLimit: 20, // Increased from 5 to handle higher request limits
             queueLimit: 0,
             enableKeepAlive: true,
-            keepAliveInitialDelay: 10000
+            keepAliveInitialDelay: 10000,
+            dateStrings: true
         });
     }
     return globalForDb.pool;
