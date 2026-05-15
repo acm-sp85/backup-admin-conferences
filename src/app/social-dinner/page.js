@@ -92,11 +92,11 @@ export default async function SocialDinnerPage({ searchParams }) {
     WHERE registration_id IN (${registrationIds.join(',')})
   `);
 
-  // 3. Fetch all tickets for these registrations
+  // 3. Fetch all tickets for these registrations (including hidden ones to filter correctly)
   const tickets = await query(`
-    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at, is_manual, is_hidden
+    SELECT registration_id, id, token, email_sent_at as sent_at, scanned_at, is_manual, is_hidden, payment_id, ticket_index
     FROM social_dinner_tickets
-    WHERE registration_id IN (${registrationIds.join(',')}) AND is_hidden = 0
+    WHERE registration_id IN (${registrationIds.join(',')})
   `);
 
   // 4. Join data in Javascript
@@ -118,13 +118,17 @@ export default async function SocialDinnerPage({ searchParams }) {
         const ticketItems = typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets;
         if (!Array.isArray(ticketItems)) return;
 
-        ticketItems.forEach(ticket => {
+        ticketItems.forEach((ticket, idx) => {
           if (ticket.name === 'Social Dinner' || (ticket.ticket_data && ticket.ticket_data.name === 'Social Dinner')) {
+            // Check if this specific ticket has been hidden/deleted
+            const isHidden = pTickets.some(t => t.payment_id === pay.id && t.ticket_index === idx && t.is_hidden === 1);
+            if (isHidden && !isShowAll) return;
+
             let dietary_preference = 'Regular (Default)';
             if (ticket.option !== undefined && ticket.ticket_data?.options) {
               dietary_preference = ticket.ticket_data.options[ticket.option] || dietary_preference;
             }
-            dinnerTickets.push({ dietary_preference, price: ticket.price, invoice: pay.invoice });
+            dinnerTickets.push({ dietary_preference, price: ticket.price, invoice: pay.invoice, is_hidden: isHidden });
             latestPayment = pay;
             latestCurrency = pay.currency || 'EUR';
           }
@@ -134,10 +138,12 @@ export default async function SocialDinnerPage({ searchParams }) {
       }
     });
 
-    // Only add one row per participant if they have dinner tickets (either from payments or manual)
-    const totalTicketCount = dinnerTickets.length + pTickets.filter(t => t.is_manual && t.is_hidden === 0).length;
-    
-    if (totalTicketCount === 0) return;
+    // Active issued tickets (synced or manual)
+    const activeTickets = isShowAll ? pTickets : pTickets.filter(t => t.is_hidden === 0);
+    const ticket_count = activeTickets.length;
+
+    // Only add row if they have at least one active ticket (or we are in showAll mode)
+    if (ticket_count === 0 && !isShowAll) return;
 
     const dinnerDebt = pPayments.reduce((sum, p) => {
       const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
@@ -175,12 +181,13 @@ export default async function SocialDinnerPage({ searchParams }) {
       purchase_date: latestPayment?.date,
       payment_status: latestPayment?.status,
       dinner_debt: dinnerDebt,
-      ticket_count: totalTicketCount,
+      ticket_count: ticket_count,
       all_payments: pPayments,
-      tickets_status: pTickets
+      tickets_status: activeTickets
     });
   });
 
+  const totalPeople = attendees.length;
   const totalPaid = attendees.filter(a => a.payment_status === 'paid' && a.dinner_debt <= 0).length;
   const totalPending = attendees.filter(a => a.payment_status === 'pending' || a.dinner_debt > 0).length;
   const totalRefunded = attendees.filter(a => a.payment_status === 'refunded').length;
@@ -214,7 +221,7 @@ export default async function SocialDinnerPage({ searchParams }) {
           </Link>
           <div className="flex gap-2">
             <div className="text-[10px] bg-slate-100 px-3 py-1.5 rounded-full text-slate-500 font-medium">
-              People: <strong className="text-slate-900 ml-1">{totalActive}</strong>
+              People: <strong className="text-slate-900 ml-1">{totalPeople}</strong>
             </div>
             <div className="text-[10px] bg-blue-50 px-3 py-1.5 rounded-full text-blue-600 font-medium border border-blue-100">
               Total Tickets: <strong className="text-blue-700 ml-1">{totalTickets}</strong>
@@ -227,12 +234,6 @@ export default async function SocialDinnerPage({ searchParams }) {
                 Manual: <strong className="text-amber-700 ml-1">{totalManual}</strong>
               </div>
             )}
-            <div className="text-[10px] bg-green-50 px-3 py-1.5 rounded-full text-green-600 font-medium border border-green-100">
-              Paid: <strong className="text-green-700 ml-1">{totalPaid}</strong>
-            </div>
-            <div className="text-[10px] bg-orange-50 px-3 py-1.5 rounded-full text-orange-600 font-medium border border-orange-100">
-              Pending: <strong className="text-orange-700 ml-1">{totalPending}</strong>
-            </div>
             {totalDebtAmount > 0 && (
               <div className="text-[10px] bg-red-50 px-3 py-1.5 rounded-full text-red-600 font-medium border border-red-100">
                 Debt Owed: <strong className="text-red-700 ml-1">{new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(totalDebtAmount)}</strong>
