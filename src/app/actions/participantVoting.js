@@ -41,9 +41,16 @@ export async function getVotersForConference(conferenceId) {
             CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
             p.email, 
             r.cluster_for_review, 
-            r.has_voted
+            CASE 
+                WHEN COALESCE(r.has_voted, 0) = 1 THEN 1
+                WHEN COALESCE(u.has_voted, 0) = 1 THEN 1
+                WHEN r.votes IS NOT NULL THEN 1
+                WHEN u.votes IS NOT NULL THEN 1
+                ELSE 0
+            END as has_voted
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
+        LEFT JOIN users u ON p.email = u.email
         WHERE r.conference_id = ? AND r.cluster_for_review IS NOT NULL
         ORDER BY p.firstName ASC, p.lastName ASC
     `, [conferenceId]);

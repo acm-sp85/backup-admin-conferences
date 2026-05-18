@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getPostersForConference, resetVotingResults } from '../actions/posters';
 import VoteDetailsModal from './VoteDetailsModal';
+import VoterStatusModal from './VoterStatusModal';
 
 export default function VotingResults({ conferences, userRole, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
@@ -10,6 +11,7 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
     const [loading, setLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [selectedPosterDetails, setSelectedPosterDetails] = useState(null);
+    const [isVotersModalOpen, setIsVotersModalOpen] = useState(false);
 
     const handleReset = async () => {
         if (!selectedConference) return;
@@ -104,9 +106,13 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                     <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
                         Total Posters: <strong className="text-[var(--foreground)] ml-1">{posters.length}</strong>
                     </div>
-                    <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
-                        People Voted: <strong className="text-[var(--foreground)] ml-1">{votersCount}</strong>
-                    </div>
+                    <button 
+                        onClick={() => setIsVotersModalOpen(true)}
+                        className="text-xs bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 px-3 py-1.5 rounded-full text-[var(--muted)] hover:text-[var(--accent)] transition-all cursor-pointer font-semibold flex items-center border border-[var(--accent)]/5 hover:border-[var(--accent)]/20"
+                        title="Click to view participation list"
+                    >
+                        People Voted: <strong className="text-[var(--foreground)] ml-1 font-black">{votersCount}</strong>
+                    </button>
                     <button 
                         onClick={fetchData}
                         className="p-1.5 text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
@@ -197,6 +203,16 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                 userRole={userRole}
                 onClose={() => {
                     setSelectedPosterDetails(null);
+                    fetchData();
+                }}
+            />
+
+            <VoterStatusModal
+                isOpen={isVotersModalOpen}
+                conferenceId={selectedConference}
+                userRole={userRole}
+                onClose={() => {
+                    setIsVotersModalOpen(false);
                     fetchData();
                 }}
             />
