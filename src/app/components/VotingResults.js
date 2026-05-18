@@ -6,6 +6,7 @@ import VoteDetailsModal from './VoteDetailsModal';
 
 export default function VotingResults({ conferences, userRole, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
+    const [votersCount, setVotersCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [selectedPosterDetails, setSelectedPosterDetails] = useState(null);
@@ -31,6 +32,21 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
         setLoading(true);
         try {
             const data = await getPostersForConference(selectedConference);
+            
+            // Calculate unique voters
+            const uniqueVoters = new Set();
+            data.forEach(p => {
+                try {
+                    const votes = typeof p.votes_received === 'string' ? JSON.parse(p.votes_received) : (p.votes_received || {});
+                    Object.keys(votes).forEach(userId => {
+                        if (userId && userId !== 'null' && userId !== 'undefined') {
+                            uniqueVoters.add(userId);
+                        }
+                    });
+                } catch(e) {}
+            });
+            setVotersCount(uniqueVoters.size);
+
             // Calculate score for sorting
             const processData = data.map(p => {
                 let votesCount = 0;
@@ -48,6 +64,7 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
             setPosters(sortedData);
         } catch (err) {
             console.error(err);
+            setVotersCount(0);
         }
         setLoading(false);
     };
@@ -85,7 +102,10 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                         </button>
                     )}
                     <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
-                        Total Results: <strong className="text-[var(--foreground)] ml-1">{posters.length}</strong>
+                        Total Posters: <strong className="text-[var(--foreground)] ml-1">{posters.length}</strong>
+                    </div>
+                    <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
+                        People Voted: <strong className="text-[var(--foreground)] ml-1">{votersCount}</strong>
                     </div>
                     <button 
                         onClick={fetchData}
