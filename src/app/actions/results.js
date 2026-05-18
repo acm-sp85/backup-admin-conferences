@@ -62,9 +62,14 @@ export async function getVoteDetails(posterId) {
         // 3. Resolve Identities
         let identities = {};
         try {
-            // mysql2 needs the array wrapped in another array for IN (?)
-            const participants = await query('SELECT id, firstName, lastName, email FROM participants WHERE id IN (?)', [userIds]);
-            const users = await query('SELECT id, firstName, lastName, email, role FROM users WHERE id IN (?) OR email IN (SELECT email FROM participants WHERE id IN (?))', [userIds, userIds]);
+            const placeholders = userIds.map(() => '?').join(',');
+            const participants = await query(`SELECT id, firstName, lastName, email FROM participants WHERE id IN (${placeholders})`, userIds);
+            const users = await query(`
+                SELECT id, firstName, lastName, email, role 
+                FROM users 
+                WHERE id IN (${placeholders}) 
+                   OR email IN (SELECT email FROM participants WHERE id IN (${placeholders}))
+            `, [...userIds, ...userIds]);
 
             participants.forEach(p => {
                 const name = `${p.firstName || ""} ${p.lastName || ""}`.trim() || p.email || `Participant ${p.id}`;

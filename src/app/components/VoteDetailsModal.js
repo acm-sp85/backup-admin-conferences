@@ -117,8 +117,16 @@ export default function VoteDetailsModal({ isOpen, onClose, poster, conferenceId
                                         <div className="text-right">
                                             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Recorded</div>
                                             <div className="text-[10px] font-medium text-slate-600">
-                                                {new Date(vote.timestamp + 'Z').toLocaleDateString('en-GB')}
-                                                <span className="block opacity-50 text-[9px]">{new Date(vote.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                                                {vote.timestamp ? (
+                                                    <>
+                                                        {new Date(vote.timestamp + 'Z').toLocaleDateString('en-GB')}
+                                                        <span className="block opacity-50 text-[9px]">
+                                                            {new Date(vote.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="italic text-slate-400">—</span>
+                                                )}
                                             </div>
                                         </div>
                                         {userRole === 'superadmin' && vote.voter.type === 'participant' && (
