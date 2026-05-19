@@ -192,13 +192,13 @@ export async function validateActivityTicket(activityId, token) {
     }
 
     await query(
-        'UPDATE extra_activity_attendees SET scanned_at = NOW() WHERE token = ?',
+        'UPDATE extra_activity_attendees SET scanned_at = NOW() WHERE qr_token = ?',
         [token]
     );
 
     return { 
         success: true, 
-        attendee: attendee.name,
+        attendee: `${attendee.name}${attendee.tickets_count > 1 ? ` (${attendee.tickets_count} tickets)` : ''}`,
         email: attendee.email,
         activity: attendee.activity_name
     };
@@ -209,7 +209,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
 
     const [attendee] = await query(`
-        SELECT a.name, a.email, a.qr_token, act.name as activity_name, act.custom_email_text, 
+        SELECT a.name, a.email, a.qr_token, a.tickets_count, act.name as activity_name, act.custom_email_text, 
                c.id as conference_id, c.name as conference_name, c.email as conference_email,
                c.logo_url, c.banner_url, c.accent_color
         FROM extra_activity_attendees a
@@ -237,22 +237,31 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     const qrBase64 = await generateQR(validationUrl);
 
     const headerHtml = renderHeader(brand);
-    const subject = `Your QR Ticket for ${attendee.activity_name} - ${brand.name}`;
+    const ticketsLabel = attendee.tickets_count > 1 ? ` (${attendee.tickets_count} tickets)` : '';
+    const subject = `Your QR Ticket${attendee.tickets_count > 1 ? 's' : ''} for ${attendee.activity_name}${ticketsLabel} - ${brand.name}`;
     const customMessageHtml = attendee.custom_email_text 
         ? `<div style="margin-top: 15px; margin-bottom: 25px; padding: 15px; border-left: 4px solid ${brand.accentColor}; background-color: #f8fafc; color: #334155; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${attendee.custom_email_text}</div>` 
         : '';
+
+    const registrationDetails = attendee.tickets_count > 1 
+        ? `You have <strong>${attendee.tickets_count} tickets</strong> registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`
+        : `You are registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`;
+
+    const qrDescription = attendee.tickets_count > 1
+        ? `Show this QR code at the entrance to check-in your ${attendee.tickets_count} tickets.`
+        : `Show this QR code to check-in to this activity.`;
 
     const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #0f172a;">
             ${headerHtml}
             <h2 style="color: #1d1d1f; font-size: 20px; margin-bottom: 15px;">Hello ${attendee.name},</h2>
-            <p style="font-size: 14px; line-height: 1.5;">You are registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.</p>
+            <p style="font-size: 14px; line-height: 1.5;">${registrationDetails}</p>
             ${customMessageHtml}
             <p style="font-size: 14px; line-height: 1.5; margin-top: 15px;">Please present the QR code below at the entrance for scanning:</p>
             
             <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
                 <img src="${qrBase64}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
-                <p style="margin: 5px 0; font-size: 12px; color: #86868b;">Show this QR code to check-in to this activity.</p>
+                <p style="margin: 5px 0; font-size: 12px; color: #86868b;">${qrDescription}</p>
             </div>
             
             <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
@@ -293,4 +302,22 @@ export async function searchConferenceParticipantsLocal(conferenceId, searchTerm
     `, [conferenceId, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
 
     return participants;
+}
+
+export async function updateAttendeeTicketsCount(attendeeId, newCount) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+
+    if (newCount < 1) throw new Error('Ticket count must be at least 1');
+
+    await query(
+        'UPDATE extra_activity_attendees SET tickets_count = ? WHERE id = ?',
+        [newCount, attendeeId]
+    );
+
+    const [attendee] = await query('SELECT activity_id FROM extra_activity_attendees WHERE id = ?', [attendeeId]);
+    if (attendee) {
+        revalidatePath(`/activities/${attendee.activity_id}`);
+    }
+    return { success: true };
 }

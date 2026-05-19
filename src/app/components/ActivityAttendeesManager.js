@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Mail, Search, Upload, Plus, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Mail, Search, Upload, Download, Plus, Trash2, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { 
     addAttendeeManual, 
     importCSVAttendees, 
@@ -10,7 +10,8 @@ import {
     resetCheckinActivity, 
     sendActivityQREmail,
     searchConferenceParticipantsLocal,
-    updateActivityEmailText
+    updateActivityEmailText,
+    updateAttendeeTicketsCount
 } from '@/app/actions/activities';
 import ActivityQRBadge from './ActivityQRBadge';
 
@@ -38,6 +39,10 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
     // Bulk selection state
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSendingBulk, startSendingBulk] = useTransition();
+
+    // Sorting & Ticket Management state
+    const [sortBy, setSortBy] = useState('date');
+    const [isUpdatingTickets, setIsUpdatingTickets] = useState(null);
 
     const handleSearch = async (e) => {
         const q = e.target.value;
@@ -201,41 +206,67 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
         });
     };
 
+    const handleExportCSV = () => {
+        const headers = ['Name', 'Email', 'Tickets Count', 'Checked In', 'Checked In At', 'Email Sent At', 'Registration Type'];
+        const rows = attendees.map(a => [
+            a.name,
+            a.email,
+            a.tickets_count || 1,
+            a.scanned_at ? 'Yes' : 'No',
+            a.scanned_at ? new Date(a.scanned_at).toLocaleString('en-US', { hour12: false }) : '',
+            a.email_sent_at ? new Date(a.email_sent_at).toLocaleString('en-US', { hour12: false }) : '',
+            a.participant_id ? 'Conference Participant' : 'Custom'
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${activityName.toLowerCase().replace(/\s+/g, '_')}_attendees.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleUpdateTickets = async (attendeeId, newCount) => {
+        if (newCount < 1) return;
+        setIsUpdatingTickets(attendeeId);
+        try {
+            await updateAttendeeTicketsCount(attendeeId, newCount);
+            setAttendees(prev => prev.map(a => a.id === attendeeId ? { ...a, tickets_count: newCount } : a));
+        } catch (e) {
+            alert(e.message || 'Failed to update tickets');
+        } finally {
+            setIsUpdatingTickets(null);
+        }
+    };
+
+    const sortedAttendees = [...attendees].sort((a, b) => {
+        if (sortBy === 'conf-first') {
+            const aType = a.participant_id ? 0 : 1;
+            const bType = b.participant_id ? 0 : 1;
+            return aType - bType;
+        }
+        if (sortBy === 'custom-first') {
+            const aType = a.participant_id ? 1 : 0;
+            const bType = b.participant_id ? 1 : 0;
+            return aType - bType;
+        }
+        if (sortBy === 'name-asc') {
+            return a.name.localeCompare(b.name);
+        }
+        // Default: date (already DESC from DB, let's keep original order)
+        return 0;
+    });
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-[var(--border)] shadow-sm">
-                <div className="flex items-center gap-3 h-9">
-                    {selectedIds.size > 0 ? (
-                        <button 
-                            onClick={handleBulkEmail}
-                            disabled={isSendingBulk}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-blue-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
-                        >
-                            {isSendingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                            Send QR Codes ({selectedIds.size})
-                        </button>
-                    ) : (
-                        <h3 className="text-lg font-medium px-2">Attendees List</h3>
-                    )}
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setIsImporting(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 border border-[var(--border)] rounded-md text-xs font-medium hover:bg-[var(--hover)] transition-colors"
-                    >
-                        <Upload className="w-3.5 h-3.5" />
-                        Import CSV
-                    </button>
-                    <button 
-                        onClick={() => setIsAdding(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[var(--foreground)] text-white rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
-                    >
-                        <Plus className="w-3.5 h-3.5" />
-                        Add Attendee
-                    </button>
-                </div>
-            </div>
-
             <div className="card p-5 border border-[var(--border)] bg-slate-50/30">
                 <div className="flex justify-between items-start mb-3 gap-4">
                     <div>
@@ -256,6 +287,57 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
                     className="input-base w-full min-h-[100px] font-sans text-sm bg-white"
                     placeholder="e.g. We are thrilled to welcome you to the Gala Dinner! The buses depart at 19:30 from the main lobby. Dress code is semi-formal..."
                 />
+            </div>
+
+            <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-[var(--border)] shadow-sm">
+                <div className="flex items-center gap-3 h-9">
+                    {selectedIds.size > 0 ? (
+                        <button 
+                            onClick={handleBulkEmail}
+                            disabled={isSendingBulk}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-blue-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
+                        >
+                            {isSendingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                            Send QR Codes ({selectedIds.size})
+                        </button>
+                    ) : (
+                        <h3 className="text-lg font-medium px-2">Attendees List</h3>
+                    )}
+                </div>
+                <div className="flex gap-2 items-center">
+                    <select 
+                        value={sortBy} 
+                        onChange={(e) => setSortBy(e.target.value)} 
+                        className="px-2.5 py-1.5 border border-slate-200 text-slate-700 rounded-md text-xs font-medium bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    >
+                        <option value="date">Sort: Date Added</option>
+                        <option value="conf-first">Sort: Conf. Participant First</option>
+                        <option value="custom-first">Sort: Custom First</option>
+                        <option value="name-asc">Sort: Name (A-Z)</option>
+                    </select>
+
+                    <button 
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 text-slate-700 rounded-md text-xs font-medium hover:bg-slate-50 transition-colors"
+                    >
+                        <Download className="w-3.5 h-3.5 text-slate-500" />
+                        Export CSV
+                    </button>
+                    <button 
+                        onClick={() => setIsImporting(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 border border-[var(--border)] rounded-md text-xs font-medium hover:bg-[var(--hover)] transition-colors"
+                    >
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        Import CSV
+                    </button>
+                    <button 
+                        onClick={() => setIsAdding(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[var(--foreground)] text-white rounded-md text-xs font-medium hover:opacity-90 transition-opacity"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Attendee
+                    </button>
+                </div>
             </div>
 
             {/* MODALS */}
@@ -370,6 +452,7 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
                                 />
                             </th>
                             <th className="th-base">Attendee</th>
+                            <th className="th-base text-center">Tickets</th>
                             <th className="th-base text-center">Status</th>
                             <th className="th-base">QR Token</th>
                             <th className="th-base">QR Email</th>
@@ -377,7 +460,7 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
-                        {attendees.map(a => (
+                        {sortedAttendees.map(a => (
                             <tr key={a.id} className={`transition-colors ${selectedIds.has(a.id) ? 'bg-indigo-50/50 hover:bg-indigo-50/80' : 'hover:bg-[var(--hover)]'}`}>
                                 <td className="p-3">
                                     <input 
@@ -395,6 +478,27 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
                                     ) : (
                                         <span className="inline-block mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded">Custom</span>
                                     )}
+                                </td>
+                                <td className="p-3 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button 
+                                            onClick={() => handleUpdateTickets(a.id, (a.tickets_count || 1) - 1)}
+                                            disabled={(a.tickets_count || 1) <= 1 || isUpdatingTickets === a.id}
+                                            className="w-6 h-6 flex items-center justify-center border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100 disabled:opacity-30 transition-colors text-xs font-bold"
+                                            title="Subtract Ticket"
+                                        >
+                                            -
+                                        </button>
+                                        <span className="font-bold text-sm min-w-[20px] text-slate-800">{a.tickets_count || 1}</span>
+                                        <button 
+                                            onClick={() => handleUpdateTickets(a.id, (a.tickets_count || 1) + 1)}
+                                            disabled={isUpdatingTickets === a.id}
+                                            className="w-6 h-6 flex items-center justify-center border border-slate-200 rounded-md text-slate-600 hover:bg-slate-100 transition-colors text-xs font-bold"
+                                            title="Add Ticket"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 </td>
                                 <td className="p-3 text-center">
                                     {a.scanned_at ? (
@@ -471,7 +575,7 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
                         ))}
                         {attendees.length === 0 && (
                             <tr>
-                                <td colSpan="6" className="p-8 text-center text-sm text-[var(--muted)]">
+                                <td colSpan="7" className="p-8 text-center text-sm text-[var(--muted)]">
                                     No attendees added to this activity yet.
                                 </td>
                             </tr>
