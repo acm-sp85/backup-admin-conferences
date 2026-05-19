@@ -23,13 +23,14 @@ npm run tunnel-mongo
 Once both tunnels are active and connected, run the appropriate synchronization command in a third terminal:
 
 ```bash
-# Terminal 3: Sync from NanoGe production database ('nanoge-production')
+# Terminal 3: Run the master synchronization
 npm run sync
+```
 
-# OR
+Alternatively, during a live conference, run the sync in **Safe Mode** to avoid any accidental deletions:
 
-# Terminal 3: Sync from SCITO production database ('scito-prod')
-npm run sync-scito
+```bash
+npm run sync:safe
 ```
 
 ---
@@ -40,8 +41,21 @@ The synchronization script reads configurations from the local environment file.
 
 * **`CONFERENCE_ACRONYM`**: The unique abbreviation of the conference (e.g., `HOPV26`, `ANGEL26`).
 * **`CONFERENCE_NAME`**: The display name of the conference (e.g., `HOPV 2026`).
+* **`CONFERENCE_PLATFORM`**: The source platform, either `NANOGE` or `SCITO`. This determines the target MongoDB and abstract URL logic (defaults to `NANOGE`).
 * **`MONGO_URI`**: MongoDB connection string (accessed via port forwarding tunnel).
 * **`DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`**: Your local MySQL/MariaDB database credentials.
+
+---
+
+## 🚩 Execution Flags
+
+You can pass execution flags directly to the sync script to isolate which modules are synchronized. This is useful for rapid updates or safe partial syncs.
+
+* `node scripts/sync-all.js --safe`: Skips the Graveyard Cleanup phase (no local deletions).
+* `node scripts/sync-all.js --only-participants`: Syncs **only** participants and registrations.
+* `node scripts/sync-all.js --only-payments`: Syncs **only** payments and dinner tickets.
+* `node scripts/sync-all.js --only-posters`: Syncs **only** posters.
+* `node scripts/sync-all.js --only-program`: Syncs **only** program sessions and slots.
 
 ---
 

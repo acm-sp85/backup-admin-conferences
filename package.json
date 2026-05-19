@@ -10,7 +10,7 @@
     "tunnel": "node scripts/start-tunnel.js",
     "tunnel-mongo": "node scripts/start-mongo-tunnel.js",
     "sync": "node scripts/sync-all.js",
-    "sync-scito": "node scripts/sync-all-scito.js"
+    "sync:safe": "node scripts/sync-all.js --safe"
   },
   "dependencies": {
     "autoprefixer": "^10.5.0",
