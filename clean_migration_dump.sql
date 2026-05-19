@@ -325,3 +325,40 @@ UNLOCK TABLES;
 
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+--
+-- Table structure for table `extra_activities`
+--
+CREATE TABLE `extra_activities` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `conference_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `date` datetime DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_activity_conference` (`conference_id`),
+  CONSTRAINT `fk_activity_conference` FOREIGN KEY (`conference_id`) REFERENCES `conferences` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `extra_activity_attendees`
+--
+CREATE TABLE `extra_activity_attendees` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `activity_id` int(11) NOT NULL,
+  `participant_id` int(11) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `qr_token` varchar(100) NOT NULL,
+  `email_sent_at` timestamp NULL DEFAULT NULL,
+  `scanned_at` timestamp NULL DEFAULT NULL,
+  `is_manual` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `qr_token` (`qr_token`),
+  KEY `fk_attendee_activity` (`activity_id`),
+  KEY `fk_attendee_participant` (`participant_id`),
+  CONSTRAINT `fk_attendee_activity` FOREIGN KEY (`activity_id`) REFERENCES `extra_activities` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_attendee_participant` FOREIGN KEY (`participant_id`) REFERENCES `participants` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
