@@ -15,6 +15,7 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   const columnMap = {
     magicLink: 'email_magic_link_body',
     posterVotingInvite: 'email_poster_voting_invite_body',
+    customVotingInvite: 'custom_voting_invite_body',
     socialDinnerTickets: 'email_social_dinner_tickets_body',
     emailCheckin: 'email_checkin_body'
   };

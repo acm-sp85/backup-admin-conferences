@@ -31,6 +31,76 @@ export default async function MigratePage() {
         results.push(`ℹ️ registrations.is_guest: ${e.message}`);
     }
 
+    // ---- Custom Voting Feature ----
+    try {
+        await query(`CREATE TABLE IF NOT EXISTS custom_voting_groups (
+            id int NOT NULL AUTO_INCREMENT,
+            conference_id int NOT NULL,
+            name varchar(255) NOT NULL,
+            color varchar(7) DEFAULT '#7c3aed',
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY conference_id (conference_id),
+            CONSTRAINT cvg_conf_fk FOREIGN KEY (conference_id) REFERENCES conferences(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+        results.push('✅ Created custom_voting_groups table');
+    } catch (e) {
+        results.push(`ℹ️ custom_voting_groups: ${e.message}`);
+    }
+
+    try {
+        await query(`CREATE TABLE IF NOT EXISTS custom_voting_items (
+            id int NOT NULL AUTO_INCREMENT,
+            group_id int NOT NULL,
+            slot_id int NOT NULL,
+            created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY group_slot_unique (group_id, slot_id),
+            KEY group_id (group_id),
+            KEY slot_id (slot_id),
+            CONSTRAINT cvi_group_fk FOREIGN KEY (group_id) REFERENCES custom_voting_groups(id) ON DELETE CASCADE,
+            CONSTRAINT cvi_slot_fk FOREIGN KEY (slot_id) REFERENCES program_slots(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+        results.push('✅ Created custom_voting_items table');
+    } catch (e) {
+        results.push(`ℹ️ custom_voting_items: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE registrations ADD COLUMN custom_voting_group text DEFAULT NULL`);
+        results.push('✅ Added custom_voting_group to registrations');
+    } catch (e) {
+        results.push(`ℹ️ registrations.custom_voting_group: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE registrations ADD COLUMN custom_votes text DEFAULT NULL`);
+        results.push('✅ Added custom_votes to registrations');
+    } catch (e) {
+        results.push(`ℹ️ registrations.custom_votes: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE registrations ADD COLUMN has_custom_voted tinyint(1) DEFAULT 0`);
+        results.push('✅ Added has_custom_voted to registrations');
+    } catch (e) {
+        results.push(`ℹ️ registrations.has_custom_voted: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN custom_voting_instructions text DEFAULT NULL`);
+        results.push('✅ Added custom_voting_instructions to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.custom_voting_instructions: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN email_custom_voting_invite_body text DEFAULT NULL`);
+        results.push('✅ Added email_custom_voting_invite_body to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.email_custom_voting_invite_body: ${e.message}`);
+    }
+
     return (
         <div className="p-10 font-mono text-sm">
             <h1 className="text-xl font-bold mb-4">Database Migration</h1>

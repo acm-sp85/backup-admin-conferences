@@ -181,6 +181,42 @@ export const emailTemplates = {
     },
 
     /**
+     * Custom Voting Invitation
+     */
+    customVotingInvite: ({ name, votingLink, conference }) => {
+        const brand = getBranding(conference);
+        return {
+            subject: `Invitation to Vote - ${brand.name}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    ${renderHeader(brand)}
+                    <h2 style="color: #1e293b; margin-bottom: 20px;">You're Invited to Vote!</h2>
+                    <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
+                        Hello ${name || 'Voter'},<br><br>
+                        You have been selected to participate in the voting process for <strong>${brand.name}</strong>. 
+                        A curated selection of presentations has been assigned to you for evaluation.
+                    </p>
+                    <div style="margin: 30px 0;">
+                        <a href="${votingLink}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+                            Open Voting Portal
+                        </a>
+                    </div>
+                    <p style="color: #64748b; font-size: 13px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+                        <strong>Instructions:</strong><br>
+                        1. Click the button above to access your personal voting portal.<br>
+                        2. Review the assigned presentations.<br>
+                        3. Rate each one from 1 to 10 (1 = lowest, 10 = highest).<br>
+                        4. Submit your votes when ready.
+                    </p>
+                    <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+                        This link is unique to you. Please do not share it with others.
+                    </p>
+                </div>
+            `
+        };
+    },
+
+    /**
      * Participant Check-in QR (General)
      */
     emailCheckin: ({ name, conference, token }) => {
@@ -258,6 +294,36 @@ export const getDefaultEmailBody = (type, conference) => {
     </p>
     <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
         This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
+    </p>
+</div>
+`.replace('\\${renderHeader(brand)}', renderHeader(brand))
+ .replace('\\${brand.name}', brand.name)
+ .replace('\\${brand.accentColor}', brand.accentColor);
+
+        case 'customVotingInvite':
+            return `
+<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+    \${renderHeader(brand)}
+    <h2 style="color: #1e293b; margin-bottom: 20px;">You're Invited to Vote!</h2>
+    <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
+        Hello \${name},<br><br>
+        You have been selected to participate in the voting process for <strong>\${brand.name}</strong>. 
+        A curated selection of presentations has been assigned to you for evaluation.
+    </p>
+    <div style="margin: 30px 0;">
+        <a href="\${votingLink}" style="background-color: \${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+            Open Voting Portal
+        </a>
+    </div>
+    <p style="color: #64748b; font-size: 13px; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+        <strong>Instructions:</strong><br>
+        1. Click the button above to access your personal voting portal.<br>
+        2. Review the assigned presentations.<br>
+        3. Rate each one from 1 to 10 (1 = lowest, 10 = highest).<br>
+        4. Submit your votes when ready.
+    </p>
+    <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+        This link is unique to you. Please do not share it with others.
     </p>
 </div>
 `.replace('\\${renderHeader(brand)}', renderHeader(brand))

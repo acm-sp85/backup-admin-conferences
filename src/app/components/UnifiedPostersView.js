@@ -4,6 +4,7 @@ import { useState } from 'react';
 import PosterManager from './PosterManager';
 import ParticipantVotingManager from './ParticipantVotingManager';
 import VotingResults from './VotingResults';
+import CustomVotingManager from './CustomVotingManager';
 
 export default function UnifiedPostersView({ conferences, allClusters, userRole }) {
     const [activeTab, setActiveTab] = useState('posters');
@@ -71,6 +72,19 @@ export default function UnifiedPostersView({ conferences, allClusters, userRole 
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)]" />
                     )}
                 </button>
+                <button
+                    onClick={() => setActiveTab('custom')}
+                    className={`px-6 py-3 text-[12px] font-semibold transition-all relative ${
+                        activeTab === 'custom' 
+                        ? 'text-[var(--accent)]' 
+                        : 'text-[var(--muted)] hover:text-[var(--foreground)]'
+                    }`}
+                >
+                    Custom Voting
+                    {activeTab === 'custom' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)]" />
+                    )}
+                </button>
             </div>
 
             <div className="page-enter">
@@ -87,8 +101,15 @@ export default function UnifiedPostersView({ conferences, allClusters, userRole 
                         selectedConference={selectedConference}
                         onConferenceChange={handleConferenceChange}
                     />
-                ) : (
+                ) : activeTab === 'results' ? (
                     <VotingResults 
+                        conferences={conferences} 
+                        userRole={userRole}
+                        selectedConference={selectedConference}
+                        onConferenceChange={handleConferenceChange}
+                    />
+                ) : (
+                    <CustomVotingManager 
                         conferences={conferences} 
                         userRole={userRole}
                         selectedConference={selectedConference}
