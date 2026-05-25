@@ -27,9 +27,9 @@ const mariadbConfig = {
 
 function printHelp() {
   console.log(`
-${c.bold}${c.blue}Sync Check-Ins to MongoDB 'Members' Collection${c.reset}
+${c.bold}${c.blue}Sync Check-Ins to MongoDB 'members' Collection${c.reset}
 ------------------------------------------------------
-Reads local checked-in participants from MariaDB and marks them as "arrived" in the MongoDB "Members" collection.
+Reads local checked-in participants from MariaDB and marks them as "arrived" in the MongoDB "members" collection.
 
 ${c.bold}Usage:${c.reset}
   node scripts/sync-checkins-to-mongo.js [options]
@@ -41,6 +41,7 @@ ${c.bold}Options:${c.reset}
 
 ${c.bold}Configuration (from .env.local):${c.reset}
   Conference Acronym: ${c.yellow}${process.env.CONFERENCE_ACRONYM || 'HOPV26'}${c.reset}
+  Platform:           ${c.yellow}${process.env.CONFERENCE_PLATFORM || 'NANOGE'}${c.reset}
   Event ID:           ${c.yellow}${process.env.MONGO_EVENT_ID || 'Not Defined'}${c.reset}
   MongoDB URI:        ${c.gray}${process.env.MONGO_URI ? 'Defined' : 'Missing'}${c.reset}
   MariaDB Host:       ${c.gray}${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 3306}${c.reset}
@@ -65,14 +66,21 @@ async function main() {
   }
 
   const ACRONYM = process.env.CONFERENCE_ACRONYM || 'HOPV26';
-  const mongoDbName = process.env.MONGO_DB_NAME || 'nanoge-production';
-  const collectionName = "Members";
+  const PLATFORM = (process.env.CONFERENCE_PLATFORM || 'NANOGE').toUpperCase();
+  const isScito = PLATFORM === 'SCITO';
+  const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
+  
+  // MongoDB collection name is lowercase 'members' on both platforms
+  const collectionName = "members";
+  const mongoParticipantsView = `${ACRONYM} - Participants`;
 
   console.log(`\n${c.bold}${c.cyan}=== Check-in Sync Pipeline ===${c.reset}`);
   console.log(`${c.bold}Conference Acronym:${c.reset} ${c.yellow}${ACRONYM}${c.reset}`);
+  console.log(`${c.bold}Platform:${c.reset}           ${c.yellow}${PLATFORM}${c.reset}`);
+  console.log(`${c.bold}Target DB Name:${c.reset}     ${c.yellow}${mongoDbName}${c.reset}`);
   console.log(`${c.bold}Target Collection:${c.reset}  ${c.yellow}${collectionName}${c.reset}`);
   console.log(`${c.bold}Target Event ID:${c.reset}    ${eventId ? `${c.yellow}${eventId}${c.reset}` : `${c.red}Not Defined (Required for live writes)${c.reset}`}`);
-  console.log(`${c.bold}Execution Mode:${c.reset}    ${isDryRun ? `${c.bold}${c.magenta}OFFLINE DRY-RUN (No Mongo Connection)${c.reset}` : `${c.bold}${c.red}LIVE-WRITE (Modifying MongoDB)${c.reset}`}`);
+  console.log(`${c.bold}Execution Mode:${c.reset}     ${isDryRun ? `${c.bold}${c.magenta}OFFLINE DRY-RUN (No Mongo Connection)${c.reset}` : `${c.bold}${c.red}LIVE-WRITE (Modifying MongoDB)${c.reset}`}`);
   console.log(`--------------------------------------------\n`);
 
   // If in live mode, ensure we have an event ID
@@ -138,7 +146,6 @@ async function main() {
     // 3. Process each record
     if (isDryRun) {
       // In dry-run mode, we just log what we WOULD write without connecting to MongoDB at all!
-      const displayEventId = eventId || "<EVENT_ID>";
       for (let i = 0; i < checkedInRows.length; i++) {
         const row = checkedInRows[i];
         const email = row.email.trim().toLowerCase();
@@ -147,11 +154,11 @@ async function main() {
         const displayTime = scannedAtDate.toISOString();
 
         updatedCount++;
-        console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.magenta}⚙ Would Update Mongo (Members):${c.reset} ${c.bold}${fullName}${c.reset} ${c.gray}<${email}>${c.reset}`);
-        console.log(`     ${c.gray}➜ Query:${c.reset} db.collection("Members").updateOne({ event: ObjectId("${displayEventId}"), email: "${email}" }, { $set: { arrived: { "$date": "${displayTime}" } } })`);
+        console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.magenta}⚙ Would Update Mongo (${collectionName}):${c.reset} ${c.bold}${fullName}${c.reset} ${c.gray}<${email}>${c.reset}`);
+        console.log(`     ${c.gray}➜ Query:${c.reset} db.collection("${collectionName}").updateOne({ _id: ObjectId("<resolved_member_id>") }, { $set: { arrived: { "$date": "${displayTime}" } } })`);
       }
     } else {
-      // Live-Write Mode: Connects and updates MongoDB 'Members' collection
+      // Live-Write Mode: Connects and updates MongoDB 'members' collection
       let parsedEventId;
       try {
         parsedEventId = new ObjectId(eventId);
@@ -168,9 +175,8 @@ async function main() {
         const fullName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Unknown';
         const scannedAtDate = new Date(row.scanned_at);
 
-        // Find in MongoDB 'Members' collection matching the specific event
-        const mongoUser = await mongoDb.collection("Members").findOne({
-          event: parsedEventId,
+        // Find in MongoDB participant view first to resolve the unique member _id
+        const participantViewDoc = await mongoDb.collection(mongoParticipantsView).findOne({
           $or: [
             { user_email: email },
             { email: email },
@@ -178,10 +184,22 @@ async function main() {
           ]
         });
 
+        if (!participantViewDoc) {
+          notFoundCount++;
+          notFoundEmails.push(`${fullName} (${row.email})`);
+          console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.red}✖ Not Found in MongoDB (view: ${mongoParticipantsView}):${c.reset} ${fullName} ${c.gray}<${row.email}>${c.reset}`);
+          continue;
+        }
+
+        // Fetch the corresponding raw member document to check current check-in status
+        const mongoUser = await mongoDb.collection(collectionName).findOne({
+          _id: participantViewDoc._id
+        });
+
         if (!mongoUser) {
           notFoundCount++;
           notFoundEmails.push(`${fullName} (${row.email})`);
-          console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.red}✖ Not Found in MongoDB (event: ${eventId}):${c.reset} ${fullName} ${c.gray}<${row.email}>${c.reset}`);
+          console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.red}✖ Member ID Not Found in '${collectionName}' collection:${c.reset} ${fullName} ${c.gray}<${row.email}>${c.reset}`);
           continue;
         }
 
@@ -203,12 +221,12 @@ async function main() {
         } else {
           updatedCount++;
           const displayTime = scannedAtDate.toISOString();
-          // Perform the actual MongoDB write to 'Members'
-          await mongoDb.collection("Members").updateOne(
+          // Perform the actual MongoDB write to 'members'
+          await mongoDb.collection(collectionName).updateOne(
             { _id: mongoUser._id },
             { $set: { arrived: scannedAtDate } }
           );
-          console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.green}✔ Updated MongoDB (Members):${c.reset} ${c.bold}${fullName}${c.reset} ${c.gray}<${email}>${c.reset} ➜ arrived: ${c.yellow}${displayTime}${c.reset}`);
+          console.log(` ${c.gray}[${i + 1}/${totalCheckins}]${c.reset} ${c.green}✔ Updated MongoDB (${collectionName}):${c.reset} ${c.bold}${fullName}${c.reset} ${c.gray}<${email}>${c.reset} ➜ arrived: ${c.yellow}${displayTime}${c.reset}`);
         }
       }
     }
@@ -228,7 +246,7 @@ async function main() {
       
       if (notFoundCount > 0) {
         console.log(`\n${c.bold}${c.yellow}⚠️ Warning: The following participants checked in locally, but do not exist in MongoDB:${c.reset}`);
-        notFoundEmails.forEach(item => console.log(` - ${c.red}${item}${c.reset}`));
+        notFoundEmails.forEach(item => console.log(" - " + c.red + item + c.reset));
       }
     }
     
