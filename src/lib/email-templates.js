@@ -204,7 +204,7 @@ export const emailTemplates = {
                         <strong>Instructions:</strong><br>
                         1. Click the button above to access your personal voting portal.<br>
                         2. Review the assigned presentations.<br>
-                        3. Rate each one from 1 to 10 (1 = lowest, 10 = highest).<br>
+                        3. Rate from 1 to 10 (1 = lowest, 10 = highest).<br>
                         4. Submit your votes when ready.
                     </p>
                     <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
