@@ -193,7 +193,7 @@ export const emailTemplates = {
                     <h2 style="color: #1e293b; margin-bottom: 20px;">Rating the orals presentations</h2>
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${name || 'Voter'},<br><br>
-                        You have been selected to participate in the voting process for the <strong>Best Student Contribution Award</strong> at ${brand.name}.
+                        You have been selected to participate in the voting process for the <strong>Best Student Presentation Award</strong> at ${brand.name}.
                     </p>
                     <div style="margin: 30px 0;">
                         <a href="${votingLink}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
