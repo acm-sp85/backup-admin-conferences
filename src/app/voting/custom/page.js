@@ -6,13 +6,19 @@ import { logout } from '@/app/actions/auth';
 
 export default async function CustomVotingPage() {
     const session = await verifySession();
+    console.log("🔍 CustomVotingPage session:", session);
     if (!session) {
+        console.log("🔍 Redirecting to /login due to missing session");
         redirect('/login');
     }
 
     // 1. Get user details from the session
     const [user] = await query('SELECT id, email, role, firstName, lastName FROM users WHERE id = ?', [session.id]);
-    if (!user) redirect('/login');
+    console.log("🔍 CustomVotingPage user from DB:", user);
+    if (!user) {
+        console.log("🔍 Redirecting to /login because user was not found in DB");
+        redirect('/login');
+    }
 
     // 2. Fetch the registration matching this email for a conference that has voting open
     const [participant] = await query(`
@@ -34,6 +40,7 @@ export default async function CustomVotingPage() {
         WHERE p.email = ? AND c.voting_window_open = 1 AND r.custom_voting_group IS NOT NULL
         LIMIT 1
     `, [user.email]);
+    console.log("🔍 CustomVotingPage participant registration:", participant);
 
     // Handle case where user is logged in but doesn't have an active custom voting registration
     if (!participant) {

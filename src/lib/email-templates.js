@@ -190,7 +190,7 @@ export const emailTemplates = {
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
-                    <h2 style="color: #1e293b; margin-bottom: 20px;">Rating the orals presentations</h2>
+                    <h2 style="color: #1e293b; margin-bottom: 20px;">Rating oral presentations</h2>
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${name || 'Voter'},<br><br>
                         You have been selected to participate in the voting process for the <strong>Best Student Presentation Award</strong> at ${brand.name}.
