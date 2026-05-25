@@ -110,6 +110,7 @@ export async function getCustomVotingItemsByConference(conferenceId) {
     return await query(`
         SELECT cvi.*, cvg.name as group_name, cvg.color as group_color,
                ps.title, ps.presenter_name, ps.type, ps.start_time, ps.end_time,
+               ps.authors, ps.content, ps.code, ps.toc,
                pss.session_name, pss.full_session_name
         FROM custom_voting_items cvi
         JOIN custom_voting_groups cvg ON cvi.group_id = cvg.id
@@ -378,6 +379,7 @@ export async function getCustomVotingResults(conferenceId) {
     const items = await query(`
         SELECT cvi.id as item_id, cvi.slot_id, cvg.id as group_id, cvg.name as group_name, cvg.color as group_color,
                ps.title, ps.presenter_name, ps.type, ps.start_time, ps.end_time,
+               ps.authors, ps.content, ps.code, ps.toc,
                pss.session_name
         FROM custom_voting_items cvi
         JOIN custom_voting_groups cvg ON cvi.group_id = cvg.id

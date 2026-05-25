@@ -1,5 +1,6 @@
-import { getCustomVotingParticipantByToken, getCustomVotingGroups, getCustomVotingItemsByConference } from '../../../actions/customVoting';
+import { getCustomVotingParticipantByToken } from '../../../actions/customVoting';
 import CustomVotingForm from '../../../components/CustomVotingForm';
+import { query } from '@/lib/db';
 
 export default async function CustomParticipantVotingPage({ searchParams }) {
     const { t: token } = await searchParams;
@@ -48,9 +49,26 @@ export default async function CustomParticipantVotingPage({ searchParams }) {
         );
     }
 
-    // Get all groups and items for this conference
-    const allGroups = await getCustomVotingGroups(participant.conference_id);
-    const allItems = await getCustomVotingItemsByConference(participant.conference_id);
+    // Get all groups and items for this conference directly via DB queries
+    const allGroups = await query(
+        'SELECT * FROM custom_voting_groups WHERE conference_id = ? ORDER BY name ASC',
+        [participant.conference_id]
+    );
+
+    const allItems = await query(`
+        SELECT cvi.*, cvg.name as group_name, cvg.color as group_color,
+               ps.title, ps.presenter_name, ps.type, ps.start_time, ps.end_time,
+               ps.authors, ps.content, ps.code, ps.toc,
+               pss.session_name, pss.full_session_name,
+               conf.base_url
+        FROM custom_voting_items cvi
+        JOIN custom_voting_groups cvg ON cvi.group_id = cvg.id
+        JOIN program_slots ps ON cvi.slot_id = ps.id
+        JOIN program_sessions pss ON ps.session_id = pss.id
+        JOIN conferences conf ON pss.conference_id = conf.id
+        WHERE cvg.conference_id = ?
+        ORDER BY cvg.name ASC, ps.start_time ASC
+    `, [participant.conference_id]);
 
     // Filter to only the groups assigned to this participant
     const assignedGroupIds = participant.custom_voting_group || [];

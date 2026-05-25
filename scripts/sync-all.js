@@ -34,6 +34,7 @@ const SYNC_CONFIG = {
   mongoPaymentsView: `${ACRONYM} - Payments`, 
   mongoProgramView: `${ACRONYM} - Program`, 
   mongoPostersView: `${ACRONYM} - Posters`,
+  mongoOralsView: `${ACRONYM} - Orals`,
   targetConferenceAcronym: ACRONYM,
   targetConferenceName: process.env.CONFERENCE_NAME || 'HOPV 2026',
 };
@@ -50,6 +51,7 @@ const summary = {
   payments: 0,
   sessions: 0,
   slots: 0,
+  orals: 0,
   posters: { new: 0, updated: 0 },
   errors: []
 };
@@ -61,13 +63,15 @@ async function syncAll() {
   const onlyPayments = args.includes('--only-payments');
   const onlyPosters = args.includes('--only-posters');
   const onlyProgram = args.includes('--only-program');
+  const onlyOrals = args.includes('--only-orals');
   
-  const hasSpecificFlag = onlyParticipants || onlyPayments || onlyPosters || onlyProgram;
+  const hasSpecificFlag = onlyParticipants || onlyPayments || onlyPosters || onlyProgram || onlyOrals;
   
   const shouldSyncParticipants = hasSpecificFlag ? onlyParticipants : true;
   const shouldSyncPayments = hasSpecificFlag ? onlyPayments : true;
   const shouldSyncPosters = hasSpecificFlag ? onlyPosters : true;
   const shouldSyncProgram = hasSpecificFlag ? onlyProgram : true;
+  const shouldSyncOrals = hasSpecificFlag ? onlyOrals : true;
   const shouldRunCleanup = hasSpecificFlag ? false : !isSafeMode;
 
   const { targetConferenceAcronym, targetConferenceName, mongoDbName, baseUrl } = SYNC_CONFIG;
@@ -423,6 +427,43 @@ async function syncAll() {
       });
     }
 
+    // Module: Orals
+    if (shouldSyncOrals) {
+      await runSyncModule('Orals', async () => {
+        const records = await mongoDb.collection(SYNC_CONFIG.mongoOralsView).find({}).toArray();
+        console.log(`🎤 Processing ${records.length} Orals...`);
+        
+        for (const record of records) {
+          const mongoId = record._id.toString();
+          const title = record.title || '';
+          
+          if (!title) continue;
+          
+          // Match by exact title
+          const [slots] = await mariadb.execute(
+            'SELECT id FROM program_slots WHERE title = ? AND session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)', 
+            [title, conferenceId]
+          );
+
+          if (slots.length > 0) {
+            const slotId = slots[0].id;
+            await mariadb.execute(
+              'UPDATE program_slots SET mongo_id = ?, authors = ?, content = ?, code = ?, toc = ? WHERE id = ?',
+              [
+                mongoId, 
+                JSON.stringify(record.authors || []), 
+                record.content || null, 
+                record.code || null,
+                record.toc || null,
+                slotId
+              ]
+            );
+            summary.orals++;
+          }
+        }
+      });
+    }
+
     // --- CLEANUP PHASE (Mirror Logic) ---
     if (shouldRunCleanup) {
       console.log('\n🧹 Starting cleanup of stale records...');
@@ -554,6 +595,7 @@ function printSummary(acronym) {
   console.log(`💰 Payments Synced: ${summary.payments}`);
   console.log(`🖼️  Posters: ${summary.posters.new} new, ${summary.posters.updated} updated`);
   console.log(`📅 Program: ${summary.sessions} sessions, ${summary.slots} slots`);
+  console.log(`🎤 Orals Linked: ${summary.orals}`);
   console.log(`----------------------------------`);
 
   if (summary.errors.length > 0) {

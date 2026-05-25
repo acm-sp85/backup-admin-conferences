@@ -186,15 +186,14 @@ export const emailTemplates = {
     customVotingInvite: ({ name, votingLink, conference }) => {
         const brand = getBranding(conference);
         return {
-            subject: `Invitation to Vote - ${brand.name}`,
+            subject: `Rating the oral presentations at ${brand.name}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
                     <h2 style="color: #1e293b; margin-bottom: 20px;">You're Invited to Vote!</h2>
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${name || 'Voter'},<br><br>
-                        You have been selected to participate in the voting process for <strong>${brand.name}</strong>. 
-                        A curated selection of presentations has been assigned to you for evaluation.
+                        You have been selected to participate in the voting process for the <strong>Best Student Contribution Award</strong> at ${brand.name}.
                     </p>
                     <div style="margin: 30px 0;">
                         <a href="${votingLink}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
