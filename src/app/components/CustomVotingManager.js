@@ -479,14 +479,14 @@ export default function CustomVotingManager({ conferences, userRole, selectedCon
                                             </div>
                                             <div className="divide-y divide-[var(--border)]">
                                                 {groupItems.map(item => (
-                                                    <div key={item.item_id} className="p-3 flex justify-between items-start gap-3 hover:bg-slate-50/50">
+                                                    <div key={item.id} className="p-3 flex justify-between items-start gap-3 hover:bg-slate-50/50">
                                                         <div className="flex-1 min-w-0">
                                                             <div className="text-[10px] font-bold text-indigo-600 mb-0.5 uppercase tracking-wide">{item.session_name}</div>
                                                             <div className="text-[13px] font-semibold leading-tight mb-1 truncate">{item.title}</div>
                                                             <div className="text-[11px] text-slate-500">{item.presenter_name || 'No presenter'}</div>
                                                         </div>
                                                         <button 
-                                                            onClick={() => handleRemoveItem(item.item_id)}
+                                                            onClick={() => handleRemoveItem(item.id)}
                                                             className="text-slate-400 hover:text-red-500 p-1"
                                                             title="Remove from group"
                                                         >
