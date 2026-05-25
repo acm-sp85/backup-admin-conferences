@@ -5,6 +5,7 @@ import { query } from '@/lib/db';
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
+  const next = searchParams.get('next');
 
   if (!token) {
     redirect('/login?error=missing_token');
@@ -25,6 +26,10 @@ export async function GET(request) {
 
   // Convert the temporary magic-link token into a standard session
   await createSession(payload.userId, payload.role);
+
+  if (next && next.startsWith('/')) {
+    redirect(next);
+  }
 
   // Redirect to dashboard or voting depending on role
   if (payload.role === 'user') {

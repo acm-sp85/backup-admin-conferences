@@ -480,25 +480,39 @@ export async function sendCustomVoterInvite(participantId, conferenceId) {
             return { error: 'Communication is currently LOCKED for this conference. Please enable it in Conference Settings first.' };
         }
 
-        // 2. Look up the participant's QR token for the voting URL
-        const [tokenRow] = await query(`
-            SELECT t.token
-            FROM participant_qr_tokens t
-            JOIN registrations r ON t.registration_id = r.id
-            WHERE r.participant_id = ? AND r.conference_id = ?
-        `, [participantId, conferenceId]);
+        // 2. Ensure user exists in users table and sync metadata
+        const [existingUser] = await query('SELECT id FROM users WHERE email = ?', [participant.participant_email]);
+        let userId;
 
-        if (!tokenRow) {
-            return { error: 'No QR token found for this participant. They may need a check-in QR first.' };
+        if (existingUser) {
+            await query(
+                'UPDATE users SET firstName = ?, lastName = ? WHERE email = ?',
+                [participant.firstName, participant.lastName, participant.participant_email]
+            );
+            userId = existingUser.id;
+        } else {
+            const res = await query(
+                'INSERT INTO users (email, role, firstName, lastName) VALUES (?, ?, ?, ?)',
+                [participant.participant_email, 'user', participant.firstName, participant.lastName]
+            );
+            userId = res.insertId;
         }
+
+        // 3. Generate Magic Link (48 hours expiry for invitations)
+        const { encrypt } = require('@/lib/auth');
+        const token = await encrypt({ 
+            userId: userId, 
+            role: 'user', 
+            type: 'magic-link' 
+        }, '48h');
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
                         (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' || 'https://smart-conference.org' : 
                          process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
                          'http://localhost:3000');
-        const votingLink = `${baseUrl}/voting/custom/v?t=${tokenRow.token}`;
+        const votingLink = `${baseUrl}/api/auth/callback?token=${token}&next=/voting/custom`;
 
-        // 3. Send email
+        // 4. Send email
         console.log(`📧 Sending Custom Voting Invite to ${participant.participant_email} from ${EMAIL_CONFIG.fromVoting}`);
         const { subject, html } = await getEmailTemplate(conferenceId, 'customVotingInvite', {
             name: participant.firstName,
