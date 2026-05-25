@@ -52,7 +52,9 @@ export default async function DownloadDocPage({ params }) {
             .slot-time { font-weight: bold; width: 80pt; font-size: 12pt; }
             .slot-title { font-weight: bold; font-size: 12pt; margin-bottom: 3pt; }
             .slot-presenter { font-style: italic; color: #555; font-size: 10pt; }
-            .slot-type { font-size: 8pt; text-transform: uppercase; color: ${config.titleColor || '#666'}; margin-top: 5pt; font-weight: bold; }
+            .presenter-name { color: ${config.titleColor || '#000000'}; font-weight: bold; }
+            .presenter-institution { color: #555; font-weight: normal; }
+            .slot-type { font-size: 8pt; text-transform: uppercase; color: #666; margin-top: 5pt; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -68,14 +70,25 @@ export default async function DownloadDocPage({ params }) {
                 ${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
         </div>
-
+ 
         <table>
             ${slots.map(slot => `
                 <tr>
                     <td class="slot-time">${new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
                     <td>
                         <div class="slot-title">${slot.title || '(No Title)'}</div>
-                        ${slot.presenter_name ? `<div class="slot-presenter">${formatName(slot.presenter_name)}</div>` : ''}
+                        ${(() => {
+                            if (!slot.presenter_name) return '';
+                            let displayName = slot.presenter_name;
+                            if (displayName.includes(',')) {
+                                const parts = displayName.split(',');
+                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                            }
+                            const formatted = formatName(displayName);
+                            const nameSpan = `<span class="presenter-name">${formatted}</span>`;
+                            const instSpan = slot.presenter_entity ? `<span class="presenter-institution"> - ${slot.presenter_entity}</span>` : '';
+                            return `<div class="slot-presenter">${nameSpan}${instSpan}</div>`;
+                        })()}
                         <div class="slot-type">${slot.type}</div>
                     </td>
                 </tr>

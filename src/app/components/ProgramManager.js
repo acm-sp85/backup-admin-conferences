@@ -235,7 +235,25 @@ export default function ProgramManager({ conferences }) {
                                                         <div className="flex-1">
                                                             <div className="font-bold text-slate-800">{slot.title || '(No Title)'}</div>
                                                             {slot.presenter_name && (
-                                                                <div className="text-slate-500 mt-0.5">Presenter: <span className="font-medium text-slate-700">{formatName(slot.presenter_name)}</span></div>
+                                                                <div className="text-slate-500 mt-0.5">
+                                                                     <span className="font-medium text-slate-700">
+                                                                        {(() => {
+                                                                            let displayName = slot.presenter_name;
+                                                                            if (displayName.includes(',')) {
+                                                                                const parts = displayName.split(',');
+                                                                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                                            }
+                                                                            const formatted = formatName(displayName);
+                                                                            return slot.presenter_entity ? `${formatted}` : formatted;
+                                                                        })()}
+                                                                    </span>
+                                                                    <span className="font-medium text-slate-700">
+                                                                        {(() => {
+                                                                            let displayName = slot.presenter_name;
+                                                                            return slot.presenter_entity ? ` (${slot.presenter_entity})` : displayName;
+                                                                        })()}
+                                                                    </span>
+                                                                </div>
                                                             )}
                                                             <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
                                                         </div>

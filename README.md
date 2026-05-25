@@ -1,5 +1,7 @@
 # SCITO & NanoGe Conference Admin Dashboard
 
+*Built in 2026.*
+
 This repository contains the administrative portal and synchronization pipeline for managing conference registrations, payments, schedules, and social dinner tickets for SCITO and NanoGe events.
 
 ---

@@ -193,18 +193,19 @@ async function syncAll() {
           }
 
           let participantId = participantMap.get(email);
+          const entity = record.user_entity || record.entity || null;
           if (!participantId) {
             const [res] = await mariadb.execute(
-              'INSERT INTO participants (firstName, lastName, email, registration_type) VALUES (?, ?, ?, ?)', 
-              [firstName, lastName, email, record.registration_type || 'Standard']
+              'INSERT INTO participants (firstName, lastName, email, registration_type, entity) VALUES (?, ?, ?, ?, ?)', 
+              [firstName, lastName, email, record.registration_type || 'Standard', entity]
             );
             participantId = res.insertId;
             participantMap.set(email, participantId);
             summary.participants++;
           } else {
             await mariadb.execute(
-              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ? WHERE id = ?', 
-              [firstName, lastName, record.registration_type || 'Standard', participantId]
+              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ? WHERE id = ?', 
+              [firstName, lastName, record.registration_type || 'Standard', entity, participantId]
             );
           }
 
@@ -344,6 +345,39 @@ async function syncAll() {
     // Module: Program
     if (shouldSyncProgram) {
       await runSyncModule('Program', async () => {
+        // Pre-fetch all participants with entities from MariaDB to resolve speaker entities by name
+        const [participantsList] = await mariadb.execute('SELECT firstName, lastName, entity FROM participants WHERE entity IS NOT NULL AND entity != ""');
+
+        const findEntityByName = (presenterName) => {
+          if (!presenterName) return null;
+          const cleanPresenter = presenterName.trim().toLowerCase();
+          
+          // Try 1: Exact match with "LastName, FirstName" vs participant.lastName and participant.firstName
+          const parts = cleanPresenter.split(',');
+          if (parts.length === 2) {
+            const lastName = parts[0].trim();
+            const firstName = parts[1].trim();
+            const found = participantsList.find(p => {
+              const pLast = (p.lastName || '').trim().toLowerCase();
+              const pFirst = (p.firstName || '').trim().toLowerCase();
+              return pLast === lastName && (pFirst === firstName || pFirst.startsWith(firstName) || firstName.startsWith(pFirst));
+            });
+            if (found) return found.entity;
+          }
+          
+          // Try 2: Contains both first and last name
+          const nameParts = cleanPresenter.replace(/,/g, '').split(/\s+/);
+          const foundByParts = participantsList.find(p => {
+            const pLast = (p.lastName || '').trim().toLowerCase();
+            const pFirst = (p.firstName || '').trim().toLowerCase();
+            if (!pLast || !pFirst) return false;
+            return nameParts.includes(pLast) && (nameParts.includes(pFirst) || pFirst.startsWith(nameParts[0]) || nameParts[0].startsWith(pFirst));
+          });
+          if (foundByParts) return foundByParts.entity;
+
+          return null;
+        };
+
         const records = await mongoDb.collection(SYNC_CONFIG.mongoProgramView).find({}).toArray();
         console.log(`📅 Processing ${records.length} sessions...`);
         for (const session of records) {
@@ -369,10 +403,17 @@ async function syncAll() {
               if (slotType === 'invSession') slotType = 'Invited Speaker Session';
               if (slotType === 'invSpeaker') slotType = 'Invited Speaker';
 
+              let presenterEntity = slot.presenter_entity || slot.presenter_institution || slot.entity || slot.institution || null;
+              
+              // Resolve from participants list if not directly present in MongoDB slot
+              if (!presenterEntity && slot.presenter_name) {
+                presenterEntity = findEntityByName(slot.presenter_name);
+              }
+
               await mariadb.execute(`
-                INSERT INTO program_slots (session_id, type, title, presenter_name, start_time, end_time)
-                VALUES (?, ?, ?, ?, ?, ?)
-              `, [sessionId, slotType, slot.title || null, slot.presenter_name || null,
+                INSERT INTO program_slots (session_id, type, title, presenter_name, presenter_entity, start_time, end_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+              `, [sessionId, slotType, slot.title || null, slot.presenter_name || null, presenterEntity,
                   slot.start_time ? new Date(slot.start_time) : null,
                   slot.end_time ? new Date(slot.end_time) : null]);
               summary.slots++;

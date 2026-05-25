@@ -117,14 +117,26 @@ export default async function ProgramPrintPage({ params }) {
                                             </div>
                                             {slot.presenter_name && (
                                                 <div 
-                                                    className="font-normal opacity-80"
-                                                    style={{ fontSize: `calc(${config.contentSize} * 0.8)` }}
+                                                    className="font-normal opacity-85"
+                                                    style={{ fontSize: `calc(${config.contentSize} * 0.8)`, color: config.contentColor }}
                                                 >
-                                                    {formatName(slot.presenter_name)}
+                                                    <span style={{ color: config.titleColor, fontWeight: 'bold' }}>
+                                                        {(() => {
+                                                            let displayName = slot.presenter_name;
+                                                            if (displayName.includes(',')) {
+                                                                const parts = displayName.split(',');
+                                                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                            }
+                                                            return formatName(displayName);
+                                                        })()}
+                                                    </span>
+                                                    {slot.presenter_entity && (
+                                                        <span style={{ opacity: 0.8 }}>{` - ${slot.presenter_entity}`}</span>
+                                                    )}
                                                 </div>
                                             )}
-                                            <div className="text-[10px] font-bold uppercase tracking-widest  mt-2"
-                                            style={{ color: config.titleColor }}>
+                                            <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
+                                            style={{ color: config.contentColor, opacity: 0.6 }}>
                                                 {slot.type}
                                             </div>
                                         </td>
