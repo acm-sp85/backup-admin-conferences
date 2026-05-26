@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -69,7 +70,7 @@ export async function sendSocialDinnerQR(registrationId) {
 
     // Get participant and their tickets
     const [participant] = await query(`
-        SELECT p.email, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, c.acronym as conference
+        SELECT p.email, p.email_alias, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, c.acronym as conference
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id
@@ -126,7 +127,7 @@ export async function sendSocialDinnerQR(registrationId) {
 
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
-        to: [participant.email],
+        to: [resolveEmail(participant)],
         subject,
         html
     });
@@ -291,13 +292,14 @@ export async function searchConferenceParticipants(conferenceAcronym, searchTerm
     const participants = await query(`
         SELECT p.id as participant_id, r.id as registration_id, 
                CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
-               p.email
+               p.email,
+               p.email_alias
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id
-        WHERE c.acronym = ? AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ?)
+        WHERE c.acronym = ? AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ? OR p.email_alias LIKE ?)
         LIMIT 10
-    `, [conferenceAcronym, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
+    `, [conferenceAcronym, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`]);
 
     return participants;
 }

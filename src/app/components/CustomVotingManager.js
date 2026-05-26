@@ -524,7 +524,16 @@ export default function CustomVotingManager({ conferences, userRole, selectedCon
                                             <div key={p.id} className="px-3 py-2 hover:bg-[var(--bg)] flex justify-between items-center border-b border-[var(--bg)] last:border-0 transition-colors">
                                                 <div>
                                                     <div className="text-xs font-medium text-[var(--foreground)]">{p.name}</div>
-                                                    <div className="text-[10px] text-[var(--muted)]">{p.email}</div>
+                                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                        {p.email_alias ? (
+                                                            <>
+                                                                <span className="text-[10px] text-amber-500 font-medium" title={`Emails redirected to ${p.email_alias}`}>{p.email_alias}</span>
+                                                                <span className="text-[9px] line-through opacity-50 text-[var(--muted)]" title="Original email">({p.email})</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-[10px] text-[var(--muted)]">{p.email}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <button 
                                                     onClick={() => handleAddVoter(p.id)}
@@ -606,7 +615,20 @@ export default function CustomVotingManager({ conferences, userRole, selectedCon
                                             </td>
                                             <td>
                                                 <div className="font-medium text-[var(--foreground)]">{v.name}</div>
-                                                <div className="text-[10px] text-[var(--muted)]">{v.email}</div>
+                                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                                    {v.email_alias ? (
+                                                        <>
+                                                            <span className="text-[10px] text-amber-500 font-medium" title={`Emails redirected to ${v.email_alias}`}>
+                                                                {v.email_alias}
+                                                            </span>
+                                                            <span className="text-[9px] line-through opacity-50 text-[var(--muted)]" title="Original email">
+                                                                ({v.email})
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[10px] text-[var(--muted)]">{v.email}</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td>
                                                 <span className="badge" style={{

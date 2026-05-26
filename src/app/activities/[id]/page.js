@@ -30,9 +30,11 @@ export default async function ActivityDetailsPage({ params }) {
     }
 
     const attendees = await query(`
-        SELECT * FROM extra_activity_attendees
-        WHERE activity_id = ?
-        ORDER BY created_at DESC
+        SELECT a.*, p.email_alias 
+        FROM extra_activity_attendees a
+        LEFT JOIN participants p ON a.participant_id = p.id
+        WHERE a.activity_id = ?
+        ORDER BY a.created_at DESC
     `, [id]);
 
     const totalCheckedIn = attendees.filter(a => a.scanned_at).length;

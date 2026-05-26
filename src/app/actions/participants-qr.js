@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -18,7 +19,7 @@ export async function sendParticipantCheckinQR(registrationId) {
 
     // Get participant and registration details
     const [participant] = await query(`
-        SELECT p.email, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
+        SELECT p.email, p.email_alias, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
                c.id as conference_id, c.name as conference_name, c.emails_enabled, t.token
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
@@ -42,7 +43,7 @@ export async function sendParticipantCheckinQR(registrationId) {
 
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
-        to: [participant.email],
+        to: [resolveEmail(participant)],
         subject,
         html
     });
@@ -182,4 +183,40 @@ export async function updateBadgeConfig(conferenceId, config, bgUrl) {
 
     revalidatePath('/participants');
     return { success: true };
+}
+
+export async function updateParticipantEmailAlias(participantId, emailAlias) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        // Validate email format if provided
+        const trimmed = emailAlias?.trim().toLowerCase() || null;
+        
+        if (trimmed) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(trimmed)) {
+                return { error: 'Invalid email format' };
+            }
+
+            // Check it's not the same as primary email
+            const [participant] = await query('SELECT email FROM participants WHERE id = ?', [participantId]);
+            if (participant && participant.email.toLowerCase() === trimmed) {
+                return { error: 'Alias must be different from the primary email' };
+            }
+        }
+
+        await query(
+            'UPDATE participants SET email_alias = ? WHERE id = ?',
+            [trimmed, participantId]
+        );
+
+        revalidatePath('/participants');
+        return { success: true };
+    } catch (error) {
+        console.error('Update email alias error:', error);
+        return { error: 'Failed to update email alias' };
+    }
 }

@@ -50,6 +50,7 @@ export default async function ParticipantsPage({ searchParams }) {
   let sql = `
     SELECT 
       p.*, 
+      p.email_alias,
       CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name
     FROM participants p
     WHERE 1=1

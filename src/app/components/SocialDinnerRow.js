@@ -54,7 +54,8 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
 
   const handleSendEmail = (e) => {
     e.stopPropagation();
-    if (!confirm(`Send QR code(s) to ${person.email}?`)) return;
+    const sendTo = person.email_alias || person.email;
+    if (!confirm(`Send QR code(s) to ${sendTo}?${person.email_alias ? ` (alias for ${person.email})` : ''}`)) return;
     startSending(async () => {
       try {
         await sendSocialDinnerQR(person.registration_id);
@@ -119,7 +120,16 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
           </div>
         </td>
         <td>
-          <div className="text-[13px] text-[var(--muted)]">{person.email}</div>
+          <div className="text-[13px] text-[var(--muted)] flex items-center gap-1.5 flex-wrap">
+            {person.email_alias ? (
+              <>
+                <span className="text-[#d4af37] font-medium">{person.email_alias}</span>
+                <span className="line-through opacity-60 text-xs">({person.email})</span>
+              </>
+            ) : (
+              person.email
+            )}
+          </div>
         </td>
         <td>
           <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#0071e3]/10 text-[#0071e3]">

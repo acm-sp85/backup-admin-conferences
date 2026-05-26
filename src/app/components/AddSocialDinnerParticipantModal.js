@@ -137,7 +137,16 @@ export default function AddSocialDinnerParticipantModal({ isOpen, onClose, confe
                     <div key={p.registration_id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl border border-transparent hover:border-slate-100 transition-all group">
                       <div>
                         <div className="text-[13px] font-bold text-slate-900">{p.name}</div>
-                        <div className="text-[11px] text-slate-500 font-medium">{p.email}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          {p.email_alias ? (
+                            <>
+                              <span className="text-[11px] text-amber-500 font-medium" title={`Emails redirected to ${p.email_alias}`}>{p.email_alias}</span>
+                              <span className="line-through opacity-50 text-[10px] text-slate-400">({p.email})</span>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 font-medium">{p.email}</span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => handleAdd(p.registration_id)}

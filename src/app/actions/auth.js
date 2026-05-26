@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Resend } from 'resend';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -39,10 +40,37 @@ export async function requestMagicLink(prevState, formData) {
   }
 
   try {
-    // 1. Check if user exists
+    // 1. Check if user exists (by primary email)
     const users = await query('SELECT id, email, role, password FROM users WHERE email = ?', [email]);
-    const user = users[0];
+    let user = users[0];
     const password = formData.get('password')?.toString();
+
+    // 1b. If not found by primary email, check if this is a participant's email_alias
+    if (!user) {
+      const [participant] = await query(
+        'SELECT p.email FROM participants p WHERE p.email_alias = ?',
+        [email]
+      );
+      if (participant) {
+        // Found by alias — look up the user by their primary (canonical) email
+        const [aliasUser] = await query('SELECT id, email, role, password FROM users WHERE email = ?', [participant.email]);
+        if (aliasUser) {
+          user = aliasUser;
+        }
+      }
+    }
+
+    // 2. Resolve the effective delivery address (alias if set)
+    let deliveryEmail = email; // default: whatever they typed
+    if (user) {
+      const [participant] = await query(
+        'SELECT email, email_alias FROM participants WHERE email = ?',
+        [user.email]
+      );
+      if (participant) {
+        deliveryEmail = resolveEmail(participant);
+      }
+    }
 
     if (user) {
       if (password && (user.role === 'admin' || user.role === 'superadmin')) {
@@ -58,7 +86,7 @@ export async function requestMagicLink(prevState, formData) {
           return { errors: { password: 'Invalid password.' } };
         }
       }
-      // 2. Generate short-lived magic token (15 mins)
+      // 3. Generate short-lived magic token (15 mins)
       const token = await encrypt({ 
         userId: user.id, 
         role: user.role, 
@@ -72,8 +100,8 @@ export async function requestMagicLink(prevState, formData) {
       const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
 
-      // 3. Send Email
-      console.log(`📧 Attempting to send magic link to: ${email}`);
+      // 4. Send Email to the resolved delivery address
+      console.log(`📧 Attempting to send magic link to: ${deliveryEmail}`);
       
       let conferenceId = null;
       // Only use conference-specific branding if the user is a regular 'user' (voter)
@@ -87,7 +115,7 @@ export async function requestMagicLink(prevState, formData) {
       
       const { data, error } = await resend.emails.send({
         from: EMAIL_CONFIG.from,
-        to: email,
+        to: deliveryEmail,
         subject,
         html,
       });

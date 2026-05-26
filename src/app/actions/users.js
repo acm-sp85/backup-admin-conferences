@@ -8,6 +8,7 @@ import { Resend } from 'resend';
 import { headers } from 'next/headers';
 import { verifySession, encrypt } from '@/lib/auth';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -62,8 +63,12 @@ export async function inviteUser(prevState, formData) {
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
 
-        // 4. Send invitation email
-        console.log(`📧 Sending invitation to ${email}`);
+        // 4. Resolve effective delivery email (alias if participant record has one)
+        const [participantRecord] = await query('SELECT email, email_alias FROM participants WHERE email = ?', [email]);
+        const deliveryEmail = participantRecord ? resolveEmail(participantRecord) : email;
+
+        // 5. Send invitation email
+        console.log(`📧 Sending invitation to ${deliveryEmail}`);
         
         let conference = null;
         // Only use conference-specific branding if it's a regular user
@@ -80,7 +85,7 @@ export async function inviteUser(prevState, formData) {
 
         const { data, error: mailError } = await resend.emails.send({
             from: EMAIL_CONFIG.from,
-            to: email,
+            to: deliveryEmail,
             subject: template.subject,
             html: template.html
         });

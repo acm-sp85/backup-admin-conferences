@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -21,7 +22,7 @@ export async function searchConferenceParticipants(conferenceId, search) {
     if (!search || search.length < 2) return [];
 
     return await query(`
-        SELECT p.id, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, p.email, p.cluster_for_review
+        SELECT p.id, CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, p.email, p.email_alias, p.cluster_for_review
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         WHERE r.conference_id = ? AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ?)
@@ -40,6 +41,7 @@ export async function getVotersForConference(conferenceId) {
             p.id, 
             CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name, 
             p.email, 
+            p.email_alias,
             r.cluster_for_review, 
             CASE 
                 WHEN COALESCE(r.has_voted, 0) = 1 THEN 1
@@ -172,7 +174,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
     try {
         // 1. Get participant details and REGISTRATION-specific cluster data
         const participants = await query(`
-            SELECT p.firstName, p.lastName, p.email as participant_email, r.cluster_for_review, c.*
+            SELECT p.firstName, p.lastName, p.email as participant_email, p.email_alias as participant_email_alias, r.cluster_for_review, c.*
             FROM participants p
             JOIN registrations r ON p.id = r.participant_id
             JOIN conferences c ON r.conference_id = c.id
@@ -220,8 +222,8 @@ export async function sendVoterInvite(participantId, conferenceId) {
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
 
-        // 4. Send email
-        console.log(`📧 Sending Voting Invite to ${participant.participant_email} from ${EMAIL_CONFIG.fromVoting}`);
+        const sendTo = resolveEmail(participant);
+        console.log(`📧 Sending Voting Invite to ${sendTo} from ${EMAIL_CONFIG.fromVoting}`);
         const { subject, html } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
             name: participant.firstName,
             magicLink
@@ -229,7 +231,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
         const { data, error } = await resend.emails.send({
             from: EMAIL_CONFIG.fromVoting,
-            to: participant.participant_email,
+            to: sendTo,
             subject,
             html
         });

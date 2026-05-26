@@ -7,6 +7,7 @@ import { generateQR } from '@/lib/qr';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { EMAIL_CONFIG, getBranding, renderHeader } from '@/lib/email-templates';
+import { resolveEmail } from '@/lib/email-resolver';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -211,10 +212,12 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     const [attendee] = await query(`
         SELECT a.name, a.email, a.qr_token, a.tickets_count, act.name as activity_name, act.custom_email_text, 
                c.id as conference_id, c.name as conference_name, c.email as conference_email,
-               c.logo_url, c.banner_url, c.accent_color
+               c.logo_url, c.banner_url, c.accent_color,
+               p.email_alias
         FROM extra_activity_attendees a
         JOIN extra_activities act ON a.activity_id = act.id
         JOIN conferences c ON act.conference_id = c.id
+        LEFT JOIN participants p ON a.participant_id = p.id
         WHERE a.id = ?
     `, [attendeeId]);
 
@@ -272,7 +275,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
 
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
-        to: [attendee.email],
+        to: [resolveEmail(attendee)],
         subject,
         html
     });

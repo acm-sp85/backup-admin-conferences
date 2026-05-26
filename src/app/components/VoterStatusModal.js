@@ -35,7 +35,8 @@ export default function VoterStatusModal({ isOpen, onClose, conferenceId, userRo
     const filteredVoters = voters.filter(v => {
         const matchesSearch = 
             v.name.toLowerCase().includes(search.toLowerCase()) || 
-            v.email.toLowerCase().includes(search.toLowerCase());
+            v.email.toLowerCase().includes(search.toLowerCase()) ||
+            (v.email_alias && v.email_alias.toLowerCase().includes(search.toLowerCase()));
         
         if (!matchesSearch) return false;
 
@@ -156,7 +157,16 @@ export default function VoterStatusModal({ isOpen, onClose, conferenceId, userRo
                                     {/* Voter Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="font-bold text-xs text-slate-900 truncate">{voter.name}</div>
-                                        <div className="text-[10px] text-slate-400 truncate mt-0.5">{voter.email}</div>
+                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5 min-w-0">
+                                            {voter.email_alias ? (
+                                                <>
+                                                    <span className="text-[10px] text-amber-500 font-medium truncate" title={`Emails redirected to ${voter.email_alias}`}>{voter.email_alias}</span>
+                                                    <span className="text-[9px] line-through opacity-50 text-slate-400 truncate" title="Original email">({voter.email})</span>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] text-slate-400 truncate">{voter.email}</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Badge Status */}

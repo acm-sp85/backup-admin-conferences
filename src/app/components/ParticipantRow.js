@@ -4,14 +4,17 @@ import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantQRBadge from './ParticipantQRBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
-import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2 } from 'lucide-react';
-import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant } from '../actions/participants-qr';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward } from 'lucide-react';
+import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 
 export default function ParticipantRow({ person, activeConfId, userRole, selected, onSelect }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSendingQR, setIsSendingQR] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [isCheckingIn, setIsCheckingIn] = useState(false);
+    const [aliasInput, setAliasInput] = useState(person.email_alias || '');
+    const [isSavingAlias, setIsSavingAlias] = useState(false);
+    const [aliasMessage, setAliasMessage] = useState(null);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -19,7 +22,8 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
             alert('No registration found for this participant in this conference context.');
             return;
         }
-        if (!confirm(`Send Check-in QR to ${person.email}?`)) return;
+        const sendTo = person.email_alias || person.email;
+        if (!confirm(`Send Check-in QR to ${sendTo}?${person.email_alias ? ` (alias for ${person.email})` : ''}`)) return;
 
         setIsSendingQR(true);
         try {
@@ -125,7 +129,22 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                         )}
                     </div>
                 </td>
-                <td className="text-[var(--muted)] py-4">{person.email}</td>
+                <td className="text-[var(--muted)] py-4">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {person.email_alias ? (
+                            <>
+                                <span className="text-amber-500 font-medium" title={`Emails redirected to ${person.email_alias}`}>
+                                    {person.email_alias}
+                                </span>
+                                <span className="line-through opacity-50 text-[10px]" title="Original email">
+                                    ({person.email})
+                                </span>
+                            </>
+                        ) : (
+                            <span>{person.email}</span>
+                        )}
+                    </div>
+                </td>
                 <td className="py-4">
                     <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         person.qr_scanned_at ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
@@ -286,6 +305,69 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                     </button>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
+                                            <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">
+                                                <Forward className="w-3 h-3" />
+                                                Email Alias (Redirect)
+                                            </div>
+                                            <p className="text-[10px] text-[var(--muted)] -mt-1 mb-2">
+                                                If set, all system emails will be sent to the alias instead of the primary email.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <input 
+                                                    type="email"
+                                                    placeholder="e.g., user@gmail.com"
+                                                    value={aliasInput}
+                                                    onChange={(e) => { setAliasInput(e.target.value); setAliasMessage(null); }}
+                                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+                                                />
+                                                <button
+                                                    disabled={isSavingAlias}
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        setIsSavingAlias(true);
+                                                        setAliasMessage(null);
+                                                        const res = await updateParticipantEmailAlias(person.id, aliasInput);
+                                                        setIsSavingAlias(false);
+                                                        if (res.error) {
+                                                            setAliasMessage({ type: 'error', text: res.error });
+                                                        } else {
+                                                            setAliasMessage({ type: 'success', text: aliasInput ? 'Alias saved' : 'Alias cleared' });
+                                                        }
+                                                    }}
+                                                    className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    {isSavingAlias ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Save'}
+                                                </button>
+                                                {aliasInput && (
+                                                    <button
+                                                        disabled={isSavingAlias}
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            setIsSavingAlias(true);
+                                                            setAliasMessage(null);
+                                                            setAliasInput('');
+                                                            const res = await updateParticipantEmailAlias(person.id, '');
+                                                            setIsSavingAlias(false);
+                                                            if (res.error) {
+                                                                setAliasMessage({ type: 'error', text: res.error });
+                                                            } else {
+                                                                setAliasMessage({ type: 'success', text: 'Alias cleared' });
+                                                            }
+                                                        }}
+                                                        className="px-3 py-2 bg-red-50 text-red-600 rounded-xl text-[10px] font-bold hover:bg-red-100 transition-colors border border-red-100 disabled:opacity-50 whitespace-nowrap"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {aliasMessage && (
+                                                <p className={`text-[10px] font-medium ${aliasMessage.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                                                    {aliasMessage.text}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
