@@ -124,3 +124,4 @@ To ensure the local database accurately reflects the source database (handling d
 To prevent synchronization from wiping administrative overrides or manually managed guests, the system enforces the following strict preservation rules:
 * **Manual Tickets (`is_manual = 1`)**: Any dinner tickets created manually from the dashboard are protected and **never deleted or archived** during automated cleanup.
 * **Guest Registrations (`is_guest = 1`)**: Event guests and organizers added directly in the dashboard are marked as guests and are completely **exempt from automatic cleanup pruning**.
+

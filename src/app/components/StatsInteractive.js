@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-export default function StatsInteractive({ total_registrations, total_checked_in, total_revenue, countriesData, countriesDataCheckedIn }) {
+export default function StatsInteractive({ total_registrations, total_checked_in, total_revenue, total_inferred, countriesData, countriesDataCheckedIn }) {
   const [filter, setFilter] = useState('all'); // 'all' or 'checked-in'
 
   const activeCountries = filter === 'all' ? countriesData : countriesDataCheckedIn;
@@ -16,6 +16,11 @@ export default function StatsInteractive({ total_registrations, total_checked_in
         >
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Participants</h3>
           <p className="text-3xl font-black text-slate-800">{total_registrations}</p>
+          {total_inferred > 0 && (
+            <div className="text-[10px] text-indigo-500 font-medium mt-1 flex items-center gap-1">
+              <span>🪄</span> {total_inferred} inferred from institution
+            </div>
+          )}
         </div>
         
         <div 

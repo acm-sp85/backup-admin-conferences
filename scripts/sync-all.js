@@ -199,18 +199,19 @@ async function syncAll() {
           let participantId = participantMap.get(email);
           const entity = record.user_entity || record.entity || null;
           const country = record.user_country || record.country || null;
+          const country_inferred = record.user_country_inferred || record.country_inferred ? 1 : 0;
           if (!participantId) {
             const [res] = await mariadb.execute(
-              'INSERT INTO participants (firstName, lastName, email, registration_type, entity, country) VALUES (?, ?, ?, ?, ?, ?)', 
-              [firstName, lastName, email, record.registration_type || 'Standard', entity, country]
+              'INSERT INTO participants (firstName, lastName, email, registration_type, entity, country, country_inferred) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+              [firstName, lastName, email, record.registration_type || 'Standard', entity, country, country_inferred]
             );
             participantId = res.insertId;
             participantMap.set(email, participantId);
             summary.participants++;
           } else {
             await mariadb.execute(
-              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ? WHERE id = ?', 
-              [firstName, lastName, record.registration_type || 'Standard', entity, country, participantId]
+              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ?, country_inferred = ? WHERE id = ?', 
+              [firstName, lastName, record.registration_type || 'Standard', entity, country, country_inferred, participantId]
             );
           }
 
@@ -401,7 +402,14 @@ async function syncAll() {
           let sessionId = res.insertId || (await mariadb.execute('SELECT id FROM program_sessions WHERE mongo_id = ?', [mongoId]))[0][0].id;
           summary.sessions++;
 
-          await mariadb.execute('DELETE FROM program_slots WHERE session_id = ?', [sessionId]);
+          // Fetch existing slots to avoid destructive DELETES
+          const [existingSlots] = await mariadb.execute('SELECT id, title FROM program_slots WHERE session_id = ?', [sessionId]);
+          const existingSlotMap = new Map();
+          for (const s of existingSlots) {
+             if (s.title) existingSlotMap.set(s.title.toLowerCase().trim(), s.id);
+          }
+          const incomingSlotIds = new Set();
+
           if (session.full_slots && Array.isArray(session.full_slots)) {
             for (const slot of session.full_slots) {
               let slotType = slot.type || 'oral';
@@ -418,14 +426,41 @@ async function syncAll() {
                 if (!presenterCountry) presenterCountry = info.country;
               }
 
-              await mariadb.execute(`
-                INSERT INTO program_slots (session_id, type, title, presenter_name, presenter_entity, presenter_country, start_time, end_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-              `, [sessionId, slotType, slot.title || null, slot.presenter_name || null, presenterEntity, presenterCountry,
-                  slot.start_time ? new Date(slot.start_time) : null,
-                  slot.end_time ? new Date(slot.end_time) : null]);
-              summary.slots++;
+              const slotTitle = slot.title || 'Untitled';
+              const matchKey = slotTitle.toLowerCase().trim();
+              const matchedSlotId = existingSlotMap.get(matchKey);
+              
+              if (matchedSlotId) {
+                // Update existing slot (preserves custom_voting_items foreign keys)
+                await mariadb.execute(`
+                  UPDATE program_slots SET type = ?, presenter_name = ?, presenter_entity = ?, presenter_country = ?, start_time = ?, end_time = ?
+                  WHERE id = ?
+                `, [slotType, slot.presenter_name || null, presenterEntity, presenterCountry,
+                    slot.start_time ? new Date(slot.start_time) : null,
+                    slot.end_time ? new Date(slot.end_time) : null, matchedSlotId]);
+                incomingSlotIds.add(matchedSlotId);
+                // Remove from map to handle duplicates correctly if any
+                existingSlotMap.delete(matchKey);
+                summary.slots++;
+              } else {
+                // Insert new slot
+                const [insRes] = await mariadb.execute(`
+                  INSERT INTO program_slots (session_id, type, title, presenter_name, presenter_entity, presenter_country, start_time, end_time)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `, [sessionId, slotType, slotTitle, slot.presenter_name || null, presenterEntity, presenterCountry,
+                    slot.start_time ? new Date(slot.start_time) : null,
+                    slot.end_time ? new Date(slot.end_time) : null]);
+                incomingSlotIds.add(insRes.insertId);
+                summary.slots++;
+              }
             }
+          }
+          
+          // Delete old slots that are no longer in this session
+          for (const existingSlot of existingSlots) {
+             if (!incomingSlotIds.has(existingSlot.id)) {
+                await mariadb.execute('DELETE FROM program_slots WHERE id = ?', [existingSlot.id]);
+             }
           }
         }
       });

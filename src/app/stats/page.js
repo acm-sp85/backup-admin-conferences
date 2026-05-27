@@ -65,6 +65,14 @@ export default async function StatsPage({ searchParams }) {
     WHERE r.conference_id = ? AND p.status = 'paid'
   `, [activeConfId]);
 
+  // 3.5 Total Inferred Countries
+  const [{ total_inferred }] = await query(`
+    SELECT COUNT(*) as total_inferred
+    FROM participants p
+    JOIN registrations r ON p.id = r.participant_id
+    WHERE r.conference_id = ? AND r.is_guest = 0 AND p.country_inferred = 1
+  `, [activeConfId]);
+
   // 4. Country Distribution (All)
   const countriesData = await query(`
     SELECT COALESCE(NULLIF(p.country, ''), 'Not Provided') as country, COUNT(*) as count
@@ -99,6 +107,7 @@ export default async function StatsPage({ searchParams }) {
         total_registrations={total_registrations} 
         total_checked_in={total_checked_in} 
         total_revenue={total_revenue} 
+        total_inferred={total_inferred}
         countriesData={countriesData} 
         countriesDataCheckedIn={countriesDataCheckedIn} 
       />

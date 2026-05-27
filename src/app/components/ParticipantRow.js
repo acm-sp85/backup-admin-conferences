@@ -264,7 +264,12 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                             {person.country && (
                                                 <div className="flex justify-between items-center py-2 border-b border-slate-100">
                                                     <span className="text-[var(--muted)]">Country</span>
-                                                    <span className="font-medium">{person.country}</span>
+                                                    <span className="font-medium flex items-center gap-1.5">
+                                                        {person.country}
+                                                        {person.country_inferred ? (
+                                                            <span title="Inferred from institution" className="cursor-help text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full text-[10px]">🪄 Inferred</span>
+                                                        ) : null}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
