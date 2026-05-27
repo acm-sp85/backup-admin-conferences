@@ -261,6 +261,12 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                 <span className="text-[var(--muted)]">Registration Date</span>
                                                 <span className="font-medium">{new Date(person.created_at + 'Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                             </div>
+                                            {person.country && (
+                                                <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                                                    <span className="text-[var(--muted)]">Country</span>
+                                                    <span className="font-medium">{person.country}</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="pt-4 space-y-3">

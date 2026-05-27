@@ -248,10 +248,7 @@ export default function ProgramManager({ conferences }) {
                                                                         })()}
                                                                     </span>
                                                                     <span className="font-medium text-slate-700">
-                                                                        {(() => {
-                                                                            let displayName = slot.presenter_name;
-                                                                            return slot.presenter_entity ? ` (${slot.presenter_entity})` : displayName;
-                                                                        })()}
+                                                                            return slot.presenter_entity ? ` (${slot.presenter_entity})` : '';
                                                                     </span>
                                                                 </div>
                                                             )}

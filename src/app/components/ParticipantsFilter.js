@@ -3,7 +3,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTransition, useState, useEffect } from 'react';
 
-export default function ParticipantsFilter({ conferences }) {
+export default function ParticipantsFilter({ conferences, hideSearch = false, hideStatus = false }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -39,25 +39,27 @@ export default function ParticipantsFilter({ conferences }) {
 
   return (
     <div className="card p-3 mb-4 flex flex-col md:flex-row items-end gap-3">
-      <div className="flex-1 w-full">
-        <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Search</label>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Name, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-base w-full"
-          />
-          {isPending && (
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <div className="animate-spin rounded-full h-3 w-3 border-[1.5px] border-[var(--accent)] border-t-transparent"></div>
-            </div>
-          )}
+      {!hideSearch && (
+        <div className="flex-1 w-full">
+          <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Search</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Name, email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-base w-full"
+            />
+            {isPending && (
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                <div className="animate-spin rounded-full h-3 w-3 border-[1.5px] border-[var(--accent)] border-t-transparent"></div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="w-full md:w-40">
+      <div className={`w-full ${!hideSearch ? 'md:w-40' : 'flex-1'}`}>
         <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Conference</label>
         <select
           value={conference}
@@ -71,19 +73,21 @@ export default function ParticipantsFilter({ conferences }) {
         </select>
       </div>
 
-      <div className="w-full md:w-40">
-        <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Payment</label>
-        <select
-          value={status}
-          onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value); }}
-          className="input-base w-full"
-        >
-          <option value="">Any</option>
-          <option value="paid">Paid</option>
-          <option value="pending">Pending</option>
-          <option value="none">None</option>
-        </select>
-      </div>
+      {!hideStatus && (
+        <div className="w-full md:w-40">
+          <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Payment</label>
+          <select
+            value={status}
+            onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value); }}
+            className="input-base w-full"
+          >
+            <option value="">Any</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+      )}
 
       {(search || conference || status) && (
         <button
