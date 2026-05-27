@@ -515,7 +515,10 @@ export async function sendCustomVoterInvite(participantId, conferenceId) {
         const votingLink = `${baseUrl}/api/auth/callback?token=${token}&next=/voting/custom`;
 
         // 4. Send email
-        const sendTo = resolveEmail(participant);
+        const sendTo = resolveEmail({
+            email: participant.participant_email,
+            email_alias: participant.participant_email_alias
+        });
         console.log(`📧 Sending Custom Voting Invite to ${sendTo} from ${EMAIL_CONFIG.fromVoting}`);
         const { subject, html } = await getEmailTemplate(conferenceId, 'customVotingInvite', {
             name: participant.firstName,

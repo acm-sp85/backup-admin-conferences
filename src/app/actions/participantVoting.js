@@ -222,7 +222,10 @@ export async function sendVoterInvite(participantId, conferenceId) {
         const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
 
 
-        const sendTo = resolveEmail(participant);
+        const sendTo = resolveEmail({
+            email: participant.participant_email,
+            email_alias: participant.participant_email_alias
+        });
         console.log(`📧 Sending Voting Invite to ${sendTo} from ${EMAIL_CONFIG.fromVoting}`);
         const { subject, html } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
             name: participant.firstName,
