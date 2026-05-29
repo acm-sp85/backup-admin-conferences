@@ -60,6 +60,37 @@ export async function sendCertificateEmail(registrationId) {
     // Determine registration type from payment group or participant field
     const registrationType = participant.payment_group || participant.registration_type || '';
 
+    // Fetch start and end dates from program_sessions
+    const [datesRow] = await query(`
+        SELECT MIN(start_time) as start_date, MAX(end_time) as end_date 
+        FROM program_sessions 
+        WHERE conference_id = ?
+    `, [participant.conference_id]);
+
+    let conferenceDates = '';
+    if (datesRow && datesRow.start_date && datesRow.end_date) {
+        const start = new Date(datesRow.start_date);
+        const end = new Date(datesRow.end_date);
+        
+        const startDay = start.getDate();
+        const startMonth = start.toLocaleDateString('en-GB', { month: 'long' });
+        const startYear = start.getFullYear();
+        
+        const endDay = end.getDate();
+        const endMonth = end.toLocaleDateString('en-GB', { month: 'long' });
+        const endYear = end.getFullYear();
+        
+        if (startYear !== endYear) {
+            conferenceDates = `${startDay} ${startMonth} ${startYear} to ${endDay} ${endMonth} ${endYear}`;
+        } else if (startMonth !== endMonth) {
+            conferenceDates = `${startDay} ${startMonth} to ${endDay} ${endMonth} ${startYear}`;
+        } else if (startDay !== endDay) {
+            conferenceDates = `${startDay} to ${endDay} ${startMonth} ${startYear}`;
+        } else {
+            conferenceDates = `${startDay} ${startMonth} ${startYear}`;
+        }
+    }
+
     // Build email
     const { subject, html } = await getEmailTemplate(participant.conference_id, 'certificate', {
         name: participant.name,
@@ -76,7 +107,8 @@ export async function sendCertificateEmail(registrationId) {
         conferenceAddress: participant.conference_address,
         signatureImage: participant.signature_image,
         textUnderSignature: participant.text_under_signature,
-        conferenceFullName: participant.conference_full_name
+        conferenceFullName: participant.conference_full_name,
+        conferenceDates
     });
 
     const { error } = await resend.emails.send({

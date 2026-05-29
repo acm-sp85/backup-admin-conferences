@@ -251,7 +251,7 @@ export const emailTemplates = {
     /**
      * Certificate of Participation
      */
-    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName }) => {
+    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName, conferenceDates }) => {
         const brand = getBranding(conference);
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         const confName = brand.name;
@@ -306,7 +306,7 @@ export const emailTemplates = {
                                 </td>
                                 <td style="width: 50%; vertical-align: top; padding-left: 20px; border-left: 1px solid #e2e8f0;">
                                     <p style="font-size: 11px; font-weight: 700; color: ${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">This certifies participation at:</p>
-                                    <p style="font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">${confName}${conferenceFullName ? ` - ${conferenceFullName}` : ''}</p>
+                                    <p style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">${confName}${conferenceFullName ? ` - ${conferenceFullName}` : ''}</p>
                                     ${conferenceAddress ? `<p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.4;">${conferenceAddress.replace(/\n/g, '<br>')}</p>` : ''}
                                 </td>
                             </tr>
@@ -316,7 +316,7 @@ export const emailTemplates = {
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
                                 This letter certifies that <strong>${name}</strong>
                                 ${registrationType ? ` participated as <strong>${registrationType}</strong>` : ' participated'}
-                                at the <strong>${confName}</strong>.
+                                at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
                             </p>
                         </div>
 
