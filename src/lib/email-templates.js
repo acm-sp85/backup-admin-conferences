@@ -251,7 +251,7 @@ export const emailTemplates = {
     /**
      * Certificate of Participation
      */
-    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName, conferenceDates }) => {
+    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName, conferenceDates, presentations = [] }) => {
         const brand = getBranding(conference);
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         const confName = brand.name;
@@ -316,8 +316,14 @@ export const emailTemplates = {
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
                                 This letter certifies that <strong>${name}</strong>
                                 ${registrationType ? ` participated as <strong>${registrationType}</strong>` : ' participated'}
+                                ${presentations && presentations.length > 0 ? ` and presented the following contribution(s):` : ''}
                                 at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
                             </p>
+                            ${presentations && presentations.length > 0 ? `
+                                <ul style="margin-top: 10px; margin-bottom: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+                                    ${presentations.map(pres => `<li><strong>${pres}</strong></li>`).join('')}
+                                </ul>
+                            ` : ''}
                         </div>
 
                         <div style="margin-bottom: 30px;">

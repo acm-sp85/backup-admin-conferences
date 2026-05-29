@@ -91,6 +91,83 @@ export async function sendCertificateEmail(registrationId) {
         }
     }
 
+    // Fetch Posters
+    const posters = await query('SELECT id, title, authors FROM posters WHERE conference_id = ?', [participant.conference_id]);
+    
+    // Fetch Program Slots
+    const slots = await query('SELECT id, type, title, presenter_name FROM program_slots WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)', [participant.conference_id]);
+
+    const compareNames = (presenter, firstName, lastName) => {
+        if (!presenter || !firstName || !lastName) return false;
+        
+        const presenterClean = presenter.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const firstClean = firstName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const lastClean = lastName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // Case 1: Presenter contains a comma (usually "LastName, FirstName")
+        if (presenterClean.includes(',')) {
+            const parts = presenterClean.split(',');
+            const presLast = parts[0].trim();
+            const presFirst = parts[1] ? parts[1].trim() : '';
+            
+            // Check if last names are equal, and first name matches or is a prefix/suffix
+            if (presLast === lastClean && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
+                return true;
+            }
+            // Sometimes lastName in the DB contains multiple surnames but only one matches:
+            if (lastClean.includes(presLast) && presLast.length > 2 && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
+                return true;
+            }
+        }
+        
+        // Case 2: No comma, check direct combinations
+        const option1 = `${firstClean} ${lastClean}`;
+        const option2 = `${lastClean} ${firstClean}`;
+        if (presenterClean === option1 || presenterClean === option2) {
+            return true;
+        }
+        
+        // Case 3: Fuzzy check - both first and last name appear somewhere in the presenter string
+        if (presenterClean.includes(firstClean) && presenterClean.includes(lastClean)) {
+            return true;
+        }
+        
+        return false;
+    };
+
+    const presentations = [];
+    const fName = participant.firstName || '';
+    const lName = participant.lastName || '';
+    
+    // Check slots
+    for (const slot of slots) {
+        if (slot.presenter_name && compareNames(slot.presenter_name, fName, lName)) {
+            presentations.push(slot.title);
+        }
+    }
+    
+    // Check posters (only primary author)
+    for (const poster of posters) {
+        let authors = [];
+        try {
+            authors = typeof poster.authors === 'string' ? JSON.parse(poster.authors) : poster.authors;
+        } catch (e) {}
+        
+        if (Array.isArray(authors) && authors.length > 0) {
+            const primaryAuthor = authors[0];
+            let aName = '';
+            if (typeof primaryAuthor === 'string') {
+                aName = primaryAuthor;
+            } else if (primaryAuthor.name) {
+                aName = primaryAuthor.name;
+            }
+            
+            if (aName && compareNames(aName, fName, lName)) {
+                presentations.push(poster.title);
+            }
+        }
+    }
+
     // Build email
     const { subject, html } = await getEmailTemplate(participant.conference_id, 'certificate', {
         name: participant.name,
@@ -108,7 +185,8 @@ export async function sendCertificateEmail(registrationId) {
         signatureImage: participant.signature_image,
         textUnderSignature: participant.text_under_signature,
         conferenceFullName: participant.conference_full_name,
-        conferenceDates
+        conferenceDates,
+        presentations
     });
 
     const { error } = await resend.emails.send({

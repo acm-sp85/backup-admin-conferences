@@ -4,7 +4,7 @@ import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantQRBadge from './ParticipantQRBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
-import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award } from 'lucide-react';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award, Download } from 'lucide-react';
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
 
@@ -356,6 +356,16 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                     >
                                                         {isSendingCert ? <Loader2 className="w-3 h-3 animate-spin" /> : <Award className="w-3 h-3" />}
                                                         {person.cert_sent_at ? 'Resend Certificate' : 'Send Certificate'}
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(`/participants/certificates/print?registrationIds=${person.primary_registration_id}&conferenceId=${activeConfId}`, '_blank');
+                                                        }}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold hover:bg-rose-700 transition-colors"
+                                                    >
+                                                        <Download className="w-3 h-3" />
+                                                        Download PDF
                                                     </button>
                                                     {person.cert_sent_at && (
                                                         <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-bold border border-amber-100">

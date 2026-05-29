@@ -180,6 +180,16 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                         <button 
                             onClick={() => {
                                 const ids = Array.from(selectedIds).join(',');
+                                window.open(`/participants/certificates/print?registrationIds=${ids}&conferenceId=${activeConfId}`, '_blank');
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-rose-100 transition-all animate-in fade-in zoom-in duration-200"
+                        >
+                            <Download className="w-3 h-3" />
+                            Download PDFs ({selectedIds.size})
+                        </button>
+                        <button 
+                            onClick={() => {
+                                const ids = Array.from(selectedIds).join(',');
                                 window.open(`/participants/print?registrationIds=${ids}&conferenceId=${activeConfId}`, '_blank');
                             }}
                             className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-semibold shadow-lg shadow-slate-200 transition-all animate-in fade-in zoom-in duration-200"
