@@ -315,8 +315,8 @@ export const emailTemplates = {
                         <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
                                 This letter certifies that <strong>${name}</strong>
-                                ${registrationType ? ` participated as <strong>${registrationType}</strong>` : ' participated'}
-                                at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
+                                ${registrationType ? ` participated as <strong>${registrationType}</strong> ` : ' participated '}
+                                &nbsp;at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
                             </p>
                             ${presentations && presentations.length > 0 ? `
                                 <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">

@@ -285,7 +285,7 @@ export default async function CertificatePrintPage({ searchParams }) {
                                 <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.7', margin: '0' }}>
                                     This letter certifies that <strong>{p.name}</strong>
                                     {regType ? <span> participated as <strong>{regType}</strong></span> : ' participated'}
-                                    at the <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
+                                     &nbsp;at the <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
                                     {conference.conference_address ? <span>, celebrated at <strong>{conference.conference_address.replace(/\n/g, ', ')}</strong></span> : ''}
                                     {conferenceDates ? <span> from <strong>{conferenceDates}</strong></span> : ''}.
                                 </p>
