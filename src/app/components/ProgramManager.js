@@ -236,20 +236,21 @@ export default function ProgramManager({ conferences }) {
                                                             <div className="font-bold text-slate-800">{slot.title || '(No Title)'}</div>
                                                             {slot.presenter_name && (
                                                                 <div className="text-slate-500 mt-0.5">
-                                                                     <span className="font-medium text-slate-700">
+                                                                    <span className="font-medium text-slate-700">
                                                                         {(() => {
                                                                             let displayName = slot.presenter_name;
                                                                             if (displayName.includes(',')) {
                                                                                 const parts = displayName.split(',');
                                                                                 displayName = `${parts[1].trim()} ${parts[0].trim()}`;
                                                                             }
-                                                                            const formatted = formatName(displayName);
-                                                                            return slot.presenter_entity ? `${formatted}` : formatted;
+                                                                            return formatName(displayName);
                                                                         })()}
                                                                     </span>
-                                                                    <span className="font-medium text-slate-700">
-                                                                            return slot.presenter_entity ? ` (${slot.presenter_entity})` : '';
-                                                                    </span>
+                                                                    {slot.presenter_entity && (
+                                                                        <span className="text-slate-400 font-normal">
+                                                                            {` (${slot.presenter_entity})`}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                             <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
