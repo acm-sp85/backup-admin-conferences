@@ -142,7 +142,10 @@ export async function sendCertificateEmail(registrationId) {
     // Check slots
     for (const slot of slots) {
         if (slot.presenter_name && compareNames(slot.presenter_name, fName, lName)) {
-            presentations.push(slot.title);
+            presentations.push({
+                title: slot.title,
+                type: slot.type ? (slot.type.charAt(0).toUpperCase() + slot.type.slice(1)) : 'Oral'
+            });
         }
     }
     
@@ -163,7 +166,10 @@ export async function sendCertificateEmail(registrationId) {
             }
             
             if (aName && compareNames(aName, fName, lName)) {
-                presentations.push(poster.title);
+                presentations.push({
+                    title: poster.title,
+                    type: 'Poster'
+                });
             }
         }
     }

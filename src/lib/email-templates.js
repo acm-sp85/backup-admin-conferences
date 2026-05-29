@@ -265,16 +265,16 @@ export const emailTemplates = {
                     const logosList = sponsors
                         .map(s => {
                             if (s.logoUrl) {
-                                return `<img src="${s.logoUrl}" alt="${s.name}" width="100" height="35" style="max-height: 35px; max-width: 100px; object-fit: contain; margin: 10px 15px; display: inline-block; vertical-align: middle;" />`;
+                                return `<img src="${s.logoUrl}" alt="${s.name}" width="70" height="25" style="max-height: 25px; max-width: 70px; object-fit: contain; margin: 6px 10px; display: inline-block; vertical-align: middle;" />`;
                             }
-                            return `<span style="font-size: 11px; font-weight: bold; color: #64748b; margin: 10px 15px; display: inline-block; vertical-align: middle;">${s.name}</span>`;
+                            return `<span style="font-size: 8px; font-weight: bold; color: #64748b; margin: 6px 10px; display: inline-block; vertical-align: middle;">${s.name}</span>`;
                         })
                         .join('');
                     
                     sponsorsHtml = `
-                        <div style="margin-top: 35px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center;">
-                            <p style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Organized & Supported By</p>
-                            <div style="text-align: center; line-height: 35px;">
+                        <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 14px; text-align: center;">
+                            <p style="font-size: 7px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 0;">Organized & Supported By</p>
+                            <div style="text-align: center; line-height: 25px;">
                                 ${logosList}
                             </div>
                         </div>
@@ -316,13 +316,17 @@ export const emailTemplates = {
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
                                 This letter certifies that <strong>${name}</strong>
                                 ${registrationType ? ` participated as <strong>${registrationType}</strong>` : ' participated'}
-                                ${presentations && presentations.length > 0 ? ` and presented the following contribution(s):` : ''}
                                 at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
                             </p>
                             ${presentations && presentations.length > 0 ? `
-                                <ul style="margin-top: 10px; margin-bottom: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
-                                    ${presentations.map(pres => `<li><strong>${pres}</strong></li>`).join('')}
-                                </ul>
+                                <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #334155; line-height: 1.7;">
+                                        <strong>${name}</strong> has presented:
+                                    </p>
+                                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+                                        ${presentations.map(pres => `<li>${pres.type} contribution entitled <strong>"${pres.title}"</strong>.</li>`).join('')}
+                                    </ul>
+                                </div>
                             ` : ''}
                         </div>
 
