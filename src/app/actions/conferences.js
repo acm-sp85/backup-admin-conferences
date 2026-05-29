@@ -16,6 +16,11 @@ export async function createConference(formData) {
     const logo_url = formData.get('logo_url') || null;
     const banner_url = formData.get('banner_url') || null;
     const accent_color = formData.get('accent_color') || '#007aff';
+    const sponsor_list = formData.get('sponsor_list') || null;
+    const conference_address = formData.get('conference_address') || null;
+    const signature_image = formData.get('signature_image') || null;
+    const text_under_signature = formData.get('text_under_signature') || null;
+    const conference_full_name = formData.get('conference_full_name') || null;
 
     if (!name || !acronym) {
         return { error: 'Name and Acronym are required' };
@@ -23,7 +28,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -39,7 +44,12 @@ export async function createConference(formData) {
               formData.get('voting_instructions') || null,
               formData.get('emails_enabled') === 'on' ? 1 : 0,
               formData.get('badge_bg') || null,
-              formData.get('badge_config') || null
+              formData.get('badge_config') || null,
+              sponsor_list,
+              conference_address,
+              signature_image,
+              text_under_signature,
+              conference_full_name
             ]
           );
         revalidatePath('/');
@@ -118,6 +128,11 @@ export async function updateConference(id, formData) {
     const logo_url = formData.get('logo_url') || null;
     const banner_url = formData.get('banner_url') || null;
     const accent_color = formData.get('accent_color') || '#007aff';
+    const sponsor_list = formData.get('sponsor_list') || null;
+    const conference_address = formData.get('conference_address') || null;
+    const signature_image = formData.get('signature_image') || null;
+    const text_under_signature = formData.get('text_under_signature') || null;
+    const conference_full_name = formData.get('conference_full_name') || null;
 
     if (!name || !acronym) {
         return { error: 'Name and Acronym are required' };
@@ -125,7 +140,7 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -142,6 +157,11 @@ export async function updateConference(id, formData) {
               formData.get('emails_enabled') === 'on' ? 1 : 0,
               formData.get('badge_bg') || null,
               formData.get('badge_config') || null,
+              sponsor_list,
+              conference_address,
+              signature_image,
+              text_under_signature,
+              conference_full_name,
               id
             ]
           );

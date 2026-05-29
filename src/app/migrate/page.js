@@ -101,6 +101,85 @@ export default async function MigratePage() {
         results.push(`ℹ️ conferences.email_custom_voting_invite_body: ${e.message}`);
     }
 
+    // ---- Certificate of Participation Feature ----
+    try {
+        await query(`ALTER TABLE participant_qr_tokens ADD COLUMN cert_sent_at DATETIME DEFAULT NULL`);
+        results.push('✅ Added cert_sent_at to participant_qr_tokens');
+    } catch (e) {
+        results.push(`ℹ️ participant_qr_tokens.cert_sent_at: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN email_certificate_body text DEFAULT NULL`);
+        results.push('✅ Added email_certificate_body to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.email_certificate_body: ${e.message}`);
+    }
+
+    // ---- Conference Form Extensions Feature ----
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN sponsor_list TEXT DEFAULT NULL`);
+        results.push('✅ Added sponsor_list to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.sponsor_list: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN conference_address TEXT DEFAULT NULL`);
+        results.push('✅ Added conference_address to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.conference_address: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN signature_image TEXT DEFAULT NULL`);
+        results.push('✅ Added signature_image to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.signature_image: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN text_under_signature TEXT DEFAULT NULL`);
+        results.push('✅ Added text_under_signature to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.text_under_signature: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN conference_full_name TEXT DEFAULT NULL`);
+        results.push('✅ Added conference_full_name to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.conference_full_name: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE participants ADD COLUMN entity_address TEXT DEFAULT NULL`);
+        results.push('✅ Added entity_address to participants');
+    } catch (e) {
+        results.push(`ℹ️ participants.entity_address: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE participants ADD COLUMN entity_zip VARCHAR(50) DEFAULT NULL`);
+        results.push('✅ Added entity_zip to participants');
+    } catch (e) {
+        results.push(`ℹ️ participants.entity_zip: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE participants ADD COLUMN entity_city VARCHAR(100) DEFAULT NULL`);
+        results.push('✅ Added entity_city to participants');
+    } catch (e) {
+        results.push(`ℹ️ participants.entity_city: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE participants ADD COLUMN entity_country VARCHAR(255) DEFAULT NULL`);
+        results.push('✅ Added entity_country to participants');
+    } catch (e) {
+        results.push(`ℹ️ participants.entity_country: ${e.message}`);
+    }
+
     return (
         <div className="p-10 font-mono text-sm">
             <h1 className="text-xl font-bold mb-4">Database Migration</h1>

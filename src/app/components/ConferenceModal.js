@@ -32,6 +32,11 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         padding: '10mm'
     });
 
+    // Sponsor List State
+    const [sponsorsList, setSponsorsList] = useState([]);
+    const [newSponsorName, setNewSponsorName] = useState('');
+    const [newSponsorLogo, setNewSponsorLogo] = useState('');
+
     useEffect(() => {
         if (isOpen) {
             setAccentColor(conference?.accent_color || '#007aff');
@@ -49,8 +54,39 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 qrSize: '35mm',
                 padding: '10mm'
             });
+
+            // Parse sponsors list
+            try {
+                if (conference?.sponsor_list) {
+                    setSponsorsList(typeof conference.sponsor_list === 'string' ? JSON.parse(conference.sponsor_list) : conference.sponsor_list);
+                } else {
+                    setSponsorsList([]);
+                }
+            } catch (e) {
+                console.error("Failed to parse sponsor list:", e);
+                setSponsorsList([]);
+            }
+            setNewSponsorName('');
+            setNewSponsorLogo('');
         }
     }, [isOpen, conference]);
+
+    const handleAddSponsor = () => {
+        if (!newSponsorName.trim()) {
+            alert('Please enter a sponsor name.');
+            return;
+        }
+        const logoUrl = newSponsorLogo.trim() || '';
+        const updated = [...sponsorsList, { name: newSponsorName.trim(), logoUrl }];
+        setSponsorsList(updated);
+        setNewSponsorName('');
+        setNewSponsorLogo('');
+    };
+
+    const handleRemoveSponsor = (index) => {
+        const updated = sponsorsList.filter((_, i) => i !== index);
+        setSponsorsList(updated);
+    };
 
     if (!isOpen) return null;
 
@@ -114,7 +150,18 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         type="text" 
                                         required
                                         defaultValue={conference?.name || ''}
-                                        placeholder="e.g. Hybrid and Organic Photovoltaics"
+                                        placeholder="e.g. HOPV26"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Conference Full Name</label>
+                                    <input 
+                                        name="conference_full_name"
+                                        type="text" 
+                                        defaultValue={conference?.conference_full_name || ''}
+                                        placeholder="e.g. International Conference on Hybrid and Organic Photovoltaics"
                                         className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -182,6 +229,36 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             value={accentColor}
                                             onChange={(e) => setAccentColor(e.target.value)}
                                             className="flex-1 h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-mono text-slate-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Conference Address (Venue)</label>
+                                        <textarea 
+                                            name="conference_address"
+                                            defaultValue={conference?.conference_address || ''}
+                                            placeholder="e.g. Venue Name, Address, City, Country"
+                                            className="w-full h-16 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Signature Image URL</label>
+                                        <textarea 
+                                            name="signature_image"
+                                            defaultValue={conference?.signature_image || ''}
+                                            placeholder="https://..."
+                                            className="w-full h-16 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Text Under Signature</label>
+                                        <textarea 
+                                            name="text_under_signature"
+                                            defaultValue={conference?.text_under_signature || ''}
+                                            placeholder="e.g. Prof. David Sanz, Chairperson"
+                                            className="w-full h-16 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
                                         />
                                     </div>
                                 </div>
@@ -436,6 +513,83 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             />
                                         )}
                                         <p className="text-[9px] text-slate-400 px-1 italic">Use {"${name}"} and {"${conference}"} placeholders. QR is appended automatically.</p>
+                                    </div>
+
+                                    {/* Template Block: Sponsors Builder */}
+                                    <div className="space-y-4 pt-4 border-t border-slate-100 mt-6">
+                                        <div className="pb-2 flex justify-between items-center">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Conference Sponsors</label>
+                                            <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 py-0.5 rounded-full">{sponsorsList.length}</span>
+                                        </div>
+
+                                        <input type="hidden" name="sponsor_list" value={JSON.stringify(sponsorsList)} />
+
+                                        {/* Add Sponsor Input Row */}
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Sponsor Name</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={newSponsorName}
+                                                        onChange={(e) => setNewSponsorName(e.target.value)}
+                                                        placeholder="e.g. SCITO"
+                                                        className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-[11px] outline-none"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Logo URL (Optional)</label>
+                                                    <input 
+                                                        type="url" 
+                                                        value={newSponsorLogo}
+                                                        onChange={(e) => setNewSponsorLogo(e.target.value)}
+                                                        placeholder="https://..."
+                                                        className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-[11px] outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button 
+                                                type="button"
+                                                onClick={handleAddSponsor}
+                                                className="w-full h-10 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm border border-indigo-100"
+                                            >
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                Add Sponsor
+                                            </button>
+                                        </div>
+
+                                        {/* Sponsors List Preview */}
+                                        {sponsorsList.length > 0 ? (
+                                            <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1">
+                                                {sponsorsList.map((sponsor, index) => (
+                                                    <div key={index} className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl relative shadow-sm hover:border-slate-350 transition-all animate-in fade-in duration-200">
+                                                        {sponsor.logoUrl ? (
+                                                            <div className="w-10 h-10 rounded-lg border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center bg-slate-50">
+                                                                <img src={sponsor.logoUrl} alt={sponsor.name} className="max-w-full max-h-full object-contain animate-in fade-in zoom-in-75" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-lg border border-slate-100 flex-shrink-0 flex items-center justify-center bg-slate-50 text-[10px] font-bold text-slate-400">
+                                                                No Logo
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1 min-w-0 pr-6">
+                                                            <p className="text-xs font-bold text-slate-700 truncate">{sponsor.name}</p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleRemoveSponsor(index)}
+                                                            className="absolute top-2 right-2 text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-all"
+                                                        >
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-6 text-center border border-dashed border-slate-200 rounded-2xl text-[10px] text-slate-400 font-medium">
+                                                No sponsors added yet.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                         </div>

@@ -4,8 +4,9 @@ import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantQRBadge from './ParticipantQRBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
-import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward } from 'lucide-react';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award } from 'lucide-react';
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
+import { sendCertificateEmail } from '../actions/certificates';
 
 export default function ParticipantRow({ person, activeConfId, userRole, selected, onSelect }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -15,6 +16,7 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
     const [aliasInput, setAliasInput] = useState(person.email_alias || '');
     const [isSavingAlias, setIsSavingAlias] = useState(false);
     const [aliasMessage, setAliasMessage] = useState(null);
+    const [isSendingCert, setIsSendingCert] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -69,6 +71,28 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
             alert(error.message);
         } finally {
             setIsCheckingIn(false);
+        }
+    };
+
+    const handleSendCertificate = async (e) => {
+        e.stopPropagation();
+        if (!person.primary_registration_id) {
+            alert('No registration found for this participant.');
+            return;
+        }
+        const sendTo = person.email_alias || person.email;
+        if (!confirm(`Send Certificate of Participation to ${sendTo}?${person.cert_sent_at ? ' (Certificate was already sent)' : ''}`)) return;
+
+        setIsSendingCert(true);
+        try {
+            const res = await sendCertificateEmail(person.primary_registration_id);
+            if (res.success) {
+                alert('Certificate email sent successfully!');
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setIsSendingCert(false);
         }
     };
 
@@ -317,6 +341,31 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                 )}
                                             </div>
                                         </div>
+
+                                        {person.qr_scanned_at && (
+                                            <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
+                                                <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">
+                                                    <Award className="w-3 h-3" />
+                                                    Certificate of Participation
+                                                </div>
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    <button 
+                                                        onClick={handleSendCertificate}
+                                                        disabled={isSendingCert}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-bold hover:bg-amber-700 transition-colors disabled:opacity-50"
+                                                    >
+                                                        {isSendingCert ? <Loader2 className="w-3 h-3 animate-spin" /> : <Award className="w-3 h-3" />}
+                                                        {person.cert_sent_at ? 'Resend Certificate' : 'Send Certificate'}
+                                                    </button>
+                                                    {person.cert_sent_at && (
+                                                        <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 rounded-xl text-[10px] font-bold border border-amber-100">
+                                                            <Award className="w-3 h-3" />
+                                                            Sent: {new Date(person.cert_sent_at + 'Z').toLocaleString([], { hour12: false })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
                                             <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">

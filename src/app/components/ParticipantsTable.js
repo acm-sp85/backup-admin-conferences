@@ -3,11 +3,14 @@
 import { useState, useTransition } from 'react';
 import ParticipantRow from './ParticipantRow';
 import { sendParticipantCheckinQR } from '../actions/participants-qr';
-import { Loader2, Mail, Download } from 'lucide-react';
+import { sendCertificateEmail } from '../actions/certificates';
+import { Loader2, Mail, Download, Award, CheckCircle2 } from 'lucide-react';
 
 export default function ParticipantsTable({ participants, activeConfId, userRole, sortBy, order, searchParams }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSendingBulk, startSendingBulk] = useTransition();
+    const [isSendingCerts, startSendingCerts] = useTransition();
+    const [certProgress, setCertProgress] = useState(null); // { done, total, success, fail }
 
     const getSortUrl = (field) => {
         const newOrder = sortBy === field && order === 'asc' ? 'desc' : 'asc';
@@ -57,6 +60,64 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
         });
     };
 
+    const selectCheckedIn = () => {
+        const checkedInIds = new Set(
+            participants
+                .filter(p => p.qr_scanned_at && p.primary_registration_id)
+                .map(p => p.primary_registration_id)
+        );
+        setSelectedIds(checkedInIds);
+    };
+
+    const handleBulkCertificates = (registrationIds) => {
+        const count = registrationIds.length;
+        if (count === 0) return;
+        if (!confirm(`Send Certificate of Participation emails to ${count} participants?`)) return;
+
+        setCertProgress({ done: 0, total: count, success: 0, fail: 0 });
+        startSendingCerts(async () => {
+            let success = 0;
+            let fail = 0;
+            for (let i = 0; i < registrationIds.length; i++) {
+                try {
+                    await sendCertificateEmail(registrationIds[i]);
+                    success++;
+                } catch (e) {
+                    fail++;
+                }
+                setCertProgress({ done: i + 1, total: count, success, fail });
+                // Pace emails: wait 500ms between each
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            alert(`Certificate send complete: ${success} successful, ${fail} failed.`);
+            setCertProgress(null);
+            setSelectedIds(new Set());
+        });
+    };
+
+    const handleSendSelectedCertificates = () => {
+        // Filter to only checked-in participants from the selection
+        const checkedInSelected = participants
+            .filter(p => selectedIds.has(p.primary_registration_id) && p.qr_scanned_at)
+            .map(p => p.primary_registration_id);
+        
+        if (checkedInSelected.length === 0) {
+            alert('None of the selected participants have checked in. Certificates can only be sent to checked-in participants.');
+            return;
+        }
+        if (checkedInSelected.length < selectedIds.size) {
+            if (!confirm(`Only ${checkedInSelected.length} of ${selectedIds.size} selected participants have checked in. Continue sending to those ${checkedInSelected.length}?`)) return;
+        }
+        handleBulkCertificates(checkedInSelected);
+    };
+
+    const handleSendAllCertificates = () => {
+        const allCheckedIn = participants
+            .filter(p => p.qr_scanned_at && p.primary_registration_id)
+            .map(p => p.primary_registration_id);
+        handleBulkCertificates(allCheckedIn);
+    };
+
     const handleDownloadCSV = () => {
         const headers = ["Name", "Email", "Registration Type", "Check-in Status", "Check-in Time", "Payment Status", "Total Paid", "Total Debt"];
         const rows = participants.map(p => {
@@ -93,17 +154,28 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-h-[52px]">
-                <div className="flex items-center gap-3">
+            <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-h-[52px] flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
                     {selectedIds.size > 0 ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button 
                             onClick={handleBulkEmail}
-                            disabled={isSendingBulk}
+                            disabled={isSendingBulk || isSendingCerts}
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
                         >
                             {isSendingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                             Send Check-in QRs ({selectedIds.size})
+                        </button>
+                        <button 
+                            onClick={handleSendSelectedCertificates}
+                            disabled={isSendingCerts || isSendingBulk}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-amber-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
+                        >
+                            {isSendingCerts ? <Loader2 className="w-3 h-3 animate-spin" /> : <Award className="w-3 h-3" />}
+                            {certProgress 
+                                ? `Sending... (${certProgress.done}/${certProgress.total})` 
+                                : `Send Certificates (${selectedIds.size})`
+                            }
                         </button>
                         <button 
                             onClick={() => {
@@ -119,11 +191,29 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                     ) : (
                         <div className="text-[10px] text-slate-400 font-medium px-1 flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                            Select participants to send bulk check-in emails
+                            Select participants to send bulk emails or certificates
                         </div>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <button 
+                        onClick={selectCheckedIn}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
+                    >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Select Checked-in
+                    </button>
+                    <button 
+                        onClick={handleSendAllCertificates}
+                        disabled={isSendingCerts || isSendingBulk}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm disabled:opacity-50"
+                    >
+                        <Award className="w-3.5 h-3.5" />
+                        {certProgress 
+                            ? `Sending... (${certProgress.done}/${certProgress.total})` 
+                            : 'Send All Certificates'
+                        }
+                    </button>
                     <button 
                         onClick={handleDownloadCSV}
                         className="flex items-center gap-2 px-3 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-all shadow-sm"

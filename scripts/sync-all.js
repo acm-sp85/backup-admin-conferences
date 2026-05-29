@@ -200,18 +200,23 @@ async function syncAll() {
           const entity = record.user_entity || record.entity || null;
           const country = record.user_country || record.country || null;
           const country_inferred = record.user_country_inferred || record.country_inferred ? 1 : 0;
+          const entity_address = record.entity_address || null;
+          const entity_zip = record.entity_zip || null;
+          const entity_city = record.entity_city || null;
+          const entity_country = record.entity_country || null;
+
           if (!participantId) {
             const [res] = await mariadb.execute(
-              'INSERT INTO participants (firstName, lastName, email, registration_type, entity, country, country_inferred) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-              [firstName, lastName, email, record.registration_type || 'Standard', entity, country, country_inferred]
+              'INSERT INTO participants (firstName, lastName, email, registration_type, entity, country, country_inferred, entity_address, entity_zip, entity_city, entity_country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+              [firstName, lastName, email, record.registration_type || 'Standard', entity, country, country_inferred, entity_address, entity_zip, entity_city, entity_country]
             );
             participantId = res.insertId;
             participantMap.set(email, participantId);
             summary.participants++;
           } else {
             await mariadb.execute(
-              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ?, country_inferred = ? WHERE id = ?', 
-              [firstName, lastName, record.registration_type || 'Standard', entity, country, country_inferred, participantId]
+              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ?, country_inferred = ?, entity_address = ?, entity_zip = ?, entity_city = ?, entity_country = ? WHERE id = ?', 
+              [firstName, lastName, record.registration_type || 'Standard', entity, country, country_inferred, entity_address, entity_zip, entity_city, entity_country, participantId]
             );
           }
 

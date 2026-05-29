@@ -95,7 +95,7 @@ export default async function ParticipantsPage({ searchParams }) {
 
   // 2. Fetch all registrations for these participants
   const registrations = await query(`
-    SELECT r.*, c.acronym, t.email_sent_at as qr_email_sent_at, t.scanned_at as qr_scanned_at, t.token as qr_token, t.is_manual as qr_is_manual
+    SELECT r.*, c.acronym, t.email_sent_at as qr_email_sent_at, t.scanned_at as qr_scanned_at, t.token as qr_token, t.is_manual as qr_is_manual, t.cert_sent_at as cert_sent_at
     FROM registrations r
     JOIN conferences c ON r.conference_id = c.id
     LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
@@ -137,6 +137,7 @@ export default async function ParticipantsPage({ searchParams }) {
       qr_scanned_at: primaryReg?.qr_scanned_at,
       qr_is_manual: primaryReg?.qr_is_manual,
       qr_token: primaryReg?.qr_token,
+      cert_sent_at: primaryReg?.cert_sent_at,
       cluster_for_review: primaryReg?.cluster_for_review,
       all_payments_json: JSON.stringify(pPayments) 
     };
