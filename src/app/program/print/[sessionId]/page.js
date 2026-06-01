@@ -130,8 +130,10 @@ export default async function ProgramPrintPage({ params }) {
                                                             return formatName(displayName);
                                                         })()}
                                                     </span>
-                                                    {slot.presenter_entity && (
-                                                        <span style={{ opacity: 0.8 }}>{` - ${slot.presenter_entity}`}</span>
+                                                    {(slot.presenter_entity || slot.presenter_country) && (
+                                                        <span style={{ opacity: 0.8 }}>
+                                                            {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
+                                                        </span>
                                                     )}
                                                 </div>
                                             )}

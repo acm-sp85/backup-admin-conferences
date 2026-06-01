@@ -246,9 +246,9 @@ export default function ProgramManager({ conferences }) {
                                                                             return formatName(displayName);
                                                                         })()}
                                                                     </span>
-                                                                    {slot.presenter_entity && (
+                                                                    {(slot.presenter_entity || slot.presenter_country) && (
                                                                         <span className="text-slate-400 font-normal">
-                                                                            {` (${slot.presenter_entity})`}
+                                                                            {` (${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')})`}
                                                                         </span>
                                                                     )}
                                                                 </div>

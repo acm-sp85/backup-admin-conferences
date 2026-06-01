@@ -86,7 +86,8 @@ export default async function DownloadDocPage({ params }) {
                             }
                             const formatted = formatName(displayName);
                             const nameSpan = `<span class="presenter-name">${formatted}</span>`;
-                            const instSpan = slot.presenter_entity ? `<span class="presenter-institution"> - ${slot.presenter_entity}</span>` : '';
+                            const instText = [slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ');
+                            const instSpan = instText ? `<span class="presenter-institution"> - ${instText}</span>` : '';
                             return `<div class="slot-presenter">${nameSpan}${instSpan}</div>`;
                         })()}
                         <div class="slot-type">${slot.type}</div>

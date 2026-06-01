@@ -134,9 +134,11 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                                                      return formatName(displayName);
                                                                  })()}
                                                              </span>
-                                                             {slot.presenter_entity && (
-                                                                 <span style={{ opacity: 0.8 }}>{` - ${slot.presenter_entity}`}</span>
-                                                             )}
+                                                              {((slot.presenter_entity || slot.presenter_country)) && (
+                                                                  <span style={{ opacity: 0.8 }}>
+                                                                      {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
+                                                                  </span>
+                                                              )}
                                                          </div>
                                                      )}
                                                      <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
