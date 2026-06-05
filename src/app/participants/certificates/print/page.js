@@ -39,17 +39,10 @@ export default async function CertificatePrintPage({ searchParams }) {
         WHERE r.id IN (${placeholders})
     `, ids);
 
-    // Fetch dates
-    const [datesRow] = await query(`
-        SELECT MIN(start_time) as start_date, MAX(end_time) as end_date 
-        FROM program_sessions 
-        WHERE conference_id = ?
-    `, [conferenceId]);
-
     let conferenceDates = '';
-    if (datesRow && datesRow.start_date && datesRow.end_date) {
-        const start = new Date(datesRow.start_date);
-        const end = new Date(datesRow.end_date);
+    if (conference.start_date && conference.end_date) {
+        const start = new Date(conference.start_date);
+        const end = new Date(conference.end_date);
         
         const startDay = start.getDate();
         const startMonth = start.toLocaleDateString('en-GB', { month: 'long' });

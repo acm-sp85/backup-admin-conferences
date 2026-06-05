@@ -28,6 +28,7 @@ export async function sendCertificateEmail(registrationId) {
             CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name,
             c.id as conference_id, c.name as conference_name, c.emails_enabled,
             c.sponsor_list, c.conference_address, c.signature_image, c.text_under_signature, c.conference_full_name,
+            c.start_date, c.end_date,
             t.token, t.scanned_at, t.cert_sent_at,
             pay.group_name as payment_group
         FROM participants p
@@ -54,23 +55,25 @@ export async function sendCertificateEmail(registrationId) {
         throw new Error('Communication is currently LOCKED for this conference. Please enable it in Conference Settings first.');
     }
 
+    if (!participant.end_date) {
+        throw new Error('Cannot send certificate: Conference end date has not been set.');
+    }
+
+    const conferenceEndDate = new Date(participant.end_date);
+    if (new Date() < conferenceEndDate) {
+        throw new Error('Cannot send certificate: The conference has not completed yet.');
+    }
+
     // Determine the best institution/group name available
     const institution = participant.entity || participant.payment_group || '';
     
     // Determine registration type from payment group or participant field
     const registrationType = participant.payment_group || participant.registration_type || '';
 
-    // Fetch start and end dates from program_sessions
-    const [datesRow] = await query(`
-        SELECT MIN(start_time) as start_date, MAX(end_time) as end_date 
-        FROM program_sessions 
-        WHERE conference_id = ?
-    `, [participant.conference_id]);
-
     let conferenceDates = '';
-    if (datesRow && datesRow.start_date && datesRow.end_date) {
-        const start = new Date(datesRow.start_date);
-        const end = new Date(datesRow.end_date);
+    if (participant.start_date && participant.end_date) {
+        const start = new Date(participant.start_date);
+        const end = new Date(participant.end_date);
         
         const startDay = start.getDate();
         const startMonth = start.toLocaleDateString('en-GB', { month: 'long' });

@@ -8,7 +8,7 @@ import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award,
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
 
-export default function ParticipantRow({ person, activeConfId, userRole, selected, onSelect }) {
+export default function ParticipantRow({ person, activeConfId, isCompleted, userRole, selected, onSelect }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSendingQR, setIsSendingQR] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
@@ -351,8 +351,13 @@ export default function ParticipantRow({ person, activeConfId, userRole, selecte
                                                 <div className="flex flex-wrap gap-2 items-center">
                                                     <button 
                                                         onClick={handleSendCertificate}
-                                                        disabled={isSendingCert}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-bold hover:bg-amber-700 transition-colors disabled:opacity-50"
+                                                        disabled={isSendingCert || !isCompleted}
+                                                        className={`flex items-center gap-2 px-3 py-2 text-white rounded-xl text-[10px] font-bold transition-colors ${
+                                                            !isCompleted 
+                                                                ? 'bg-slate-300 cursor-not-allowed opacity-50' 
+                                                                : 'bg-amber-600 hover:bg-amber-700 disabled:opacity-50'
+                                                        }`}
+                                                        title={!isCompleted ? "Certificates can only be sent once the conference has completed." : ""}
                                                     >
                                                         {isSendingCert ? <Loader2 className="w-3 h-3 animate-spin" /> : <Award className="w-3 h-3" />}
                                                         {person.cert_sent_at ? 'Resend Certificate' : 'Send Certificate'}

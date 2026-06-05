@@ -118,6 +118,20 @@ export default async function MigratePage() {
 
     // ---- Conference Form Extensions Feature ----
     try {
+        await query(`ALTER TABLE conferences ADD COLUMN start_date DATE DEFAULT NULL`);
+        results.push('✅ Added start_date to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.start_date: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN end_date DATE DEFAULT NULL`);
+        results.push('✅ Added end_date to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.end_date: ${e.message}`);
+    }
+
+    try {
         await query(`ALTER TABLE conferences ADD COLUMN sponsor_list TEXT DEFAULT NULL`);
         results.push('✅ Added sponsor_list to conferences');
     } catch (e) {
@@ -150,6 +164,69 @@ export default async function MigratePage() {
         results.push('✅ Added conference_full_name to conferences');
     } catch (e) {
         results.push(`ℹ️ conferences.conference_full_name: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN social_dinner_date VARCHAR(255) DEFAULT NULL`);
+        results.push('✅ Added social_dinner_date to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.social_dinner_date: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN social_dinner_location TEXT DEFAULT NULL`);
+        results.push('✅ Added social_dinner_location to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.social_dinner_location: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN social_dinner_time VARCHAR(50) DEFAULT NULL`);
+        results.push('✅ Added social_dinner_time to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.social_dinner_time: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN social_dinner_timezone VARCHAR(100) DEFAULT NULL`);
+        results.push('✅ Added social_dinner_timezone to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.social_dinner_timezone: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN social_dinner_maps_url TEXT DEFAULT NULL`);
+        results.push('✅ Added social_dinner_maps_url to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.social_dinner_maps_url: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN registration_venue TEXT DEFAULT NULL`);
+        results.push('✅ Added registration_venue to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.registration_venue: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN registration_starts_at DATETIME DEFAULT NULL`);
+        results.push('✅ Added registration_starts_at to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.registration_starts_at: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN registration_notes TEXT DEFAULT NULL`);
+        results.push('✅ Added registration_notes to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.registration_notes: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN registration_maps_url TEXT DEFAULT NULL`);
+        results.push('✅ Added registration_maps_url to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.registration_maps_url: ${e.message}`);
     }
 
     try {

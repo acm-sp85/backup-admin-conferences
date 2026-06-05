@@ -18,7 +18,7 @@ export default async function ParticipantsPage({ searchParams }) {
   }
 
   const { search, conference, status, sortBy = 'created_at', order = 'desc' } = await searchParams;
-  const conferences = await query('SELECT id, acronym FROM conferences ORDER BY acronym ASC');
+  const conferences = await query('SELECT id, acronym, start_date, end_date FROM conferences ORDER BY acronym ASC');
 
   // Persistence: If no conference in URL, check cookie
   if (!conference && conferences.length > 0) {
@@ -45,6 +45,7 @@ export default async function ParticipantsPage({ searchParams }) {
 
   const activeConf = conferences.find(c => c.acronym === conference);
   const activeConfId = activeConf?.id;
+  const activeConfEndDate = activeConf?.end_date ? new Date(activeConf.end_date).toISOString() : null;
 
   // 1. Fetch participants
   let sql = `
@@ -217,6 +218,7 @@ export default async function ParticipantsPage({ searchParams }) {
       <ParticipantsTable 
         participants={filteredParticipants} 
         activeConfId={activeConfId} 
+        activeConfEndDate={activeConfEndDate}
         userRole={session.role}
         sortBy={sortBy}
         order={order}

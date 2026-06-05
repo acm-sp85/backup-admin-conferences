@@ -1,6 +1,7 @@
 import { query } from '@/lib/db';
 import sanitizeHtml from 'sanitize-html';
 import { emailTemplates, getBranding, renderHeader } from '@/lib/email-templates';
+import { formatSocialDinnerDate, formatRegistrationDate } from '@/lib/date-formatter';
 
 /**
  * Retrieve email subject and HTML for a given conference and email type.
@@ -30,6 +31,37 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     return { subject: generic.subject, html: generic.html };
   }
 
+  // Clean up registration details for checkin email templates (whether custom or default)
+  if (type === 'emailCheckin') {
+    const venueVal = (conf?.registration_venue || placeholders?.conference?.registration_venue || '').trim();
+    const startsAtVal = (conf?.registration_starts_at || placeholders?.conference?.registration_starts_at || '').trim();
+    const notesVal = (conf?.registration_notes || placeholders?.conference?.registration_notes || '').trim();
+    const hasNotes = notesVal && notesVal.toLowerCase() !== 'none';
+    const hasRegistration = venueVal || startsAtVal || hasNotes;
+
+    if (!hasRegistration) {
+      html = html.replace(/<!-- registration_details_start -->[\s\S]*?<!-- registration_details_end -->/gi, '');
+    } else {
+      const stripPlaceholder = (content, placeholder) => {
+        const tagRegex = new RegExp('<(p|li|tr|td|span)[^>]*>(?:(?!<\\/\\1>)[\\s\\S])*?\\$\\{' + placeholder + '\\}(?:(?!<\\/\\1>)[\\s\\S])*?<\\/\\1>', 'gi');
+        let newContent = content.replace(tagRegex, '');
+        const lineRegex = new RegExp('^[^\\n]*\\$\\{' + placeholder + '\\}[^\\n]*\\n?', 'gim');
+        newContent = newContent.replace(lineRegex, '');
+        return newContent;
+      };
+
+      if (!venueVal) {
+        html = stripPlaceholder(html, 'registration_venue');
+      }
+      if (!startsAtVal) {
+        html = stripPlaceholder(html, 'registration_starts_at');
+      }
+      if (!hasNotes) {
+        html = stripPlaceholder(html, 'registration_notes');
+      }
+    }
+  }
+
   // 1. Prepare rich branding placeholders
   const brand = getBranding(conf);
   const richPlaceholders = {
@@ -45,7 +77,44 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     'brand.name': brand.name,
     'brand.email': brand.email,
     'brand.accentColor': brand.accentColor,
-    'renderHeader(brand)': renderHeader(brand) // Support the exact string the user tried
+    'renderHeader(brand)': renderHeader(brand), // Support the exact string the user tried
+    
+    // Social Dinner Placeholders
+    social_dinner_date: formatSocialDinnerDate(
+        conf?.social_dinner_date || placeholders?.conference?.social_dinner_date || '',
+        conf?.social_dinner_time || placeholders?.conference?.social_dinner_time || '',
+        conf?.social_dinner_timezone || placeholders?.conference?.social_dinner_timezone || ''
+    ) || 'TBD',
+    social_dinner_location: (() => {
+        const mapsUrl = conf?.social_dinner_maps_url || placeholders?.conference?.social_dinner_maps_url || '';
+        const locationText = conf?.social_dinner_location || placeholders?.conference?.social_dinner_location || '';
+        return (mapsUrl && !locationText.includes('<a'))
+            ? `<a href="${mapsUrl}" target="_blank" style="color: #0071e3; text-decoration: underline;">${locationText}</a>`
+            : (locationText || 'TBD');
+    })(),
+    'conference.social_dinner_date': formatSocialDinnerDate(
+        conf?.social_dinner_date || placeholders?.conference?.social_dinner_date || '',
+        conf?.social_dinner_time || placeholders?.conference?.social_dinner_time || '',
+        conf?.social_dinner_timezone || placeholders?.conference?.social_dinner_timezone || ''
+    ) || 'TBD',
+    'conference.social_dinner_location': (() => {
+        const mapsUrl = conf?.social_dinner_maps_url || placeholders?.conference?.social_dinner_maps_url || '';
+        const locationText = conf?.social_dinner_location || placeholders?.conference?.social_dinner_location || '';
+        return (mapsUrl && !locationText.includes('<a'))
+            ? `<a href="${mapsUrl}" target="_blank" style="color: #0071e3; text-decoration: underline;">${locationText}</a>`
+            : (locationText || 'TBD');
+    })(),
+    
+    // Registration Details Placeholders
+    registration_venue: (() => {
+        const venueText = conf?.registration_venue || placeholders?.conference?.registration_venue || '';
+        const mapsUrl = conf?.registration_maps_url || placeholders?.conference?.registration_maps_url || '';
+        return (mapsUrl && !venueText.includes('<a'))
+            ? `<a href="${mapsUrl}" target="_blank" style="color: #0071e3; text-decoration: underline;">${venueText}</a>`
+            : (venueText || 'TBD');
+    })(),
+    registration_starts_at: formatRegistrationDate(conf?.registration_starts_at || placeholders?.conference?.registration_starts_at || '') || 'TBD',
+    registration_notes: conf?.registration_notes || placeholders?.conference?.registration_notes || 'None'
   };
 
   // 2. Interpolate placeholders

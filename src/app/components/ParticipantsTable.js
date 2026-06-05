@@ -1,16 +1,25 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import ParticipantRow from './ParticipantRow';
 import { sendParticipantCheckinQR } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
 import { Loader2, Mail, Download, Award, CheckCircle2 } from 'lucide-react';
 
-export default function ParticipantsTable({ participants, activeConfId, userRole, sortBy, order, searchParams }) {
+export default function ParticipantsTable({ participants, activeConfId, activeConfEndDate, userRole, sortBy, order, searchParams }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSendingBulk, startSendingBulk] = useTransition();
     const [isSendingCerts, startSendingCerts] = useTransition();
     const [certProgress, setCertProgress] = useState(null); // { done, total, success, fail }
+    const [isCompleted, setIsCompleted] = useState(false);
+
+    useEffect(() => {
+        if (activeConfEndDate) {
+            setIsCompleted(new Date() > new Date(activeConfEndDate));
+        } else {
+            setIsCompleted(false);
+        }
+    }, [activeConfEndDate]);
 
     const getSortUrl = (field) => {
         const newOrder = sortBy === field && order === 'asc' ? 'desc' : 'asc';
@@ -168,8 +177,13 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                         </button>
                         <button 
                             onClick={handleSendSelectedCertificates}
-                            disabled={isSendingCerts || isSendingBulk}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-lg shadow-amber-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
+                            disabled={isSendingCerts || isSendingBulk || !isCompleted}
+                            className={`flex items-center gap-2 px-3 py-1.5 text-white rounded-lg text-xs font-semibold shadow-lg transition-all animate-in fade-in zoom-in duration-200 ${
+                                !isCompleted 
+                                    ? 'bg-slate-300 cursor-not-allowed opacity-50 shadow-none' 
+                                    : 'bg-amber-600 hover:bg-amber-700 shadow-amber-100 disabled:opacity-50'
+                            }`}
+                            title={!isCompleted ? "Certificates can only be sent once the conference has completed." : ""}
                         >
                             {isSendingCerts ? <Loader2 className="w-3 h-3 animate-spin" /> : <Award className="w-3 h-3" />}
                             {certProgress 
@@ -215,8 +229,13 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                     </button>
                     <button 
                         onClick={handleSendAllCertificates}
-                        disabled={isSendingCerts || isSendingBulk}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-semibold hover:bg-amber-100 transition-all shadow-sm disabled:opacity-50"
+                        disabled={isSendingCerts || isSendingBulk || !isCompleted}
+                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-semibold transition-all shadow-sm ${
+                            !isCompleted 
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-50' 
+                                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 disabled:opacity-50'
+                        }`}
+                        title={!isCompleted ? "Certificates can only be sent once the conference has completed." : ""}
                     >
                         <Award className="w-3.5 h-3.5" />
                         {certProgress 
@@ -270,6 +289,7 @@ export default function ParticipantsTable({ participants, activeConfId, userRole
                                 key={person.id} 
                                 person={person} 
                                 activeConfId={activeConfId} 
+                                isCompleted={isCompleted}
                                 userRole={userRole}
                                 selected={selectedIds.has(person.primary_registration_id)}
                                 onSelect={() => toggleSelect(person.primary_registration_id)}

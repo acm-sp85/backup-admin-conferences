@@ -4,6 +4,7 @@
  * Centralized location for all email communication.
  * Templates now consume 'conference' objects fetched directly from the database.
  */
+import { formatSocialDinnerDate, formatRegistrationDate } from './date-formatter';
 
 export const EMAIL_CONFIG = {
     // IMPORTANT: Ensure the domain below is verified in https://resend.com/domains
@@ -136,10 +137,9 @@ export const emailTemplates = {
                             <p style="margin: 5px 0; font-weight: bold; color: ${brand.accentColor};">Dietary: ${qc.dietary}</p>
                         </div>
                     `).join('')}
-                    
-                    // <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-                    //     This is an automated message from ${brand.name}. For support, contact ${brand.email}.
-                    // </p>
+                    <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                        The social dinner will take place on ${formatSocialDinnerDate(conference?.social_dinner_date, conference?.social_dinner_time, conference?.social_dinner_timezone) || 'TBD'} at ${conference?.social_dinner_maps_url ? `<a href="${conference.social_dinner_maps_url}" target="_blank" style="color: #0071e3; text-decoration: underline;">${conference.social_dinner_location || 'TBD'}</a>` : (conference?.social_dinner_location || 'TBD')}
+                    </p>
                 </div>
             `
         };
@@ -222,8 +222,48 @@ export const emailTemplates = {
         const brand = getBranding(conference);
         const checkinBody = conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference);
         
+        const venueVal = (conference?.registration_venue || '').trim();
+        const startsAtVal = (conference?.registration_starts_at || '').trim();
+        const notesVal = (conference?.registration_notes || '').trim();
+        const hasNotes = notesVal && notesVal.toLowerCase() !== 'none';
+        
+        const regVenueHtml = (conference?.registration_maps_url && !conference.registration_venue?.includes('<a'))
+            ? `<a href="${conference.registration_maps_url}" target="_blank" style="color: #0071e3; text-decoration: underline;">${conference.registration_venue}</a>`
+            : venueVal;
+
+        let processedBody = checkinBody;
+        const hasRegistration = venueVal || startsAtVal || hasNotes;
+        
+        if (!hasRegistration) {
+            processedBody = processedBody.replace(/<!-- registration_details_start -->[\s\S]*?<!-- registration_details_end -->/gi, '');
+        } else {
+            const stripPlaceholder = (content, placeholder) => {
+                const tagRegex = new RegExp('<(p|li|tr|td|span)[^>]*>(?:(?!<\\/\\1>)[\\s\\S])*?\\$\\{' + placeholder + '\\}(?:(?!<\\/\\1>)[\\s\\S])*?<\\/\\1>', 'gi');
+                let newContent = content.replace(tagRegex, '');
+                const lineRegex = new RegExp('^[^\\n]*\\$\\{' + placeholder + '\\}[^\\n]*\\n?', 'gim');
+                newContent = newContent.replace(lineRegex, '');
+                return newContent;
+            };
+
+            if (!venueVal) {
+                processedBody = stripPlaceholder(processedBody, 'registration_venue');
+            } else {
+                processedBody = processedBody.replace(/\${registration_venue}/g, regVenueHtml);
+            }
+            if (!startsAtVal) {
+                processedBody = stripPlaceholder(processedBody, 'registration_starts_at');
+            } else {
+                processedBody = processedBody.replace(/\${registration_starts_at}/g, formatRegistrationDate(conference?.registration_starts_at) || '');
+            }
+            if (!hasNotes) {
+                processedBody = stripPlaceholder(processedBody, 'registration_notes');
+            } else {
+                processedBody = processedBody.replace(/\${registration_notes}/g, notesVal);
+            }
+        }
+
         // Inject variables into the custom body if they exist as placeholders
-        const htmlBody = checkinBody
+        const htmlBody = processedBody
             .replace(/\${name}/g, name)
             .replace(/\${conference}/g, brand.name)
             .replace(/\${renderHeader\(brand\)}/g, renderHeader(brand));
@@ -370,9 +410,9 @@ export const getDefaultEmailBody = (type, conference) => {
     <a href="\${magicLink}" style="display: block; background: \${brand.accentColor}; color: white; text-align: center; padding: 12px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Sign In</a>
     <p style="font-size: 11px; color: #999; margin-top: 24px; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
 </div>
-`.replace('\\${renderHeader(brand)}', renderHeader(brand))
- .replace('\\${brand.name}', brand.name)
- .replace('\\${brand.accentColor}', brand.accentColor);
+`.replace('${renderHeader(brand)}', renderHeader(brand))
+ .replace('${brand.name}', brand.name)
+ .replace('${brand.accentColor}', brand.accentColor);
 
         case 'posterVotingInvite':
             return `
@@ -399,9 +439,9 @@ export const getDefaultEmailBody = (type, conference) => {
         This link will expire in 48 hours. After that, you can request a new login link at any time from the login page.
     </p>
 </div>
-`.replace('\\${renderHeader(brand)}', renderHeader(brand))
- .replace('\\${brand.name}', brand.name)
- .replace('\\${brand.accentColor}', brand.accentColor);
+`.replace('${renderHeader(brand)}', renderHeader(brand))
+ .replace('${brand.name}', brand.name)
+ .replace('${brand.accentColor}', brand.accentColor);
 
         case 'customVotingInvite':
             return `
@@ -429,23 +469,21 @@ export const getDefaultEmailBody = (type, conference) => {
         This link is unique to you. Please do not share it with others.
     </p>
 </div>
-`.replace('\\${renderHeader(brand)}', renderHeader(brand))
- .replace('\\${brand.name}', brand.name)
- .replace('\\${brand.accentColor}', brand.accentColor);
+`.replace('${renderHeader(brand)}', renderHeader(brand))
+ .replace('${brand.name}', brand.name)
+ .replace('${brand.accentColor}', brand.accentColor);
 
         case 'socialDinnerTickets':
             return `
 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
     \${renderHeader(brand)}
     <h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
-    <p>Here are your tickets for the Social Dinner. Please show these QR codes at the entrance.</p>
+    <p>Here are your tickets for the Social Dinner. Please show this QR at the entrance.</p>
     <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-        This is an automated message from \${brand.name}. For support, contact \${brand.email}.
+        The social dinner will take place on \${social_dinner_date} at \${social_dinner_location}
     </p>
 </div>
-`.replace('\\${renderHeader(brand)}', renderHeader(brand))
- .replace('\\${brand.name}', brand.name)
- .replace('\\${brand.email}', brand.email);
+`.replace('${renderHeader(brand)}', renderHeader(brand));
 
         case 'emailCheckin':
             return `
@@ -453,8 +491,16 @@ export const getDefaultEmailBody = (type, conference) => {
     \${renderHeader(brand)}
     <h1 style="color: #1d1d1f; font-size: 24px;">Hello \${name},</h1>
     <p>We are looking forward to seeing you at <strong>\${conference}</strong>. Below is your personal QR code for a faster check-in at the registration desk.</p>
-</div>`.replace('\\${renderHeader(brand)}', renderHeader(brand))
-  .replace('\\${conference}', brand.name);
+    <!-- registration_details_start -->
+    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+        <h3 style="margin-bottom: 8px; font-size: 14px; color: #1e293b;">Registration Details:</h3>
+        <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Venue:</strong> \${registration_venue}</p>
+        <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Starts at:</strong> \${registration_starts_at}</p>
+        <p style="margin: 4px 0; font-size: 13px; color: #475569;"><strong>Notes:</strong> \${registration_notes}</p>
+    </div>
+    <!-- registration_details_end -->
+</div>`.replace('${renderHeader(brand)}', renderHeader(brand))
+  .replace('${conference}', brand.name);
 
         case 'certificate':
             return `
@@ -474,10 +520,10 @@ export const getDefaultEmailBody = (type, conference) => {
             This is an automated certificate from \${conference}. For support, contact \${brand.email}.
         </p>
     </div>
-</div>`.replace(/\\\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
-  .replace(/\\\$\{brand\.accentColor\}/g, brand.accentColor)
-  .replace(/\\\$\{brand\.email\}/g, brand.email)
-  .replace(/\\\$\{conference\}/g, brand.name);
+</div>`.replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
+  .replace(/\$\{brand\.accentColor\}/g, brand.accentColor)
+  .replace(/\$\{brand\.email\}/g, brand.email)
+  .replace(/\$\{conference\}/g, brand.name);
 
         default:
             return '';

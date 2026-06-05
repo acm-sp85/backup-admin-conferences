@@ -21,14 +21,25 @@ export async function createConference(formData) {
     const signature_image = formData.get('signature_image') || null;
     const text_under_signature = formData.get('text_under_signature') || null;
     const conference_full_name = formData.get('conference_full_name') || null;
+    const start_date = formData.get('start_date');
+    const end_date = formData.get('end_date');
+    const social_dinner_date = formData.get('social_dinner_date') || null;
+    const social_dinner_location = formData.get('social_dinner_location') || null;
+    const social_dinner_time = formData.get('social_dinner_time') || null;
+    const social_dinner_timezone = formData.get('social_dinner_timezone') || null;
+    const social_dinner_maps_url = formData.get('social_dinner_maps_url') || null;
+    const registration_venue = formData.get('registration_venue') || null;
+    const registration_starts_at = formData.get('registration_starts_at') || null;
+    const registration_notes = formData.get('registration_notes') || null;
+    const registration_maps_url = formData.get('registration_maps_url') || null;
 
-    if (!name || !acronym) {
-        return { error: 'Name and Acronym are required' };
+    if (!name || !acronym || !start_date || !end_date) {
+        return { error: 'Name, Acronym, Start Date, and End Date are required' };
     }
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -49,7 +60,18 @@ export async function createConference(formData) {
               conference_address,
               signature_image,
               text_under_signature,
-              conference_full_name
+              conference_full_name,
+              start_date,
+              end_date,
+              social_dinner_date,
+              social_dinner_location,
+              social_dinner_time,
+              social_dinner_timezone,
+              social_dinner_maps_url,
+              registration_venue,
+              registration_starts_at,
+              registration_notes,
+              registration_maps_url
             ]
           );
         revalidatePath('/');
@@ -133,14 +155,25 @@ export async function updateConference(id, formData) {
     const signature_image = formData.get('signature_image') || null;
     const text_under_signature = formData.get('text_under_signature') || null;
     const conference_full_name = formData.get('conference_full_name') || null;
+    const start_date = formData.get('start_date');
+    const end_date = formData.get('end_date');
+    const social_dinner_date = formData.get('social_dinner_date') || null;
+    const social_dinner_location = formData.get('social_dinner_location') || null;
+    const social_dinner_time = formData.get('social_dinner_time') || null;
+    const social_dinner_timezone = formData.get('social_dinner_timezone') || null;
+    const social_dinner_maps_url = formData.get('social_dinner_maps_url') || null;
+    const registration_venue = formData.get('registration_venue') || null;
+    const registration_starts_at = formData.get('registration_starts_at') || null;
+    const registration_notes = formData.get('registration_notes') || null;
+    const registration_maps_url = formData.get('registration_maps_url') || null;
 
-    if (!name || !acronym) {
-        return { error: 'Name and Acronym are required' };
+    if (!name || !acronym || !start_date || !end_date) {
+        return { error: 'Name, Acronym, Start Date, and End Date are required' };
     }
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -162,6 +195,17 @@ export async function updateConference(id, formData) {
               signature_image,
               text_under_signature,
               conference_full_name,
+              start_date,
+              end_date,
+              social_dinner_date,
+              social_dinner_location,
+              social_dinner_time,
+              social_dinner_timezone,
+              social_dinner_maps_url,
+              registration_venue,
+              registration_starts_at,
+              registration_notes,
+              registration_maps_url,
               id
             ]
           );
