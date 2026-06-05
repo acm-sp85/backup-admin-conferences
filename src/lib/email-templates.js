@@ -71,7 +71,7 @@ export const emailTemplates = {
     magicLink: ({ magicLink, conference }) => {
         const brand = getBranding(conference);
         return {
-            subject: `Your Login Link - ${brand.name}`,
+            subject: `${brand.name} -Your Login Link`,
             html: `
               <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 12px;">
                 ${renderHeader(brand)}
@@ -151,7 +151,7 @@ export const emailTemplates = {
     posterVotingInvite: ({ name, magicLink, conference }) => {
         const brand = getBranding(conference);
         return {
-            subject: `Invitation to Poster Voting - ${brand.name}`,
+            subject: `${brand.name} - Invitation to Poster Voting`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
@@ -186,7 +186,7 @@ export const emailTemplates = {
     customVotingInvite: ({ name, votingLink, conference }) => {
         const brand = getBranding(conference);
         return {
-            subject: `Rating the oral presentations at ${brand.name}`,
+            subject: `${brand.name} - Rating the oral presentations at ${brand.name}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
@@ -269,7 +269,7 @@ export const emailTemplates = {
             .replace(/\${renderHeader\(brand\)}/g, renderHeader(brand));
 
         return {
-            subject: `Your Check-in QR Code - ${brand.name}`,
+            subject: `${brand.name} - Your Check-in QR Code`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     ${renderHeader(brand)}
