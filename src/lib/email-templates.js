@@ -8,9 +8,9 @@ import { formatSocialDinnerDate, formatRegistrationDate } from './date-formatter
 
 export const EMAIL_CONFIG = {
     // IMPORTANT: Ensure the domain below is verified in https://resend.com/domains
-    from: 'Smart Conference Admin <no-reply@smart-conference.org>',
-    fromConferences: 'Smart Conference <no-reply@smart-conference.org>',
-    fromVoting: 'Smart Conference Voting <no-reply@smart-conference.org>',
+    from: process.env.EMAIL_FROM || 'Smart Conference Admin <no-reply@smart-conference.org>',
+    fromConferences: process.env.EMAIL_FROM_CONFERENCES || 'Smart Conference <no-reply@smart-conference.org>',
+    fromVoting: process.env.EMAIL_FROM_VOTING || 'Smart Conference Voting <no-reply@smart-conference.org>',
 };
 
 /**
