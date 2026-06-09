@@ -120,7 +120,8 @@ export default async function SocialDinnerPage({ searchParams }) {
         if (!Array.isArray(ticketItems)) return;
 
         ticketItems.forEach((ticket, idx) => {
-          if (ticket.name === 'Social Dinner' || (ticket.ticket_data && ticket.ticket_data.name === 'Social Dinner')) {
+          const tName = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
+          if (tName && tName.toLowerCase() === 'social dinner') {
             // Check if this specific ticket has been hidden/deleted
             const isHidden = pTickets.some(t => t.payment_id === pay.id && t.ticket_index === idx && t.is_hidden === 1);
             if (isHidden && !isShowAll) return;

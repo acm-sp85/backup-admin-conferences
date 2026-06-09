@@ -300,7 +300,7 @@ async function syncAll() {
               for (let i = 0; i < tickets.length; i++) {
                 const ticket = tickets[i];
                 const tName = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
-                if (tName === 'Social Dinner') {
+                if (tName && tName.toLowerCase() === 'social dinner') {
                   const [existing] = await mariadb.execute(
                     'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',
                     [paymentId, i]
