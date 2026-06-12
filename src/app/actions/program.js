@@ -79,3 +79,47 @@ export async function toggleSessionVisibility(sessionId, isHidden) {
     revalidatePath('/program');
     return { success: true };
 }
+
+export async function updateSessionData(sessionId, data) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized');
+    }
+
+    const { full_session_name } = data;
+    await query(
+        'UPDATE program_sessions SET full_session_name = ?, is_manual = 1 WHERE id = ?',
+        [full_session_name, sessionId]
+    );
+
+    revalidatePath('/program');
+    return { success: true };
+}
+
+export async function updateSlotData(slotId, data) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized');
+    }
+
+    const { title, presenter_name, type, presenter_entity, presenter_country } = data;
+    await query(
+        'UPDATE program_slots SET title = ?, presenter_name = ?, type = ?, presenter_entity = ?, presenter_country = ?, is_manual = 1 WHERE id = ?',
+        [title, presenter_name, type, presenter_entity, presenter_country, slotId]
+    );
+
+    revalidatePath('/program');
+    return { success: true };
+}
+
+export async function deleteSlotData(slotId) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized');
+    }
+
+    await query('DELETE FROM program_slots WHERE id = ?', [slotId]);
+
+    revalidatePath('/program');
+    return { success: true };
+}

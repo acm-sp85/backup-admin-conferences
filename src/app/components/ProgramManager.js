@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility } from '../actions/program';
+import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility, updateSessionData, updateSlotData, deleteSlotData } from '../actions/program';
 
 const formatName = (name) => {
     if (!name) return '';
@@ -15,7 +15,7 @@ const formatName = (name) => {
         .join('-');
 };
 
-export default function ProgramManager({ conferences }) {
+export default function ProgramManager({ conferences, userRole }) {
     // Initialize from cookie if available
     const [selectedConfId, setSelectedConfId] = useState(() => {
         if (typeof document !== 'undefined') {
@@ -43,6 +43,8 @@ export default function ProgramManager({ conferences }) {
     const [isCustomizing, setIsCustomizing] = useState(false);
     const [showHidden, setShowHidden] = useState(false);
     const [isUpdating, setIsUpdating] = useState(null);
+    const [editingSession, setEditingSession] = useState(null);
+    const [editingSlot, setEditingSlot] = useState(null);
 
     useEffect(() => {
         if (selectedConfId) {
@@ -86,6 +88,45 @@ export default function ProgramManager({ conferences }) {
             alert('Error updating visibility: ' + error.message);
         } finally {
             setIsUpdating(null);
+        }
+    };
+
+    const handleSaveSession = async (e) => {
+        e.preventDefault();
+        try {
+            await updateSessionData(editingSession.id, { full_session_name: editingSession.full_session_name });
+            setEditingSession(null);
+            await loadData();
+        } catch (error) {
+            alert('Error updating session: ' + error.message);
+        }
+    };
+
+    const handleSaveSlot = async (e) => {
+        e.preventDefault();
+        try {
+            await updateSlotData(editingSlot.id, { 
+                title: editingSlot.title, 
+                presenter_name: editingSlot.presenter_name, 
+                type: editingSlot.type,
+                presenter_entity: editingSlot.presenter_entity,
+                presenter_country: editingSlot.presenter_country
+            });
+            setEditingSlot(null);
+            await loadData();
+        } catch (error) {
+            alert('Error updating slot: ' + error.message);
+        }
+    };
+
+    const handleDeleteSlot = async () => {
+        if (!confirm('Are you sure you want to permanently delete this slot?')) return;
+        try {
+            await deleteSlotData(editingSlot.id);
+            setEditingSlot(null);
+            await loadData();
+        } catch (error) {
+            alert('Error deleting slot: ' + error.message);
         }
     };
 
@@ -174,9 +215,17 @@ export default function ProgramManager({ conferences }) {
                                                     {!!session.is_hidden && (
                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
                                                     )}
+                                                    {!!session.is_manual && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-tighter bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Manual</span>
+                                                    )}
                                                 </div>
-                                                <h4 className="font-bold text-slate-800 text-[15px] leading-snug">
+                                                <h4 className="font-bold text-slate-800 text-[15px] leading-snug flex items-center gap-2">
                                                     {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
+                                                    {userRole === 'superadmin' && (
+                                                        <button onClick={() => setEditingSession(session)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Session">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                                        </button>
+                                                    )}
                                                 </h4>
                                                 {session.full_session_name.includes('(Chair:') && (
                                                     <div className="text-[11px] text-slate-500 italic mt-0.5 flex items-center gap-1.5">
@@ -232,8 +281,18 @@ export default function ProgramManager({ conferences }) {
                                                         <span className="text-slate-400 font-mono w-20 flex-shrink-0">
                                                             {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                                         </span>
-                                                        <div className="flex-1">
-                                                            <div className="font-bold text-slate-800">{slot.title || '(No Title)'}</div>
+                                                        <div className="flex-1 group/slot relative">
+                                                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                                {slot.title || '(No Title)'}
+                                                                {!!slot.is_manual && (
+                                                                    <span className="text-[9px] font-bold uppercase tracking-tighter bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded" title="This slot was manually edited and won't be overwritten by sync">Manual</span>
+                                                                )}
+                                                                {userRole === 'superadmin' && (
+                                                                    <button onClick={() => setEditingSlot(slot)} className="opacity-0 group-hover/slot:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Slot">
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                             {slot.presenter_name && (
                                                                 <div className="text-slate-500 mt-0.5">
                                                                     <span className="font-medium text-slate-700">
@@ -345,6 +404,108 @@ export default function ProgramManager({ conferences }) {
                                 Save Settings
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Session Modal */}
+            {editingSession && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-lg font-bold">Edit Session</h3>
+                            <button onClick={() => setEditingSession(null)} className="text-slate-400 hover:text-slate-600">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleSaveSession} className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Session Name</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                    value={editingSession.full_session_name || ''}
+                                    onChange={(e) => setEditingSession({ ...editingSession, full_session_name: e.target.value })}
+                                />
+                                <p className="text-[10px] text-purple-600 italic mt-1">Editing this will mark it as manual and prevent overwrites during sync.</p>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingSession(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-200 transition-all">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Slot Modal */}
+            {editingSlot && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-lg font-bold">Edit Slot</h3>
+                            <button onClick={() => setEditingSlot(null)} className="text-slate-400 hover:text-slate-600">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleSaveSlot} className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Title</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                                    value={editingSlot.title || ''}
+                                    onChange={(e) => setEditingSlot({ ...editingSlot, title: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Presenter Name</label>
+                                <input 
+                                    type="text"
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={editingSlot.presenter_name || ''}
+                                    onChange={(e) => setEditingSlot({ ...editingSlot, presenter_name: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Presenter Entity/Institution</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editingSlot.presenter_entity || ''}
+                                        onChange={(e) => setEditingSlot({ ...editingSlot, presenter_entity: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Presenter Country</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editingSlot.presenter_country || ''}
+                                        onChange={(e) => setEditingSlot({ ...editingSlot, presenter_country: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</label>
+                                <input 
+                                    type="text"
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={editingSlot.type || ''}
+                                    onChange={(e) => setEditingSlot({ ...editingSlot, type: e.target.value })}
+                                />
+                                <p className="text-[10px] text-purple-600 italic mt-1">Editing this will mark the slot as manual and prevent overwrites or deletion during sync.</p>
+                            </div>
+                            <div className="flex justify-between items-center gap-3 pt-4 border-t mt-4">
+                                <button type="button" onClick={handleDeleteSlot} className="px-5 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                    Delete Slot
+                                </button>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setEditingSlot(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-200 transition-all">Save</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

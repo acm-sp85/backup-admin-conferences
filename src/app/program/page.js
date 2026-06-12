@@ -21,7 +21,7 @@ export default async function ProgramPage() {
         </div>
       </header>
 
-      <ProgramManager conferences={conferences} />
+      <ProgramManager conferences={conferences} userRole={session.role} />
     </DashboardLayout>
   );
 }

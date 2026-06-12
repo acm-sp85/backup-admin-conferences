@@ -139,6 +139,10 @@ async function syncAll() {
     try { await mariadb.execute('ALTER TABLE social_dinner_tickets MODIFY payment_id INT DEFAULT NULL'); } catch (e) {}
     try { await mariadb.execute('ALTER TABLE social_dinner_tickets MODIFY ticket_index INT DEFAULT NULL'); } catch (e) {}
 
+    // 0.1.1 Program manual flag safety
+    try { await mariadb.execute('ALTER TABLE program_sessions ADD COLUMN is_manual TINYINT(1) DEFAULT 0'); } catch (e) {}
+    try { await mariadb.execute('ALTER TABLE program_slots ADD COLUMN is_manual TINYINT(1) DEFAULT 0'); } catch (e) {}
+
     // 0.2 Ensure participant_qr_tokens table exists
     await mariadb.execute(`
       CREATE TABLE IF NOT EXISTS participant_qr_tokens (
@@ -397,9 +401,12 @@ async function syncAll() {
           const [res] = await mariadb.execute(`
             INSERT INTO program_sessions (conference_id, session_name, full_session_name, start_time, end_time, mongo_id)
             VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE session_name = VALUES(session_name), full_session_name = VALUES(full_session_name),
-                                    start_time = VALUES(start_time), end_time = VALUES(end_time)
-                                    /* is_hidden is intentionally omitted to preserve manual state */
+            ON DUPLICATE KEY UPDATE 
+                session_name = IF(is_manual = 1, program_sessions.session_name, VALUES(session_name)),
+                full_session_name = IF(is_manual = 1, program_sessions.full_session_name, VALUES(full_session_name)),
+                start_time = IF(is_manual = 1, program_sessions.start_time, VALUES(start_time)),
+                end_time = IF(is_manual = 1, program_sessions.end_time, VALUES(end_time))
+                /* is_hidden is intentionally omitted to preserve manual state */
           `, [conferenceId, session.session_name, session.full_session_name, 
               session.start_time ? new Date(session.start_time) : null,
               session.end_time ? new Date(session.end_time) : null, mongoId]);
@@ -437,9 +444,10 @@ async function syncAll() {
               
               if (matchedSlotId) {
                 // Update existing slot (preserves custom_voting_items foreign keys)
+                // We only update if is_manual = 0, otherwise we leave it alone.
                 await mariadb.execute(`
                   UPDATE program_slots SET type = ?, presenter_name = ?, presenter_entity = ?, presenter_country = ?, start_time = ?, end_time = ?
-                  WHERE id = ?
+                  WHERE id = ? AND is_manual = 0
                 `, [slotType, slot.presenter_name || null, presenterEntity, presenterCountry,
                     slot.start_time ? new Date(slot.start_time) : null,
                     slot.end_time ? new Date(slot.end_time) : null, matchedSlotId]);
@@ -461,10 +469,10 @@ async function syncAll() {
             }
           }
           
-          // Delete old slots that are no longer in this session
+          // Delete old slots that are no longer in this session, unless they were manually added/modified
           for (const existingSlot of existingSlots) {
              if (!incomingSlotIds.has(existingSlot.id)) {
-                await mariadb.execute('DELETE FROM program_slots WHERE id = ?', [existingSlot.id]);
+                await mariadb.execute('DELETE FROM program_slots WHERE id = ? AND is_manual = 0', [existingSlot.id]);
              }
           }
         }

@@ -31,6 +31,21 @@ export default async function MigratePage() {
         results.push(`ℹ️ registrations.is_guest: ${e.message}`);
     }
 
+    // ---- Program Manual Override Feature ----
+    try {
+        await query(`ALTER TABLE program_sessions ADD COLUMN is_manual BOOLEAN DEFAULT 0`);
+        results.push('✅ Added is_manual to program_sessions');
+    } catch (e) {
+        results.push(`ℹ️ program_sessions.is_manual: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE program_slots ADD COLUMN is_manual BOOLEAN DEFAULT 0`);
+        results.push('✅ Added is_manual to program_slots');
+    } catch (e) {
+        results.push(`ℹ️ program_slots.is_manual: ${e.message}`);
+    }
+
     // ---- Custom Voting Feature ----
     try {
         await query(`CREATE TABLE IF NOT EXISTS custom_voting_groups (
