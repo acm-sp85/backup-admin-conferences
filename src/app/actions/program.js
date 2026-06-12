@@ -82,7 +82,7 @@ export async function toggleSessionVisibility(sessionId, isHidden) {
 
 export async function updateSessionData(sessionId, data) {
     const session = await verifySession();
-    if (!session || session.role !== 'superadmin') {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
         throw new Error('Unauthorized');
     }
 
@@ -98,7 +98,7 @@ export async function updateSessionData(sessionId, data) {
 
 export async function updateSlotData(slotId, data) {
     const session = await verifySession();
-    if (!session || session.role !== 'superadmin') {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
         throw new Error('Unauthorized');
     }
 
