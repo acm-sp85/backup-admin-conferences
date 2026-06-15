@@ -1,7 +1,7 @@
 import { useState, useTransition, useEffect } from 'react';
-import { createConference, updateConference } from '../actions/conferences';
+import { createConference, updateConference, getRegistrationTypes } from '../actions/conferences';
 import { getDefaultEmailBody } from '@/lib/email-templates';
-import { Info, Settings, Mail, Award, Globe } from 'lucide-react';
+import { Info, Settings, Mail, Award, Globe, Plus, Trash2 } from 'lucide-react';
 import { formatSocialDinnerDate, formatRegistrationDate } from '@/lib/date-formatter';
 
 const formatDatetimeLocal = (val) => {
@@ -67,11 +67,60 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         qrSize: '35mm',
         padding: '10mm'
     });
+    const [availableUserTypes, setAvailableUserTypes] = useState([]);
 
     // Sponsor List State
     const [sponsorsList, setSponsorsList] = useState([]);
     const [newSponsorName, setNewSponsorName] = useState('');
     const [newSponsorLogo, setNewSponsorLogo] = useState('');
+
+    const handleAddCustomBg = () => {
+        const customBackgrounds = badgeConfig.customBackgrounds || [];
+        setBadgeConfig({
+            ...badgeConfig,
+            customBackgrounds: [...customBackgrounds, { url: '', userTypes: [] }]
+        });
+    };
+
+    const handleUpdateCustomBg = (index, field, value) => {
+        const customBackgrounds = [...(badgeConfig.customBackgrounds || [])];
+        customBackgrounds[index] = {
+            ...customBackgrounds[index],
+            [field]: value
+        };
+        setBadgeConfig({
+            ...badgeConfig,
+            customBackgrounds
+        });
+    };
+
+    const handleToggleUserTypeForCustomBg = (bgIndex, type) => {
+        const customBackgrounds = [...(badgeConfig.customBackgrounds || [])];
+        const userTypes = [...(customBackgrounds[bgIndex].userTypes || [])];
+        const typeIndex = userTypes.indexOf(type);
+        if (typeIndex > -1) {
+            userTypes.splice(typeIndex, 1);
+        } else {
+            userTypes.push(type);
+        }
+        customBackgrounds[bgIndex] = {
+            ...customBackgrounds[bgIndex],
+            userTypes
+        };
+        setBadgeConfig({
+            ...badgeConfig,
+            customBackgrounds
+        });
+    };
+
+    const handleRemoveCustomBg = (index) => {
+        const customBackgrounds = [...(badgeConfig.customBackgrounds || [])];
+        customBackgrounds.splice(index, 1);
+        setBadgeConfig({
+            ...badgeConfig,
+            customBackgrounds
+        });
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -114,6 +163,13 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 setSponsorsList([]);
             }
             setNewSponsorName('');
+
+            // Fetch available registration types
+            getRegistrationTypes(conference?.id).then(types => {
+                setAvailableUserTypes(types || []);
+            }).catch(err => {
+                console.error("Failed to load registration types:", err);
+            });
         }
     }, [isOpen, conference]);
 
@@ -563,6 +619,75 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         placeholder="https://..."
                                         className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
                                     />
+                                </div>
+
+                                <div className="border-t border-slate-200/60 pt-4 mt-4 space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h5 className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Custom Backgrounds by User Type</h5>
+                                        <button 
+                                            type="button"
+                                            onClick={handleAddCustomBg}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-indigo-600 hover:text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            Add Custom Background
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {(badgeConfig.customBackgrounds || []).map((bg, index) => (
+                                            <div key={index} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm relative space-y-3">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleRemoveCustomBg(index)}
+                                                    className="absolute top-3 right-3 text-slate-400 hover:text-red-500 p-1 hover:bg-slate-50 rounded-lg transition-colors"
+                                                    title="Remove mapping"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+
+                                                <div className="pr-8">
+                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-0.5">Background Image URL</label>
+                                                    <input 
+                                                        type="url"
+                                                        value={bg.url || ''}
+                                                        onChange={(e) => handleUpdateCustomBg(index, 'url', e.target.value)}
+                                                        placeholder="https://example.com/custom-bg.png"
+                                                        className="w-full h-9 px-3 bg-slate-55 border border-slate-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-0.5">Applies to User Types</label>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {availableUserTypes.map(type => {
+                                                            const isSelected = (bg.userTypes || []).includes(type);
+                                                            return (
+                                                                <button
+                                                                    key={type}
+                                                                    type="button"
+                                                                    onClick={() => handleToggleUserTypeForCustomBg(index, type)}
+                                                                    className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${
+                                                                        isSelected 
+                                                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold shadow-sm' 
+                                                                            : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100'
+                                                                    }`}
+                                                                >
+                                                                    {type}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                        {availableUserTypes.length === 0 && (
+                                                            <span className="text-[10px] text-slate-400 italic">No user types found in database.</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(badgeConfig.customBackgrounds || []).length === 0 && (
+                                            <p className="text-[10px] text-slate-400 italic text-center py-2">No custom backgrounds defined yet. Click the button above to add one.</p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

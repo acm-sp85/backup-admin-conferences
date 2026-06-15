@@ -216,3 +216,38 @@ export async function updateConference(id, formData) {
         return { error: 'Failed to update conference. Acronym might be a duplicate.' };
     }
 }
+
+export async function getRegistrationTypes(conferenceId) {
+    const session = await verifySession();
+    if (!session) {
+        throw new Error('Unauthorized');
+    }
+    try {
+        let rows = [];
+        if (conferenceId) {
+            rows = await query(
+                `SELECT DISTINCT p.registration_type 
+                 FROM participants p 
+                 JOIN registrations r ON p.id = r.participant_id 
+                 WHERE r.conference_id = ? AND p.registration_type IS NOT NULL AND p.registration_type != ''
+                 ORDER BY p.registration_type ASC`,
+                [conferenceId]
+            );
+        }
+        
+        if (rows.length === 0) {
+            rows = await query(
+                `SELECT DISTINCT registration_type 
+                 FROM participants 
+                 WHERE registration_type IS NOT NULL AND registration_type != ''
+                 ORDER BY registration_type ASC`
+            );
+        }
+        
+        return rows.map(r => r.registration_type);
+    } catch (error) {
+        console.error('Error fetching registration types:', error);
+        return [];
+    }
+}
+

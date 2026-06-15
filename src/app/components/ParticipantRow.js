@@ -195,6 +195,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                     registrationId={registrationId}
                                     conferenceId={conferenceId}
                                     institution={person.regInstitution || person.institution}
+                                    registrationType={person.registration_type}
                                 />
                                 <ParticipantQRBadge 
                                     participantName={person.name}

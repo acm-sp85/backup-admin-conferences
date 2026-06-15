@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { getBadgeConfig } from '../actions/participants-qr';
 import { Loader2, Printer, X } from 'lucide-react';
 
-export default function ParticipantBadge({ participantName, conferenceAcronym, token, registrationId, conferenceId, institution }) {
+export default function ParticipantBadge({ participantName, conferenceAcronym, token, registrationId, conferenceId, institution, registrationType }) {
     const [isOpen, setIsOpen] = useState(false);
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -67,7 +67,18 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
                                         <div 
                                             className="w-full h-full bg-white flex flex-col items-center justify-center text-center p-[13mm] box-border relative"
                                             style={{ 
-                                                backgroundImage: config?.bgUrl ? `url("${config.bgUrl.replace(/"/g, '%22')}")` : 'none',
+                                                backgroundImage: (() => {
+                                                    let activeBgUrl = config?.bgUrl;
+                                                    if (config?.config?.customBackgrounds && registrationType) {
+                                                        const match = config.config.customBackgrounds.find(cb => 
+                                                            cb.userTypes && cb.userTypes.includes(registrationType)
+                                                        );
+                                                        if (match && match.url) {
+                                                            activeBgUrl = match.url;
+                                                        }
+                                                    }
+                                                    return activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none';
+                                                })(),
                                                 backgroundSize: 'cover',
                                                 backgroundPosition: 'center',
                                                 backgroundRepeat: 'no-repeat'

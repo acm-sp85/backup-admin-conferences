@@ -47,7 +47,6 @@ export default async function PrintBadgesPage({ searchParams }) {
                     width: 86mm;
                     height: 104mm;
                     background-color: white;
-                    ${bgUrl ? `background-image: url("${bgUrl.replace(/"/g, '%22')}");` : ''}
                     background-size: cover;
                     background-position: center;
                     background-repeat: no-repeat;
@@ -98,11 +97,29 @@ export default async function PrintBadgesPage({ searchParams }) {
                 }
             `}} />
             
-            {participants.map(p => (
-                <div key={p.registrationId} className="badge">
-                    <div className="name">{p.name}</div>
-                </div>
-            ))}
+            {participants.map(p => {
+                let activeBgUrl = bgUrl;
+                if (config?.customBackgrounds && p.registration_type) {
+                    const match = config.customBackgrounds.find(cb => 
+                        cb.userTypes && cb.userTypes.includes(p.registration_type)
+                    );
+                    if (match && match.url) {
+                        activeBgUrl = match.url;
+                    }
+                }
+                
+                return (
+                    <div 
+                        key={p.registrationId} 
+                        className="badge"
+                        style={{
+                            backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
+                        }}
+                    >
+                        <div className="name">{p.name}</div>
+                    </div>
+                );
+            })}
             
             <script dangerouslySetInnerHTML={{ __html: `
                 window.onload = () => {
