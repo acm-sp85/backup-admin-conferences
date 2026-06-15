@@ -39,7 +39,7 @@ export async function syncSocialDinnerTickets() {
             const ticket = tickets[i];
             const name = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
             
-            if (name && name.toLowerCase() === 'social dinner') {
+            if (name && name === 'Social Dinner') {
                 // Check if this specific ticket already has a token
                 const [existing] = await query(
                     'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',

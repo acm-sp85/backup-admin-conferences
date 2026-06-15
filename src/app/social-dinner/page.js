@@ -55,7 +55,10 @@ export default async function SocialDinnerPage({ searchParams }) {
     JOIN registrations r ON p.id = r.participant_id
     JOIN conferences c ON r.conference_id = c.id
     WHERE (
-      r.id IN (SELECT registration_id FROM payments WHERE tickets_info LIKE '%Social Dinner%')
+      r.id IN (
+        SELECT registration_id FROM payments 
+        WHERE tickets_info LIKE '%Social Dinner%'
+      )
       OR
       r.id IN (SELECT registration_id FROM social_dinner_tickets WHERE is_hidden = 0)
     )
@@ -121,7 +124,7 @@ export default async function SocialDinnerPage({ searchParams }) {
 
         ticketItems.forEach((ticket, idx) => {
           const tName = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
-          if (tName && tName.toLowerCase() === 'social dinner') {
+          if (tName === 'Social Dinner') {
             // Check if this specific ticket has been hidden/deleted
             const isHidden = pTickets.some(t => t.payment_id === pay.id && t.ticket_index === idx && t.is_hidden === 1);
             if (isHidden && !isShowAll) return;

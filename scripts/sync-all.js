@@ -44,11 +44,23 @@ const { MongoClient } = require('mongodb');
 const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 
+const isDinnerTicket = (name) => {
+  if (!name) return false;
+  const lower = name.toLowerCase().trim();
+  return lower === 'social dinner' || 
+         lower === 'cena de gala' || 
+         lower.startsWith('cena de gala (') ||
+         lower === 'gala dinner' ||
+         lower === 'conference dinner';
+};
+
+
 // Summary state
 const summary = {
   participants: 0,
   registrations: 0,
   payments: 0,
+  socialDinnerTickets: 0,
   sessions: 0,
   slots: 0,
   orals: 0,
@@ -275,6 +287,17 @@ async function syncAll() {
           if (registrationId) {
             const mongoId = pay._id.toString();
             seenPaymentMongoIds.add(mongoId);
+
+            // Normalize Dinner Tickets to "Social Dinner"
+            if (Array.isArray(pay.tickets)) {
+              pay.tickets.forEach(ticket => {
+                const tName = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
+                if (tName && isDinnerTicket(tName)) {
+                  if (ticket.name) ticket.name = 'Social Dinner';
+                  if (ticket.ticket_data && ticket.ticket_data.name) ticket.ticket_data.name = 'Social Dinner';
+                }
+              });
+            }
             const [res] = await mariadb.execute(`
               INSERT INTO payments (
                 registration_id, amount, balance, currency, status, payment_method, mongo_id,
@@ -304,7 +327,7 @@ async function syncAll() {
               for (let i = 0; i < tickets.length; i++) {
                 const ticket = tickets[i];
                 const tName = ticket.name || (ticket.ticket_data && ticket.ticket_data.name);
-                if (tName && tName.toLowerCase() === 'social dinner') {
+                 if (tName === 'Social Dinner') {
                   const [existing] = await mariadb.execute(
                     'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',
                     [paymentId, i]
@@ -320,7 +343,10 @@ async function syncAll() {
                     'SELECT id FROM social_dinner_tickets WHERE payment_id = ? AND ticket_index = ?',
                     [paymentId, i]
                   );
-                  if (final.length) seenTicketIds.add(final[0].id);
+                  if (final.length) {
+                    seenTicketIds.add(final[0].id);
+                    summary.socialDinnerTickets++;
+                  }
                 }
               }
             }
@@ -645,6 +671,7 @@ function printSummary(acronym) {
   console.log(`👤 New Participants: ${summary.participants}`);
   console.log(`🔗 New Registrations: ${summary.registrations}`);
   console.log(`💰 Payments Synced: ${summary.payments}`);
+  console.log(`🍽️  Social Dinner Tickets: ${summary.socialDinnerTickets}`);
   console.log(`🖼️  Posters: ${summary.posters.new} new, ${summary.posters.updated} updated`);
   console.log(`📅 Program: ${summary.sessions} sessions, ${summary.slots} slots`);
   console.log(`🎤 Orals Linked: ${summary.orals}`);
