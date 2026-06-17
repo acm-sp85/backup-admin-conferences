@@ -60,7 +60,8 @@ function translateType(type) {
     if (!type) return '';
     const t = type.toLowerCase();
     if (t.includes('symposium')) return 'Simposio';
-    if (t.includes('talk') || t.includes('oral') || t.includes('comunicación')) return 'Comunicación Asociada';
+    if (t.includes('oral')) return 'Oral';
+    if (t.includes('talk') || t.includes('comunicación')) return 'Comunicación Asociada';
     if (t.includes('workshop')) return 'Taller';
     if (t.includes('break')) return '';
     return type;
