@@ -66,7 +66,7 @@ export default async function ProgramPrintPage({ params }) {
                             className="font-medium uppercase tracking-widest mb-1 mt-6 opacity-70 text-center"
                             style={{ fontSize: '16px', color: config.titleColor }}
                         >
-                           {new Date(session.start_time).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                           {new Date(session.start_time).toLocaleDateString(Number(session.conference_id) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </div>
                         
                         <h1 
@@ -101,45 +101,56 @@ export default async function ProgramPrintPage({ params }) {
                         <table className="w-full border-collapse">
                             <tbody>
                                 {slots.map((slot, idx) => (
-                                    <tr key={idx} className="border-b border-black/10 last:border-0">
+                                    <tr key={idx} className={Number(session.conference_id) === 11 ? (slot.title?.includes('\u2022') && idx > 0 ? "border-t border-black/20" : "") : "border-b border-black/10 last:border-0"}>
                                         <td 
                                             className="py-1 pr-8 font-medium align-top whitespace-nowrap"
                                             style={{ fontSize: config.contentSize, color: config.contentColor }}
                                         >
-                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                            {slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                         </td>
                                         <td className="py-1 align-top">
-                                            <div 
-                                                className="font-semibold mb-1"
-                                                style={{ fontSize: config.contentSize, color: config.contentColor }}
-                                            >
-                                                {slot.title || '(No Title)'}
-                                            </div>
-                                            {slot.presenter_name && (
-                                                <div 
-                                                    className="font-normal opacity-85"
-                                                    style={{ fontSize: `calc(${config.contentSize} * 0.8)`, color: config.contentColor }}
-                                                >
-                                                    <span style={{ color: config.titleColor, fontWeight: 'bold' }}>
-                                                        {(() => {
-                                                            let displayName = slot.presenter_name;
-                                                            if (displayName.includes(',')) {
-                                                                const parts = displayName.split(',');
-                                                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
-                                                            }
-                                                            return formatName(displayName);
-                                                        })()}
-                                                    </span>
-                                                    {(slot.presenter_entity || slot.presenter_country) && (
-                                                        <span style={{ opacity: 0.8 }}>
-                                                            {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
-                                                        </span>
+                                            <div className={slot.title?.includes('\u21B3') ? 'flex gap-2' : ''}>
+                                                {slot.title?.includes('\u21B3') && (
+                                                    <div className="shrink-0 flex-none whitespace-pre opacity-80 pt-[1px]">
+                                                        {'\u00A0\u00A0\u00A0\u00A0\u21B3'}
+                                                    </div>
+                                                )}
+                                                <div className={slot.title?.includes('\u21B3') ? 'flex-1' : ''}>
+                                                    <div 
+                                                        className="font-semibold mb-1"
+                                                        style={{ fontSize: config.contentSize, color: config.contentColor }}
+                                                    >
+                                                        {slot.title?.includes('\u21B3') 
+                                                            ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') 
+                                                            : slot.title || '(No Title)'}
+                                                    </div>
+                                                    {slot.presenter_name && (
+                                                        <div 
+                                                            className="font-normal opacity-85"
+                                                            style={{ fontSize: `calc(${config.contentSize} * 0.8)`, color: config.contentColor }}
+                                                        >
+                                                            <span style={{ color: config.titleColor, fontWeight: 'bold' }}>
+                                                                {(() => {
+                                                                    let displayName = slot.presenter_name;
+                                                                    if (displayName.includes(',')) {
+                                                                        const parts = displayName.split(',');
+                                                                        displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                                    }
+                                                                    return formatName(displayName);
+                                                                })()}
+                                                            </span>
+                                                            {(slot.presenter_entity || slot.presenter_country) && (
+                                                                <span style={{ opacity: 0.8 }}>
+                                                                    {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     )}
+                                                    <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
+                                                    style={{ color: config.contentColor, opacity: 0.6 }}>
+                                                        {slot.type}
+                                                    </div>
                                                 </div>
-                                            )}
-                                            <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
-                                            style={{ color: config.contentColor, opacity: 0.6 }}>
-                                                {slot.type}
                                             </div>
                                         </td>
                                     </tr>

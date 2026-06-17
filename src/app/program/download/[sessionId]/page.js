@@ -74,7 +74,7 @@ export default async function DownloadDocPage({ params }) {
         <table>
             ${slots.map(slot => `
                 <tr>
-                    <td class="slot-time">${new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
+                    <td class="slot-time">${slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
                     <td>
                         <div class="slot-title">${slot.title || '(No Title)'}</div>
                         ${(() => {

@@ -279,40 +279,51 @@ export default function ProgramManager({ conferences, userRole }) {
                                                 {session.slots?.map((slot, idx) => (
                                                     <li key={idx} className="flex gap-4 text-xs">
                                                         <span className="text-slate-400 font-mono w-20 flex-shrink-0">
-                                                            {new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                            {slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                                         </span>
-                                                        <div className="flex-1 group/slot relative">
-                                                            <div className="font-bold text-slate-800 flex items-center gap-2">
-                                                                {slot.title || '(No Title)'}
-                                                                {!!slot.is_manual && (
-                                                                    <span className="text-[9px] font-bold uppercase tracking-tighter bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded" title="This slot was manually edited and won't be overwritten by sync">Manual</span>
-                                                                )}
-                                                                {(userRole === 'superadmin' || userRole === 'admin') && (
-                                                                    <button onClick={() => setEditingSlot(slot)} className="opacity-0 group-hover/slot:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Slot">
-                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                            {slot.presenter_name && (
-                                                                <div className="text-slate-500 mt-0.5">
-                                                                    <span className="font-medium text-slate-700">
-                                                                        {(() => {
-                                                                            let displayName = slot.presenter_name;
-                                                                            if (displayName.includes(',')) {
-                                                                                const parts = displayName.split(',');
-                                                                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
-                                                                            }
-                                                                            return formatName(displayName);
-                                                                        })()}
-                                                                    </span>
-                                                                    {(slot.presenter_entity || slot.presenter_country) && (
-                                                                        <span className="text-slate-400 font-normal">
-                                                                            {` (${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')})`}
-                                                                        </span>
-                                                                    )}
+                                                        <div className={`flex-1 group/slot relative ${slot.title?.includes('\u21B3') ? 'flex gap-1' : ''}`}>
+                                                            {slot.title?.includes('\u21B3') && (
+                                                                <div className="shrink-0 flex-none whitespace-pre text-slate-400 font-bold pt-[1px]">
+                                                                    {'\u00A0\u00A0\u00A0\u00A0\u21B3'}
                                                                 </div>
                                                             )}
-                                                            <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
+                                                            <div className={slot.title?.includes('\u21B3') ? 'flex-1' : ''}>
+                                                                <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                                    <span>
+                                                                        {slot.title?.includes('\u21B3') 
+                                                                            ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') 
+                                                                            : slot.title || '(No Title)'}
+                                                                    </span>
+                                                                    {!!slot.is_manual && (
+                                                                        <span className="text-[9px] font-bold uppercase tracking-tighter bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded" title="This slot was manually edited and won't be overwritten by sync">Manual</span>
+                                                                    )}
+                                                                    {(userRole === 'superadmin' || userRole === 'admin') && (
+                                                                        <button onClick={() => setEditingSlot(slot)} className="opacity-0 group-hover/slot:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Slot">
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                                {slot.presenter_name && (
+                                                                    <div className="text-slate-500 mt-0.5">
+                                                                        <span className="font-medium text-slate-700">
+                                                                            {(() => {
+                                                                                let displayName = slot.presenter_name;
+                                                                                if (displayName.includes(',')) {
+                                                                                    const parts = displayName.split(',');
+                                                                                    displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                                                }
+                                                                                return formatName(displayName);
+                                                                            })()}
+                                                                        </span>
+                                                                        {(slot.presenter_entity || slot.presenter_country) && (
+                                                                            <span className="text-slate-400 font-normal">
+                                                                                {` (${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')})`}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
+                                                            </div>
                                                         </div>
                                                     </li>
                                                 ))}
