@@ -94,11 +94,20 @@ async function main() {
                 groups[roomStr][timeBlock].push(sym);
             }
 
+            const roomDescriptions = {
+                "SALA 1": "SALA 1: Innovación y Emprendimiento en Psicología mediante tecnología y análisis de datos. Psicología de la Intervención en redes sociales, análisis de datos e IA",
+                "SALA 2": "SALA 2: Psicología Clínica y de la Salud",
+                "SALA 3": "SALA 3: Psicología de la Educación",
+                "SALA 4": "SALA 4: Psicología del Trabajo y de las Organizaciones. Psicología Social. Psicología Deportiva",
+                "SALA 5": "SALA 5: Psicología Jurídica. Psicología de la Mediación. Psicología del Tráfico y Seguridad Vial",
+                "SALA 6": "SALA 6: Neuropsicología. Psicología del Envejecimiento. Psicología de los Cuidados paliativos y Psicooncología. Psicología de las Emergencias y de la Cooperación. Psicología de la Igualdad y la Diversidad"
+            };
+
             for (const room in groups) {
                 for (const block in groups[room]) {
                     const symposiaList = groups[room][block];
                     
-                    const sessionName = `${room} - ${block} (${daySchedule.day})`;
+                    const sessionName = roomDescriptions[room] || room;
                     
                     let minStartTime = '23:59:59';
                     let maxEndTime = '00:00:00';

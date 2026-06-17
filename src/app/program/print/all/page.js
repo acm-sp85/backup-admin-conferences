@@ -78,7 +78,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                 
                                 <h1 
                                     className="font-bold leading-tight mb-2"
-                                    style={{ fontSize: config.titleSize || '48px' }}
+                                    style={{ fontSize: Number(conferenceId) === 11 ? '28px' : (config.titleSize || '48px') }}
                                 >
                                     {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
                                 </h1>
