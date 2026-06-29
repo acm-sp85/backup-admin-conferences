@@ -57,6 +57,7 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
                         <div className="flex flex-col md:flex-row gap-10 items-start">
                             {/* Preview Area */}
                             <div className="flex-shrink-0 mx-auto md:mx-0">
+                                <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@300..900&family=Inter:wght@300..900&family=Lora:ital,wght@0,300..900;1,300..900&family=Montserrat:wght@300..900&family=Open+Sans:wght@300..800&family=Outfit:wght@100..900&family=Playfair+Display:wght@400..900&family=Roboto:wght@100..900&display=swap" rel="stylesheet" />
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Badge Preview (80x98mm + 3mm Bleed)</p>
                                 <div className="relative shadow-2xl rounded-sm overflow-hidden border border-slate-200" style={{ width: '86mm', height: '104mm', transform: 'scale(0.6)', transformOrigin: 'top center' }}>
                                     {loading ? (
@@ -87,16 +88,64 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
                                             {/* Trim line indicator */}
                                             <div className="absolute inset-[3mm] border border-dashed border-slate-300 pointer-events-none" />
                                             
-                                            <div style={{ 
-                                                fontSize: config?.config?.nameSize || '32px', 
-                                                color: config?.config?.nameColor || '#000',
-                                                fontWeight: '700',
-                                                lineHeight: '1.1',
-                                                textTransform: 'uppercase',
-                                                zIndex: 2
-                                            }}>
-                                                {participantName}
-                                            </div>
+                                            {(() => {
+                                                const formatBadgeName = (fullName) => {
+                                                    if (!fullName) return '';
+                                                    let name = fullName;
+                                                    if (config?.config?.capitalizeName === false) {
+                                                        name = name.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+                                                    }
+                                                    const parts = name.trim().split(/\s+/);
+                                                    if (parts.length <= 1) return name;
+                                                    return `${parts[0]}<br/>${parts.slice(1).join(' ')}`;
+                                                };
+                                                return (
+                                                    <div 
+                                                        style={{ 
+                                                            fontFamily: `'${config?.config?.nameFont || 'Inter'}', sans-serif`,
+                                                            fontSize: config?.config?.nameSize || '32px', 
+                                                            color: config?.config?.nameColor || '#000',
+                                                            fontWeight: config?.config?.nameWeight || '700',
+                                                            lineHeight: '1.1',
+                                                            textTransform: config?.config?.capitalizeName !== false ? 'uppercase' : 'none',
+                                                            zIndex: 2,
+                                                            ...(config?.config?.nameY ? {
+                                                                position: 'absolute',
+                                                                top: config.config.nameY,
+                                                                left: config.config.sideMargin || '10mm',
+                                                                right: config.config.sideMargin || '10mm',
+                                                                margin: '0 auto',
+                                                                transform: 'translateY(-50%)'
+                                                            } : {})
+                                                        }}
+                                                        dangerouslySetInnerHTML={{ __html: formatBadgeName(participantName) }}
+                                                    />
+                                                );
+                                            })()}
+                                            {institution && (
+                                                <div style={{
+                                                    fontFamily: `'${config?.config?.instFont || 'Inter'}', sans-serif`,
+                                                    fontSize: config?.config?.instSize || '16px',
+                                                    color: config?.config?.instColor || '#666',
+                                                    fontWeight: config?.config?.instWeight || '400',
+                                                    textTransform: config?.config?.capitalizeInst ? 'uppercase' : 'none',
+                                                    zIndex: 2,
+                                                    wordBreak: 'break-word',
+                                                    maxWidth: '100%',
+                                                    ...(config?.config?.instY ? {
+                                                        position: 'absolute',
+                                                        top: config.config.instY,
+                                                        left: config.config.sideMargin || '10mm',
+                                                        right: config.config.sideMargin || '10mm',
+                                                        margin: '0 auto',
+                                                        transform: 'translateY(-50%)'
+                                                    } : {
+                                                        marginTop: '8px'
+                                                    })
+                                                }}>
+                                                    {institution}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -25,13 +25,29 @@ export default async function PrintBadgesPage({ searchParams }) {
 
     const { config, bgUrl } = await getBadgeConfig(conferenceId);
 
+    // Extract base values and unit (supporting mm, cm, px, etc.)
+    const parseDim = (val, defaultVal) => {
+        const str = String(val || defaultVal || '').trim();
+        const num = parseFloat(str) || 0;
+        const unit = str.replace(/[0-9.]/g, '').trim() || 'mm';
+        return { num, unit };
+    };
+
+    const widthDim = parseDim(config.width, '80mm');
+    const heightDim = parseDim(config.height, '98mm');
+    const bleedDim = parseDim(config.bleed, '3mm');
+
+    const totalWidth = `${widthDim.num + bleedDim.num * 2}${widthDim.unit}`;
+    const totalHeight = `${heightDim.num + bleedDim.num * 2}${heightDim.unit}`;
+    const bleedStr = `${bleedDim.num}${bleedDim.unit}`;
+
     return (
         <div className="print-container">
             <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@300..900&family=Inter:wght@300..900&family=Lora:ital,wght@0,300..900;1,300..900&family=Montserrat:wght@300..900&family=Open+Sans:wght@300..800&family=Outfit:wght@100..900&family=Playfair+Display:wght@400..900&family=Roboto:wght@100..900&display=swap');
                 
                 @page {
-                    size: 86mm 104mm; /* 80x98mm + 3mm bleed on each side */
+                    size: ${totalWidth} ${totalHeight}; 
                     margin: 0;
                 }
                 
@@ -44,8 +60,8 @@ export default async function PrintBadgesPage({ searchParams }) {
                 }
 
                 .badge {
-                    width: 86mm;
-                    height: 104mm;
+                    width: ${totalWidth};
+                    height: ${totalHeight};
                     background-color: white;
                     background-size: cover;
                     background-position: center;
@@ -53,7 +69,7 @@ export default async function PrintBadgesPage({ searchParams }) {
                     position: relative;
                     overflow: hidden;
                     box-sizing: border-box;
-                    padding: 13mm; /* 3mm bleed + 10mm internal safety margin */
+                    padding: calc(${bleedStr} + ${config.padding || '10mm'});
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -63,28 +79,61 @@ export default async function PrintBadgesPage({ searchParams }) {
                     font-family: 'Inter', sans-serif;
                 }
 
-                /* Trim line indicator (80x98mm) */
+                /* Trim line indicator */
                 .badge::after {
                     content: '';
                     position: absolute;
-                    top: 3mm;
-                    left: 3mm;
-                    right: 3mm;
-                    bottom: 3mm;
+                    top: ${bleedStr};
+                    left: ${bleedStr};
+                    right: ${bleedStr};
+                    bottom: ${bleedStr};
                     border: 0.2mm dashed rgba(0,0,0,0.15);
                     pointer-events: none;
                     z-index: 10;
                 }
 
                 .name {
+                    font-family: '${config.nameFont || 'Inter'}', sans-serif;
                     font-size: ${config.nameSize || '32px'};
                     color: ${config.nameColor || '#000000'};
-                    font-weight: 700;
+                    font-weight: ${config.nameWeight || '700'};
                     line-height: 1.1;
-                    z-index: 2;
                     word-wrap: break-word;
                     max-width: 100%;
-                    text-transform: uppercase;
+                    text-transform: ${config.capitalizeName !== false ? 'uppercase' : 'none'};
+                    
+                    ${config.nameY ? `
+                        position: absolute;
+                        top: ${config.nameY};
+                        left: ${config.sideMargin || '10mm'};
+                        right: ${config.sideMargin || '10mm'};
+                        margin: 0 auto;
+                        transform: translateY(-50%);
+                    ` : `
+                        z-index: 2;
+                    `}
+                }
+
+                .institution {
+                    font-family: '${config.instFont || 'Inter'}', sans-serif;
+                    font-size: ${config.instSize || '16px'};
+                    color: ${config.instColor || '#666666'};
+                    font-weight: ${config.instWeight || '400'};
+                    word-wrap: break-word;
+                    max-width: 100%;
+                    text-transform: ${config.capitalizeInst ? 'uppercase' : 'none'};
+                    
+                    ${config.instY ? `
+                        position: absolute;
+                        top: ${config.instY};
+                        left: ${config.sideMargin || '10mm'};
+                        right: ${config.sideMargin || '10mm'};
+                        margin: 0 auto;
+                        transform: translateY(-50%);
+                    ` : `
+                        margin-top: 8px;
+                        z-index: 2;
+                    `}
                 }
 
                 @media print {
@@ -97,29 +146,43 @@ export default async function PrintBadgesPage({ searchParams }) {
                 }
             `}} />
             
-            {participants.map(p => {
-                let activeBgUrl = bgUrl;
-                if (config?.customBackgrounds && p.registration_type) {
-                    const match = config.customBackgrounds.find(cb => 
-                        cb.userTypes && cb.userTypes.includes(p.registration_type)
-                    );
-                    if (match && match.url) {
-                        activeBgUrl = match.url;
+            {(() => {
+                const formatBadgeName = (fullName) => {
+                    if (!fullName) return '';
+                    let name = fullName;
+                    if (config?.capitalizeName === false) {
+                        name = name.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
                     }
-                }
-                
-                return (
-                    <div 
-                        key={p.registrationId} 
-                        className="badge"
-                        style={{
-                            backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
-                        }}
-                    >
-                        <div className="name">{p.name}</div>
-                    </div>
-                );
-            })}
+                    const parts = name.trim().split(/\s+/);
+                    if (parts.length <= 1) return name;
+                    return `${parts[0]}<br/>${parts.slice(1).join(' ')}`;
+                };
+
+                return participants.map(p => {
+                    let activeBgUrl = bgUrl;
+                    if (config?.customBackgrounds && p.registration_type) {
+                        const match = config.customBackgrounds.find(cb => 
+                            cb.userTypes && cb.userTypes.includes(p.registration_type)
+                        );
+                        if (match && match.url) {
+                            activeBgUrl = match.url;
+                        }
+                    }
+                    
+                    return (
+                        <div 
+                            key={p.registrationId} 
+                            className="badge"
+                            style={{
+                                backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
+                            }}
+                        >
+                            <div className="name" dangerouslySetInnerHTML={{ __html: formatBadgeName(p.name) }} />
+                            {p.entity && <div className="institution">{p.entity}</div>}
+                        </div>
+                    );
+                });
+            })()}
             
             <script dangerouslySetInnerHTML={{ __html: `
                 window.onload = () => {

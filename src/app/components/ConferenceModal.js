@@ -65,7 +65,10 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         instSize: '14px',
         instColor: '#666666',
         qrSize: '35mm',
-        padding: '10mm'
+        padding: '10mm',
+        width: '80mm',
+        height: '98mm',
+        bleed: '3mm'
     });
     const [availableUserTypes, setAvailableUserTypes] = useState([]);
 
@@ -745,7 +748,128 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Font Family</label>
+                                        <select 
+                                            value={badgeConfig.nameFont || 'Inter'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, nameFont: e.target.value })}
+                                            className="w-full h-10 px-2 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            {['Inter', 'Roboto', 'Outfit', 'Montserrat', 'Playfair Display', 'Open Sans', 'Lora', 'Cinzel'].map(f => (
+                                                <option key={f} value={f}>{f}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Font Weight</label>
+                                        <select 
+                                            value={badgeConfig.nameWeight || '700'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, nameWeight: e.target.value })}
+                                            className="w-full h-10 px-2 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="300">Light (300)</option>
+                                            <option value="400">Regular (400)</option>
+                                            <option value="500">Medium (500)</option>
+                                            <option value="700">Bold (700)</option>
+                                            <option value="900">Black (900)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Inst. Font Family</label>
+                                        <select 
+                                            value={badgeConfig.instFont || 'Inter'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, instFont: e.target.value })}
+                                            className="w-full h-10 px-2 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            {['Inter', 'Roboto', 'Outfit', 'Montserrat', 'Playfair Display', 'Open Sans', 'Lora', 'Cinzel'].map(f => (
+                                                <option key={f} value={f}>{f}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Inst. Font Weight</label>
+                                        <select 
+                                            value={badgeConfig.instWeight || '400'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, instWeight: e.target.value })}
+                                            className="w-full h-10 px-2 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="300">Light (300)</option>
+                                            <option value="400">Regular (400)</option>
+                                            <option value="500">Medium (500)</option>
+                                            <option value="700">Bold (700)</option>
+                                            <option value="900">Black (900)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-6 mt-3 px-1">
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="checkbox" 
+                                            id="capitalizeName"
+                                            checked={badgeConfig.capitalizeName !== false} 
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, capitalizeName: e.target.checked })}
+                                            className="w-4 h-4 text-blue-600 border-slate-200 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="capitalizeName" className="text-[10px] font-bold text-slate-500 uppercase cursor-pointer select-none">Capitalize Name</label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input 
+                                            type="checkbox" 
+                                            id="capitalizeInst"
+                                            checked={!!badgeConfig.capitalizeInst} 
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, capitalizeInst: e.target.checked })}
+                                            className="w-4 h-4 text-blue-600 border-slate-200 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="capitalizeInst" className="text-[10px] font-bold text-slate-500 uppercase cursor-pointer select-none">Capitalize Institution</label>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6 mt-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100/80">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-[9px] font-bold text-slate-500 uppercase ml-1">Name Y Position</label>
+                                            <span className="text-[9px] font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                                {badgeConfig.nameY || '50%'}
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="100"
+                                            value={parseInt(badgeConfig.nameY) || 50}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, nameY: `${e.target.value}%` })}
+                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                        />
+                                        <div className="flex justify-between text-[8px] text-slate-400 mt-1 px-0.5">
+                                            <span>0% (Top)</span>
+                                            <span>100% (Bottom)</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="block text-[9px] font-bold text-slate-500 uppercase ml-1">Inst. Y Position</label>
+                                            <span className="text-[9px] font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                                {badgeConfig.instY || '60%'}
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="100"
+                                            value={parseInt(badgeConfig.instY) || 60}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, instY: `${e.target.value}%` })}
+                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                        />
+                                        <div className="flex justify-between text-[8px] text-slate-400 mt-1 px-0.5">
+                                            <span>0% (Top)</span>
+                                            <span>100% (Bottom)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">QR Size</label>
                                         <input 
@@ -761,6 +885,46 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="text" 
                                             value={badgeConfig.padding}
                                             onChange={(e) => setBadgeConfig({ ...badgeConfig, padding: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Side Margin</label>
+                                        <input 
+                                            type="text" 
+                                            value={badgeConfig.sideMargin || '10mm'}
+                                            placeholder="e.g. 10mm"
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, sideMargin: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4 mt-3">
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Width (e.g. 80mm)</label>
+                                        <input 
+                                            type="text" 
+                                            value={badgeConfig.width || '80mm'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, width: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Height (e.g. 98mm)</label>
+                                        <input 
+                                            type="text" 
+                                            value={badgeConfig.height || '98mm'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, height: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Bleed (e.g. 3mm)</label>
+                                        <input 
+                                            type="text" 
+                                            value={badgeConfig.bleed || '3mm'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, bleed: e.target.value })}
                                             className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
                                         />
                                     </div>

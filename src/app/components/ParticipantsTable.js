@@ -4,14 +4,16 @@ import { useState, useTransition, useEffect } from 'react';
 import ParticipantRow from './ParticipantRow';
 import { sendParticipantCheckinQR } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
-import { Loader2, Mail, Download, Award, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, Download, Award, CheckCircle2, UserPlus } from 'lucide-react';
+import AddParticipantModal from './AddParticipantModal';
 
-export default function ParticipantsTable({ participants, activeConfId, activeConfEndDate, userRole, sortBy, order, searchParams }) {
+export default function ParticipantsTable({ participants, activeConfId, activeConfEndDate, userRole, sortBy, order, searchParams, registrationTypes }) {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [isSendingBulk, startSendingBulk] = useTransition();
     const [isSendingCerts, startSendingCerts] = useTransition();
     const [certProgress, setCertProgress] = useState(null); // { done, total, success, fail }
     const [isCompleted, setIsCompleted] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         if (activeConfEndDate) {
@@ -221,6 +223,13 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 hover:bg-black text-white border border-slate-950 rounded-lg text-xs font-semibold transition-all shadow-sm"
+                    >
+                        <UserPlus className="w-3.5 h-3.5 animate-in" />
+                        Add Participant
+                    </button>
+                    <button 
                         onClick={selectCheckedIn}
                         className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold hover:bg-green-100 transition-all shadow-sm"
                     >
@@ -293,6 +302,7 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                                 userRole={userRole}
                                 selected={selectedIds.has(person.primary_registration_id)}
                                 onSelect={() => toggleSelect(person.primary_registration_id)}
+                                registrationTypes={registrationTypes}
                             />
                         ))}
                     </tbody>
@@ -304,6 +314,14 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                     </div>
                 )}
             </div>
+
+            <AddParticipantModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                conferenceAcronym={searchParams.conference} 
+                conferenceId={activeConfId}
+                registrationTypes={registrationTypes}
+            />
         </div>
     );
 }

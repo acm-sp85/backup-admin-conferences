@@ -7,8 +7,9 @@ import ParticipantVoterToggle from './ParticipantVoterToggle';
 import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award, Download } from 'lucide-react';
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
+import { updateParticipantType } from '../actions/participants';
 
-export default function ParticipantRow({ person, activeConfId, isCompleted, userRole, selected, onSelect }) {
+export default function ParticipantRow({ person, activeConfId, isCompleted, userRole, selected, onSelect, registrationTypes }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSendingQR, setIsSendingQR] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
@@ -17,6 +18,8 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     const [isSavingAlias, setIsSavingAlias] = useState(false);
     const [aliasMessage, setAliasMessage] = useState(null);
     const [isSendingCert, setIsSendingCert] = useState(false);
+    const [userTypeInput, setUserTypeInput] = useState(person.registration_type || 'Standard');
+    const [isSavingType, setIsSavingType] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -145,7 +148,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                     </div>
                     <div className="flex flex-col mt-0.5">
                         <div className="text-[10px] text-[var(--muted)] flex items-center gap-2">
-                            {person.registration_type || 'Standard'}
+                            {userTypeInput || 'Standard'}
                             {person.qr_email_sent_at && <Mail className="w-2.5 h-2.5 text-blue-500" title="QR Sent" />}
                         </div>
                         {latestPayment?.group && (
@@ -444,6 +447,41 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                                     {aliasMessage.text}
                                                 </p>
                                             )}
+                                        </div>
+
+                                        <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
+                                            <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                                User Type (Registration)
+                                            </div>
+                                            <p className="text-[10px] text-[var(--muted)] -mt-1 mb-2">
+                                                Modify the registration type. This change is protected from future sync-all overrides.
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={userTypeInput}
+                                                    onChange={async (e) => {
+                                                        const newVal = e.target.value;
+                                                        setUserTypeInput(newVal);
+                                                        setIsSavingType(true);
+                                                        try {
+                                                            await updateParticipantType(person.id, newVal);
+                                                            alert('User type updated successfully!');
+                                                        } catch (err) {
+                                                            alert('Error: ' + err.message);
+                                                        } finally {
+                                                            setIsSavingType(false);
+                                                        }
+                                                    }}
+                                                    disabled={isSavingType}
+                                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+                                                >
+                                                    {(registrationTypes || []).map(t => (
+                                                        <option key={t} value={t}>{t}</option>
+                                                    ))}
+                                                </select>
+                                                {isSavingType && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

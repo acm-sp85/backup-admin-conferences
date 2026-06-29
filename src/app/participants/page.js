@@ -215,15 +215,34 @@ export default async function ParticipantsPage({ searchParams }) {
 
       <ParticipantsFilter conferences={conferences} />
 
-      <ParticipantsTable 
-        participants={filteredParticipants} 
-        activeConfId={activeConfId} 
-        activeConfEndDate={activeConfEndDate}
-        userRole={session.role}
-        sortBy={sortBy}
-        order={order}
-        searchParams={{ search, conference, status }}
-      />
+      {/* Fetch distinct registration types present in active conference */}
+      {(() => {
+        return query(`
+          SELECT DISTINCT p.registration_type 
+          FROM participants p
+          JOIN registrations r ON p.id = r.participant_id
+          WHERE r.conference_id = ? AND p.registration_type IS NOT NULL AND p.registration_type != ""
+          ORDER BY p.registration_type ASC
+        `, [activeConfId]).then(regTypes => {
+          const list = regTypes.map(r => r.registration_type);
+          // Standard defaults in case the conference database is empty
+          const defaults = ['Standard', 'Student', 'Staff', 'Organizer', 'Invited Speaker'];
+          const union = Array.from(new Set([...list, ...defaults])).filter(Boolean);
+
+          return (
+            <ParticipantsTable 
+              participants={filteredParticipants} 
+              activeConfId={activeConfId} 
+              activeConfEndDate={activeConfEndDate}
+              userRole={session.role}
+              sortBy={sortBy}
+              order={order}
+              searchParams={{ search, conference, status }}
+              registrationTypes={union}
+            />
+          );
+        });
+      })()}
     </DashboardLayout>
   );
 }
