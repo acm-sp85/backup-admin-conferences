@@ -42,7 +42,7 @@ export default async function PrintBadgesPage({ searchParams }) {
     const bleedStr = `${bleedDim.num}${bleedDim.unit}`;
 
     return (
-        <div className="print-container">
+        <div className="print-container" style={{ paddingTop: '60px' }}>
             <style dangerouslySetInnerHTML={{ __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@300..900&family=Inter:wght@300..900&family=Lora:ital,wght@0,300..900;1,300..900&family=Montserrat:wght@300..900&family=Open+Sans:wght@300..800&family=Outfit:wght@100..900&family=Playfair+Display:wght@400..900&family=Roboto:wght@100..900&display=swap');
                 
@@ -54,14 +54,59 @@ export default async function PrintBadgesPage({ searchParams }) {
                 html, body {
                     margin: 0;
                     padding: 0;
-                    background: #f0f0f0;
+                    background: #f8fafc;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                 }
 
-                .badge {
+                .print-controls {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 55px;
+                    background: #0f172a;
+                    color: white;
+                    padding: 0 24px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    z-index: 1000;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                    font-family: system-ui, -apple-system, sans-serif;
+                    font-size: 13px;
+                }
+
+                .print-btn {
+                    background: #4f46e5;
+                    color: white;
+                    border: none;
+                    padding: 8px 18px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+                }
+
+                .print-btn:hover {
+                    background: #4338ca;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);
+                }
+
+                .badge-wrapper {
+                    position: relative;
+                    margin: 20px auto;
                     width: ${totalWidth};
                     height: ${totalHeight};
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+                    border-radius: 4px;
+                }
+
+                .badge {
+                    width: 100%;
+                    height: 100%;
                     background-color: white;
                     background-size: cover;
                     background-position: center;
@@ -75,7 +120,6 @@ export default async function PrintBadgesPage({ searchParams }) {
                     align-items: center;
                     justify-content: center;
                     text-align: center;
-                    page-break-after: always;
                     font-family: 'Inter', sans-serif;
                 }
 
@@ -101,6 +145,11 @@ export default async function PrintBadgesPage({ searchParams }) {
                     word-wrap: break-word;
                     max-width: 100%;
                     text-transform: ${config.capitalizeName !== false ? 'uppercase' : 'none'};
+                    outline: none;
+                    border: 1px transparent dashed;
+                    border-radius: 4px;
+                    transition: border 0.15s;
+                    cursor: text;
                     
                     ${config.nameY ? `
                         position: absolute;
@@ -114,6 +163,11 @@ export default async function PrintBadgesPage({ searchParams }) {
                     `}
                 }
 
+                .name:hover, .name:focus {
+                    border-color: rgba(79, 70, 229, 0.4);
+                    background-color: rgba(79, 70, 229, 0.02);
+                }
+
                 .institution {
                     font-family: '${config.instFont || 'Inter'}', sans-serif;
                     font-size: ${config.instSize || '16px'};
@@ -122,6 +176,11 @@ export default async function PrintBadgesPage({ searchParams }) {
                     word-wrap: break-word;
                     max-width: 100%;
                     text-transform: ${config.capitalizeInst ? 'uppercase' : 'none'};
+                    outline: none;
+                    border: 1px transparent dashed;
+                    border-radius: 4px;
+                    transition: border 0.15s;
+                    cursor: text;
                     
                     ${config.instY ? `
                         position: absolute;
@@ -136,15 +195,86 @@ export default async function PrintBadgesPage({ searchParams }) {
                     `}
                 }
 
+                .institution:hover, .institution:focus {
+                    border-color: rgba(79, 70, 229, 0.4);
+                    background-color: rgba(79, 70, 229, 0.02);
+                }
+
+                .badge-editor-controls {
+                    position: absolute;
+                    top: 10px;
+                    right: -105px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    background: #0f172a;
+                    color: white;
+                    padding: 10px;
+                    border-radius: 12px;
+                    font-family: system-ui, -apple-system, sans-serif;
+                    font-size: 8px;
+                    z-index: 100;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    width: 80px;
+                    text-align: left;
+                }
+
+                .badge-editor-controls label {
+                    display: block;
+                    font-weight: bold;
+                    margin-bottom: 3px;
+                    text-transform: uppercase;
+                    color: #94a3b8;
+                }
+
+                .badge-editor-controls input[type="range"] {
+                    width: 100%;
+                    height: 2px;
+                    background: #334155;
+                    border-radius: 2px;
+                    appearance: none;
+                    cursor: pointer;
+                    accent-color: #6366f1;
+                }
+
                 @media print {
-                    body {
+                    html, body {
                         background: white;
+                    }
+                    .print-container {
+                        padding-top: 0 !important;
+                    }
+                    .print-controls, .badge-editor-controls {
+                        display: none !important;
+                    }
+                    .badge-wrapper {
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        page-break-after: always;
                     }
                     .badge::after {
                         display: none !important; /* Never print the dashed trim line */
                     }
+                    .name, .institution {
+                        border: none !important;
+                        background: transparent !important;
+                    }
                 }
             `}} />
+
+            {/* Print Settings Control Bar */}
+            <div className="print-controls">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>✏️</span>
+                    <div>
+                        <strong style={{ color: '#818cf8' }}>Edit Mode Active:</strong> Click directly on any participant name or institution to customize before printing. Changes are temporary.
+                    </div>
+                </div>
+                <button className="print-btn" id="print-button-trigger">
+                    Print Badges
+                </button>
+            </div>
             
             {(() => {
                 const formatBadgeName = (fullName) => {
@@ -170,26 +300,132 @@ export default async function PrintBadgesPage({ searchParams }) {
                     }
                     
                     return (
-                        <div 
-                            key={p.registrationId} 
-                            className="badge"
-                            style={{
-                                backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
-                            }}
-                        >
-                            <div className="name" dangerouslySetInnerHTML={{ __html: formatBadgeName(p.name) }} />
-                            {p.entity && <div className="institution">{p.entity}</div>}
+                        <div key={p.registrationId} className="badge-wrapper">
+                            {/* Card-specific alignment controls (hidden on print) */}
+                            <div className="badge-editor-controls">
+                                <div>
+                                    <label>Name Y</label>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        defaultValue={parseInt(config.nameY) || 50}
+                                        className="slider-name-y"
+                                    />
+                                </div>
+                                <div>
+                                    <label>Inst Y</label>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        defaultValue={parseInt(config.instY) || 60}
+                                        className="slider-inst-y"
+                                    />
+                                </div>
+                                <div>
+                                    <label>Margin</label>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="40" 
+                                        defaultValue={parseInt(config.sideMargin) || 10}
+                                        className="slider-margin"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className="toggle-inst-white" 
+                                        id={`inst-white-${p.registrationId}`}
+                                        style={{ margin: 0, width: 'auto', cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor={`inst-white-${p.registrationId}`} style={{ margin: 0, cursor: 'pointer', whiteSpace: 'nowrap' }}>White Inst</label>
+                                </div>
+                            </div>
+
+                            <div 
+                                className="badge"
+                                style={{
+                                    backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
+                                }}
+                            >
+                                <div 
+                                    className="name" 
+                                    contentEditable="true" 
+                                    suppressContentEditableWarning={true}
+                                    dangerouslySetInnerHTML={{ __html: formatBadgeName(p.name) }} 
+                                />
+                                {p.entity ? (
+                                    <div 
+                                        className="institution" 
+                                        contentEditable="true" 
+                                        suppressContentEditableWarning={true}
+                                    >
+                                        {p.entity}
+                                    </div>
+                                ) : (
+                                    <div 
+                                        className="institution" 
+                                        contentEditable="true" 
+                                        suppressContentEditableWarning={true}
+                                        style={{ minHeight: '1.2em', minWidth: '50px' }}
+                                    />
+                                )}
+                            </div>
                         </div>
                     );
                 });
             })()}
-            
+
             <script dangerouslySetInnerHTML={{ __html: `
-                window.onload = () => {
-                    setTimeout(() => {
-                        window.print();
-                    }, 1000);
-                }
+                document.getElementById('print-button-trigger').addEventListener('click', function() {
+                    window.print();
+                });
+
+                document.querySelectorAll('.badge-wrapper').forEach(function(wrapper) {
+                    const badge = wrapper.querySelector('.badge');
+                    const nameEl = badge.querySelector('.name');
+                    const instEl = badge.querySelector('.institution');
+                    
+                    const nameYSlider = wrapper.querySelector('.slider-name-y');
+                    nameYSlider.addEventListener('input', function() {
+                        nameEl.style.position = 'absolute';
+                        nameEl.style.transform = 'translateY(-50%)';
+                        nameEl.style.top = this.value + '%';
+                    });
+                    
+                    const instYSlider = wrapper.querySelector('.slider-inst-y');
+                    instYSlider.addEventListener('input', function() {
+                        if (instEl) {
+                            instEl.style.position = 'absolute';
+                            instEl.style.transform = 'translateY(-50%)';
+                            instEl.style.top = this.value + '%';
+                        }
+                    });
+                    
+                    const marginSlider = wrapper.querySelector('.slider-margin');
+                    marginSlider.addEventListener('input', function() {
+                        nameEl.style.left = this.value + 'mm';
+                        nameEl.style.right = this.value + 'mm';
+                        if (instEl) {
+                            instEl.style.left = this.value + 'mm';
+                            instEl.style.right = this.value + 'mm';
+                        }
+                    });
+
+                    const whiteInstCheckbox = wrapper.querySelector('.toggle-inst-white');
+                    whiteInstCheckbox.addEventListener('change', function() {
+                        if (instEl) {
+                            if (this.checked) {
+                                instEl.dataset.originalColor = instEl.style.color || window.getComputedStyle(instEl).color;
+                                instEl.style.color = '#FFFFFF';
+                            } else {
+                                instEl.style.color = instEl.dataset.originalColor || '';
+                            }
+                        }
+                    });
+                });
             `}} />
         </div>
     );
