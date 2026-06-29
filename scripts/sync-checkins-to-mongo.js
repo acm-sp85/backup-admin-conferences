@@ -65,8 +65,8 @@ async function main() {
     eventId = args[eventIdx + 1];
   }
 
-  const ACRONYM = process.env.CONFERENCE_ACRONYM || 'HOPV26';
-  const PLATFORM = (process.env.CONFERENCE_PLATFORM || 'NANOGE').toUpperCase();
+  const ACRONYM = process.env.CONFERENCE_ACRONYM;
+  const PLATFORM = process.env.CONFERENCE_PLATFORM;
   const isScito = PLATFORM === 'SCITO';
   const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
   

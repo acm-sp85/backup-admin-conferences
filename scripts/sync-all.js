@@ -231,7 +231,7 @@ async function syncAll() {
             summary.participants++;
           } else {
             await mariadb.execute(
-              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ?, country_inferred = ?, entity_address = ?, entity_zip = ?, entity_city = ?, entity_country = ? WHERE id = ?', 
+              'UPDATE participants SET firstName = ?, lastName = ?, registration_type = ?, entity = ?, country = ?, country_inferred = ?, entity_address = ?, entity_zip = ?, entity_city = ?, entity_country = ? WHERE id = ? AND is_manual = 0', 
               [firstName, lastName, record.registration_type || 'Standard', entity, country, country_inferred, entity_address, entity_zip, entity_city, entity_country, participantId]
             );
           }
@@ -548,14 +548,14 @@ async function syncAll() {
       
       if (seenRegistrationIds.size > 0) {
           const ids = Array.from(seenRegistrationIds).join(',');
-          const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
+          const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})`, [conferenceId]);
           for (const row of toArchive) {
               await mariadb.execute(
                   'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
                   ['registration', row.id, conferenceId, JSON.stringify(row)]
               );
           }
-          const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND is_guest = 0 AND id NOT IN (${ids})`, [conferenceId]);
+          const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})`, [conferenceId]);
           if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
       }
 
