@@ -124,14 +124,13 @@ export default async function PrintBadgesPage({ searchParams }) {
                 }
 
                 /* Trim line indicator */
-                .badge::after {
-                    content: '';
+                .trim-line {
                     position: absolute;
                     top: ${bleedStr};
                     left: ${bleedStr};
                     right: ${bleedStr};
                     bottom: ${bleedStr};
-                    border: 0.2mm dashed rgba(0,0,0,0.15);
+                    border: 0.2mm dashed rgba(0,0,0,0.18);
                     pointer-events: none;
                     z-index: 10;
                 }
@@ -253,8 +252,8 @@ export default async function PrintBadgesPage({ searchParams }) {
                         border-radius: 0 !important;
                         page-break-after: always;
                     }
-                    .badge::after {
-                        display: none !important; /* Never print the dashed trim line */
+                    body.hide-trim-lines-print .trim-line {
+                        display: none !important;
                     }
                     .name, .institution {
                         border: none !important;
@@ -265,10 +264,21 @@ export default async function PrintBadgesPage({ searchParams }) {
 
             {/* Print Settings Control Bar */}
             <div className="print-controls">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>✏️</span>
-                    <div>
-                        <strong style={{ color: '#818cf8' }}>Edit Mode Active:</strong> Click directly on any participant name or institution to customize before printing. Changes are temporary.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>✏️</span>
+                        <div>
+                            <strong style={{ color: '#818cf8' }}>Edit Mode Active:</strong> Click directly on any participant name or institution to customize before printing. Changes are temporary.
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e293b', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
+                        <input 
+                            type="checkbox" 
+                            id="toggle-print-trim-lines" 
+                            defaultChecked={true}
+                            style={{ margin: 0, cursor: 'pointer', width: 'auto' }}
+                        />
+                        <label htmlFor="toggle-print-trim-lines" style={{ margin: 0, cursor: 'pointer', fontWeight: 'bold', color: '#e2e8f0', whiteSpace: 'nowrap' }}>Print Trim Lines</label>
                     </div>
                 </div>
                 <button className="print-btn" id="print-button-trigger">
@@ -350,6 +360,7 @@ export default async function PrintBadgesPage({ searchParams }) {
                                     backgroundImage: activeBgUrl ? `url("${activeBgUrl.replace(/"/g, '%22')}")` : 'none'
                                 }}
                             >
+                                <div className="trim-line" />
                                 <div 
                                     className="name" 
                                     contentEditable="true" 
@@ -381,6 +392,15 @@ export default async function PrintBadgesPage({ searchParams }) {
             <script dangerouslySetInnerHTML={{ __html: `
                 document.getElementById('print-button-trigger').addEventListener('click', function() {
                     window.print();
+                });
+
+                const toggleTrimCheckbox = document.getElementById('toggle-print-trim-lines');
+                toggleTrimCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        document.body.classList.remove('hide-trim-lines-print');
+                    } else {
+                        document.body.classList.add('hide-trim-lines-print');
+                    }
                 });
 
                 document.querySelectorAll('.badge-wrapper').forEach(function(wrapper) {
