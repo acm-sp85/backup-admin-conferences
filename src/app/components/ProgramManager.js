@@ -15,6 +15,32 @@ const formatName = (name) => {
         .join('-');
 };
 
+// ── CIPIE time slots ────────────────────────────────────────────────────────
+const CIPIE_TIME_SLOTS = [
+    { id: 'ts1', label: '10:00 – 11:00',  startH: 10, startM: 0,  endH: 11, endM: 0  },
+    { id: 'ts2', label: '11:30 – 12:30',  startH: 11, startM: 30, endH: 12, endM: 30 },
+    { id: 'ts3', label: '13:30 – 14:15',  startH: 13, startM: 30, endH: 14, endM: 15 },
+    { id: 'ts4', label: '17:00 – 18:00',  startH: 17, startM: 0,  endH: 18, endM: 0  },
+    { id: 'ts5', label: '18:30 – 20:00',  startH: 18, startM: 30, endH: 20, endM: 0  },
+];
+
+function matchSessionToSlot(startTimeStr) {
+    const d = new Date(startTimeStr);
+    const mins = d.getHours() * 60 + d.getMinutes();
+    for (const ts of CIPIE_TIME_SLOTS) {
+        const sMin = ts.startH * 60 + ts.startM;
+        const eMin = ts.endH * 60 + ts.endM;
+        if (mins >= sMin - 15 && mins < eMin + 5) return ts;
+    }
+    // fallback: closest slot
+    let best = CIPIE_TIME_SLOTS[0], bestDiff = Infinity;
+    for (const ts of CIPIE_TIME_SLOTS) {
+        const diff = Math.abs(mins - (ts.startH * 60 + ts.startM));
+        if (diff < bestDiff) { bestDiff = diff; best = ts; }
+    }
+    return best;
+}
+
 export default function ProgramManager({ conferences, userRole }) {
     // Initialize from cookie if available
     const [selectedConfId, setSelectedConfId] = useState(() => {
@@ -130,17 +156,77 @@ export default function ProgramManager({ conferences, userRole }) {
         }
     };
 
+    const isCipie = Number(selectedConfId) === 11;
+
     // Group sessions by day
     const groupedProgram = program
         .filter(s => showHidden || !s.is_hidden)
         .reduce((groups, session) => {
-            const date = new Date(session.start_time).toLocaleDateString('en-GB', { 
+            const locale = isCipie ? 'es-ES' : 'en-GB';
+            const date = new Date(session.start_time).toLocaleDateString(locale, { 
                 weekday: 'long', day: 'numeric', month: 'long' 
             });
-            if (!groups[date]) groups[date] = [];
-            groups[date].push(session);
+            const dayKey = date.charAt(0).toUpperCase() + date.slice(1);
+            if (!groups[dayKey]) groups[dayKey] = [];
+            groups[dayKey].push(session);
             return groups;
         }, {});
+
+    /**
+     * For CIPIE: walk each session's slots, group top-level slot+children pairs
+     * by the SLOT's start time, placing them into the correct time bucket.
+     * A single session can appear in multiple buckets (split across time blocks).
+     *
+     * Returns: [{ id, label, sessionGroups: [{ session, slots }] }]
+     */
+    function groupByTimeSlot(sessions) {
+        if (!isCipie) {
+            return [{ id: 'all', label: null, sessionGroups: sessions.map(s => ({ session: s, slots: s.slots || [] })) }];
+        }
+
+        // buckets keyed by ts.id; each holds a sessionMap: { sessionId -> { session, slots[] } }
+        const buckets = {};
+        for (const ts of CIPIE_TIME_SLOTS) buckets[ts.id] = { ...ts, sessionMap: {} };
+        buckets['other'] = { id: 'other', label: 'Otros horarios', sessionMap: {} };
+
+        for (const session of sessions) {
+            const allSlots = session.slots || [];
+            let i = 0;
+            while (i < allSlots.length) {
+                const slot = allSlots[i];
+                // Child slots (↳) are collected under their parent — skip as leading entries
+                if (slot.title?.includes('\u21B3')) { i++; continue; }
+
+                // Collect this top-level slot + all immediately following children
+                const group = [slot];
+                let j = i + 1;
+                while (j < allSlots.length && allSlots[j].title?.includes('\u21B3')) {
+                    group.push(allSlots[j]);
+                    j++;
+                }
+                i = j;
+
+                // Determine time bucket from this slot's own start time
+                const ts = matchSessionToSlot(slot.start_time);
+                const bucketId = ts ? ts.id : 'other';
+
+                if (!buckets[bucketId].sessionMap[session.id]) {
+                    buckets[bucketId].sessionMap[session.id] = { session, slots: [] };
+                }
+                buckets[bucketId].sessionMap[session.id].slots.push(...group);
+            }
+        }
+
+        const sortByRoom = groups => [...groups].sort((a, b) => {
+            const n = s => parseInt(s.session?.session_name?.match(/SALA\s*(\d+)/i)?.[1] ?? '99');
+            return n(a) - n(b);
+        });
+
+        return [
+            ...CIPIE_TIME_SLOTS.map(ts => ({ ...ts, sessionGroups: sortByRoom(Object.values(buckets[ts.id].sessionMap)) })),
+            { id: 'other', label: 'Otros horarios', sessionGroups: sortByRoom(Object.values(buckets['other'].sessionMap)) },
+        ].filter(g => g.sessionGroups.length > 0);
+    }
 
     return (
         <div className="space-y-6">
@@ -174,7 +260,7 @@ export default function ProgramManager({ conferences, userRole }) {
                     </button>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     <button 
                         onClick={() => setIsCustomizing(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
@@ -183,11 +269,25 @@ export default function ProgramManager({ conferences, userRole }) {
                         Customize Door Signs
                     </button>
                     <button 
+                        onClick={() => window.open(`/program/timetable?conferenceId=${selectedConfId}`, '_blank')}
+                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        View Timetable
+                    </button>
+                    <button 
+                        onClick={() => window.open(`/program/download/all?conferenceId=${selectedConfId}`, '_blank')}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                        Download Full Program (.doc)
+                    </button>
+                    <button 
                         onClick={() => window.open(`/program/print/all?conferenceId=${selectedConfId}`, '_blank')}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                        Print Full Program
+                        Print All Door Signs
                     </button>
                 </div>
             </div>
@@ -201,16 +301,41 @@ export default function ProgramManager({ conferences, userRole }) {
             ) : (
                 <div className="space-y-12">
                     {Object.entries(groupedProgram).map(([day, sessions]) => (
-                        <div key={day} className="space-y-4">
+                        <div key={day} className="space-y-6">
                             <h3 className="text-lg font-bold text-slate-800 border-b pb-2 sticky top-0 bg-[var(--bg)] z-10">{day}</h3>
-                            <div className="grid grid-cols-1 gap-4">
-                                {sessions.map(session => (
+
+                            {groupByTimeSlot(sessions).map(tsGroup => (
+                                <div key={tsGroup.id} className="space-y-4">
+                                    {/* Time-slot pill separator (CIPIE only) */}
+                                    {tsGroup.label && (
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-white px-3 py-1 rounded-full whitespace-nowrap shadow-sm"
+                                                style={{ backgroundColor: config?.config?.titleColor || '#7c3aed' }}>
+                                                {tsGroup.label}
+                                            </span>
+                                            <div className="flex-1 h-px bg-slate-200" />
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {tsGroup.sessionGroups.map(({ session, slots }) => (
                                     <div key={session.id} className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-300 transition-all ${session.is_hidden ? 'opacity-50 grayscale-[0.5]' : ''}`}>
                                         <div className="p-4 flex justify-between items-start bg-slate-50/50">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1.5">
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                                                        {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                        {(() => {
+                                                            const fmt = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                                                            if (isCipie && slots.length > 0) {
+                                                                const topLevel = slots.filter(s => !s.title?.includes('\u21B3'));
+                                                                const first = topLevel[0] || slots[0];
+                                                                const last  = topLevel[topLevel.length - 1] || slots[slots.length - 1];
+                                                                return first === last
+                                                                    ? fmt(first.start_time)
+                                                                    : `${fmt(first.start_time)} – ${fmt(last.start_time)}`;
+                                                            }
+                                                            return `${fmt(session.start_time)} – ${fmt(session.end_time)}`;
+                                                        })()}
                                                     </span>
                                                     {!!session.is_hidden && (
                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
@@ -276,7 +401,7 @@ export default function ProgramManager({ conferences, userRole }) {
                                         </div>
                                         <div className="p-4 border-t border-slate-100">
                                             <ul className="space-y-3">
-                                                {session.slots?.map((slot, idx) => (
+                                                {slots.map((slot, idx) => (
                                                     <li key={idx} className="flex gap-4 text-xs">
                                                         <span className="text-slate-400 font-mono w-20 flex-shrink-0">
                                                             {slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -327,11 +452,13 @@ export default function ProgramManager({ conferences, userRole }) {
                                                         </div>
                                                     </li>
                                                 ))}
-                                            </ul>
-                                        </div>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     ))}
                 </div>
