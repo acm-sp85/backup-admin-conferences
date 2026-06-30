@@ -197,7 +197,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                     token={token} 
                                     registrationId={registrationId}
                                     conferenceId={conferenceId}
-                                    institution={person.regInstitution || person.institution}
+                                    institution={person.entity || person.regInstitution || person.institution}
                                     registrationType={person.registration_type}
                                 />
                                 <ParticipantQRBadge 

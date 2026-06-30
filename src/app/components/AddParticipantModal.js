@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition, useEffect } from 'react';
-import { Search, Loader2, UserPlus, X, Users, UserCheck } from 'lucide-react';
-import { searchGlobalParticipants, registerExistingParticipant, addManualParticipant } from '../actions/participants';
+import { Search, Loader2, UserPlus, X, Users, UserCheck, Upload, Download, FileText } from 'lucide-react';
+import { searchGlobalParticipants, registerExistingParticipant, addManualParticipant, bulkAddManualParticipants } from '../actions/participants';
 
 export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym, conferenceId, registrationTypes }) {
   const [tab, setTab] = useState('search');
@@ -22,6 +22,12 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
   const [country, setCountry] = useState('');
   const [isAddingNew, startAddingNew] = useTransition();
 
+  // CSV tab state
+  const [csvData, setCsvData] = useState([]);
+  const [csvError, setCsvError] = useState(null);
+  const [isUploading, startUploading] = useTransition();
+  const [importResult, setImportResult] = useState(null);
+
   // Reset fields on close
   useEffect(() => {
     if (!isOpen) {
@@ -34,6 +40,9 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
       setRegistrationType('Standard');
       setEntity('');
       setCountry('');
+      setCsvData([]);
+      setCsvError(null);
+      setImportResult(null);
     }
   }, [isOpen]);
 
@@ -93,12 +102,96 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
     });
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target.result;
+      try {
+        const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (lines.length < 2) {
+          setCsvError('File must contain a header row and at least one data row.');
+          return;
+        }
+        
+        // Simple CSV parser supporting basic quotes
+        const parseLine = (line) => {
+           const result = [];
+           let current = '';
+           let inQuotes = false;
+           for (let i=0; i<line.length; i++) {
+             if (line[i] === '"') inQuotes = !inQuotes;
+             else if (line[i] === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+             else current += line[i];
+           }
+           result.push(current.trim());
+           return result;
+        };
+
+        const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
+        
+        // Map columns based on keywords
+        let map = { fname: 0, lname: 1, email: 2, type: 3, entity: 4, country: 5 };
+        headers.forEach((h, i) => {
+            if (h.includes('first')) map.fname = i;
+            else if (h.includes('last')) map.lname = i;
+            else if (h.includes('email')) map.email = i;
+            else if (h.includes('type') || h.includes('reg')) map.type = i;
+            else if (h.includes('entity') || h.includes('inst') || h.includes('univ')) map.entity = i;
+            else if (h.includes('country')) map.country = i;
+        });
+
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseLine(lines[i]);
+            if (cols.length < 3) continue;
+            
+            data.push({
+               firstName: cols[map.fname] || '',
+               lastName: cols[map.lname] || '',
+               email: (cols[map.email] || '').toLowerCase(),
+               registration_type: cols[map.type] || 'Standard',
+               entity: cols[map.entity] || '',
+               country: cols[map.country] || ''
+            });
+        }
+        
+        // Filter out empty emails
+        const validData = data.filter(d => d.email && d.email.includes('@'));
+        if (validData.length === 0) {
+            setCsvError('No valid email addresses found in the CSV.');
+            return;
+        }
+
+        setCsvData(validData);
+        setCsvError(null);
+        setImportResult(null);
+      } catch (err) {
+        setCsvError('Error parsing CSV: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkImport = () => {
+     if (csvData.length === 0) return;
+     startUploading(async () => {
+        try {
+           const res = await bulkAddManualParticipants(csvData, conferenceId);
+           setImportResult(res);
+        } catch (e) {
+           setCsvError('Error importing: ' + e.message);
+        }
+     });
+  };
+
   if (!isOpen) return null;
 
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className={`bg-white rounded-3xl shadow-2xl w-full ${tab === 'csv' ? 'max-w-3xl' : 'max-w-md'} overflow-hidden animate-in fade-in zoom-in duration-200 transition-all`}>
         
         {/* Header */}
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -130,6 +223,15 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
           >
             <UserPlus className="w-3.5 h-3.5" />
             Create Brand New
+          </button>
+          <button
+            onClick={() => setTab('csv')}
+            className={`flex-1 py-3 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
+              tab === 'csv' ? 'text-green-600 border-green-600' : 'text-slate-400 border-transparent hover:text-slate-600'
+            }`}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Upload CSV
           </button>
         </div>
 
@@ -202,7 +304,7 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
                 )}
               </div>
             </div>
-          ) : (
+          ) : tab === 'create' ? (
             /* ── Tab 2: Create Brand New Participant Form ── */
             <form onSubmit={handleAddNew} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -293,6 +395,121 @@ export default function AddParticipantModal({ isOpen, onClose, conferenceAcronym
                 </button>
               </div>
             </form>
+          ) : (
+            /* ── Tab 3: Upload CSV ── */
+            <div className="space-y-4">
+               {importResult ? (
+                  <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center">
+                      <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <UserCheck className="w-6 h-6" />
+                      </div>
+                      <h4 className="text-sm font-bold text-green-800 mb-1">Import Complete!</h4>
+                      <p className="text-xs text-green-700 font-medium">
+                          Successfully processed <b>{importResult.processed}</b> participants.
+                      </p>
+                      {importResult.duplicates > 0 && (
+                          <p className="text-xs text-amber-600 font-medium mt-2 bg-amber-50 px-2 py-1 rounded inline-block">
+                              Skipped {importResult.duplicates} duplicates
+                          </p>
+                      )}
+                      {importResult.errors?.length > 0 && (
+                          <div className="mt-4 text-left max-h-32 overflow-y-auto bg-white/60 p-3 rounded-xl border border-red-100 text-[10px] text-red-600 font-medium">
+                              <p className="font-bold mb-1">Errors encountered:</p>
+                              {importResult.errors.map((e, i) => (
+                                  <div key={i}>• Row: {e.row?.email || 'Unknown'} - {e.error}</div>
+                              ))}
+                          </div>
+                      )}
+                      <button 
+                         onClick={onClose}
+                         className="mt-6 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-green-100"
+                      >
+                         Done
+                      </button>
+                  </div>
+               ) : (
+                  <>
+                     <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-6 text-center">
+                         <input 
+                             type="file" 
+                             accept=".csv" 
+                             onChange={handleFileUpload}
+                             className="hidden" 
+                             id="csv-upload"
+                         />
+                         <label htmlFor="csv-upload" className="cursor-pointer flex flex-col items-center">
+                             <div className="w-10 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center mb-3 shadow-sm">
+                                 <FileText className="w-5 h-5 text-slate-500" />
+                             </div>
+                             <span className="text-sm font-bold text-slate-700">Click to upload CSV</span>
+                             <span className="text-[10px] text-slate-400 font-medium mt-1">First Name, Last Name, Email, Reg Type, Entity, Country</span>
+                             <span className="text-[10px] text-slate-400 font-medium mt-1">Staff / Comité Organizador y presidencias ejecutivas / Participantes / Ponente Plenario / Simposio Plenario / Coordinadores/as Área de trabajo / Estudiantes / Jubilados / Desempleados / Simposio/Taller Plenario / Industrial / Streaming / Coordinador de simposio Waved /Ponente Simposio Waved</span>
+                         </label>
+                     </div>
+
+                     {csvError && (
+                         <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
+                             {csvError}
+                         </div>
+                     )}
+
+                     {csvData.length > 0 && (
+                         <div className="border border-slate-200 rounded-xl overflow-hidden mt-4">
+                             <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                                 <span className="text-xs font-bold text-slate-700">Preview: {csvData.length} valid rows found</span>
+                                 <button onClick={() => setCsvData([])} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">Clear</button>
+                             </div>
+                             <div className="max-h-60 overflow-y-auto no-scrollbar">
+                                 <table className="w-full text-left text-[10px]">
+                                     <thead className="bg-slate-50/50 sticky top-0 text-slate-500 uppercase tracking-wider font-bold">
+                                         <tr>
+                                             <th className="px-4 py-2">Name</th>
+                                             <th className="px-4 py-2">Email</th>
+                                             <th className="px-4 py-2">Type</th>
+                                             <th className="px-4 py-2">Entity</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody className="divide-y divide-slate-100">
+                                         {csvData.slice(0, 100).map((row, i) => (
+                                             <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                 <td className="px-4 py-2 font-medium text-slate-900">{row.firstName} {row.lastName}</td>
+                                                 <td className="px-4 py-2 text-slate-500">{row.email}</td>
+                                                 <td className="px-4 py-2"><span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">{row.registration_type}</span></td>
+                                                 <td className="px-4 py-2 text-slate-500 truncate max-w-[120px]" title={row.entity}>{row.entity || '-'}</td>
+                                             </tr>
+                                         ))}
+                                     </tbody>
+                                 </table>
+                                 {csvData.length > 100 && (
+                                     <div className="text-center py-2 text-[10px] text-slate-400 italic bg-slate-50 border-t border-slate-100">
+                                         Showing first 100 rows...
+                                     </div>
+                                 )}
+                             </div>
+                         </div>
+                     )}
+
+                     {csvData.length > 0 && (
+                         <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+                             <button
+                               onClick={onClose}
+                               className="px-4 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+                             >
+                               Cancel
+                             </button>
+                             <button
+                               onClick={handleBulkImport}
+                               disabled={isUploading}
+                               className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 shadow-md shadow-green-100"
+                             >
+                               {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                               Import {csvData.length} Participants
+                             </button>
+                         </div>
+                     )}
+                  </>
+               )}
+            </div>
           )}
         </div>
       </div>

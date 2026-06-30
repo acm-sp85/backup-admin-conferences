@@ -125,3 +125,22 @@ To prevent synchronization from wiping administrative overrides or manually mana
 * **Manual Tickets (`is_manual = 1`)**: Any dinner tickets created manually from the dashboard are protected and **never deleted or archived** during automated cleanup.
 * **Guest Registrations (`is_guest = 1`)**: Event guests and organizers added directly in the dashboard are marked as guests and are completely **exempt from automatic cleanup pruning**.
 
+---
+
+## 📝 Reference: Registration Types (CIPIE)
+
+When manually creating participants or importing via CSV for the **CIPIE** conference, you can use the following standard registration types:
+- `Staff`
+- `Comité Organizador y presidencias ejecutivas`
+- `Participantes`
+- `Ponente Plenario`
+- `Simposio Plenario`
+- `Coordinadores/as Área de trabajo`
+- `Estudiantes / Jubilados / Desempleados`
+- `Simposio/Taller Plenario`
+- `Industrial`
+- `Streaming`
+- `Coordinador de simposio Waved`
+- `Ponente Simposio Waved`
+
+*(If left blank during CSV import, it defaults to `"Standard"`)*
