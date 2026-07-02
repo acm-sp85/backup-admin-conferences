@@ -71,13 +71,24 @@ export default async function ProgramPrintAllPage({ searchParams }) {
 
     return (
         <div className="min-h-screen bg-slate-100 flex flex-col items-center py-10 no-print-bg">
+            {/* Floating Print Button */}
+            <div className="fixed bottom-8 right-8 z-50 print:hidden flex flex-col gap-2">
+                <button 
+                    id="print-btn"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-colors flex items-center gap-2"
+                >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print All Door Signs
+                </button>
+            </div>
+
             {sessions.map((session, sIdx) => {
                 const sessionSlots = allSlots.filter(slot => slot.session_id === session.id);
                 
                 return (
                     <div 
                         key={session.id}
-                        className={`bg-white text-black shadow-2xl overflow-hidden print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
+                        className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
                         style={{ 
                             width: '210mm',
                             height: '297mm',
@@ -90,7 +101,26 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             breakAfter: 'page'
                         }}
                     >
-                        <div className="print-content flex flex-col h-full mt-6">
+                        {/* Interactive Controls (Hidden on Print) */}
+                        <div className="print:hidden absolute top-4 right-[-140px] bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-32 flex flex-col gap-3 z-10" style={{ transform: 'translateX(100%)' }}>
+                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjust Page</div>
+                            <div>
+                                <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                    <span>Y-Offset</span>
+                                    <span className="y-val" suppressHydrationWarning>0px</span>
+                                </label>
+                                <input type="range" min="-200" max="200" defaultValue="0" className="slider-y w-full accent-blue-600" suppressHydrationWarning />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                    <span>Zoom</span>
+                                    <span className="zoom-val" suppressHydrationWarning>100%</span>
+                                </label>
+                                <input type="range" min="50" max="150" defaultValue="100" className="slider-zoom w-full accent-blue-600" suppressHydrationWarning />
+                            </div>
+                        </div>
+
+                        <div className="adjustable-content print-content flex flex-col h-full mt-6" style={{ transformOrigin: 'top center' }} suppressHydrationWarning>
                             {/* Header Section */}
                             <div className="mb-12">
                  <div 
@@ -191,20 +221,35 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                 );
             })}
 
-            {/* Print Utility: Forces a print dialog and handles scaling for all pages */}
+            {/* Print Utility: Forces a print dialog and handles scaling */}
             <script dangerouslySetInnerHTML={{ __html: `
                 window.onload = () => {
                     const pages = document.querySelectorAll('.session-page');
+                    const printBtn = document.getElementById('print-btn');
+
+                    if (printBtn) {
+                        printBtn.addEventListener('click', () => window.print());
+                    }
                     
                     const tryScaleAll = () => {
                         pages.forEach(container => {
-                            const content = container.querySelector('.print-content');
+                            const content = container.querySelector('.adjustable-content');
+                            if (!content) return;
+
+                            const sliderY = container.querySelector('.slider-y');
+                            const sliderZoom = container.querySelector('.slider-zoom');
+                            const yVal = container.querySelector('.y-val');
+                            const zoomVal = container.querySelector('.zoom-val');
+
+                            let currentScale = 1;
+                            
                             const style = window.getComputedStyle(container);
                             const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
                             const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
                             const availableHeight = container.offsetHeight - paddingY;
                             const availableWidth = container.offsetWidth - paddingX;
                             
+                            // Reset scale to measure real content size
                             content.style.transform = 'none';
                             content.style.width = '100%';
                             
@@ -214,19 +259,34 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             if (contentHeight > availableHeight || contentWidth > availableWidth) {
                                 const scaleH = availableHeight / contentHeight;
                                 const scaleW = availableWidth / contentWidth;
-                                const scale = Math.min(scaleH, scaleW) - 0.01;
-                                
-                                content.style.transform = 'scale(' + scale + ')';
-                                content.style.transformOrigin = 'top center';
+                                currentScale = Math.min(scaleH, scaleW) - 0.01;
+                            } else {
+                                currentScale = 1;
                             }
+                            
+                            sliderZoom.value = Math.round(currentScale * 100);
+
+                            const updateTransform = () => {
+                                const scale = sliderZoom.value / 100;
+                                const yOffset = sliderY.value;
+                                
+                                zoomVal.textContent = sliderZoom.value + '%';
+                                yVal.textContent = yOffset + 'px';
+                                
+                                content.style.transform = \`translateY(\${yOffset}px) scale(\${scale})\`;
+                            };
+
+                            sliderY.addEventListener('input', updateTransform);
+                            sliderZoom.addEventListener('input', updateTransform);
+
+                            updateTransform();
                         });
                     };
 
                     tryScaleAll();
                     setTimeout(() => {
                         tryScaleAll(); 
-                        window.print();
-                    }, 1200);
+                    }, 500);
                 }
             ` }} />
 
