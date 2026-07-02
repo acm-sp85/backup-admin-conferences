@@ -31,6 +31,9 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         conference?.social_dinner_timezone || 
         (typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC')
     );
+    // Email domain selection state
+    const [emailDomain, setEmailDomain] = useState(conference?.email_from_domain || '@scitoevents.com');
+    const [domainOptions, setDomainOptions] = useState(['@scitoevents.com', '@nanoge.org']);
     const [socialDinnerLocation, setSocialDinnerLocation] = useState(conference?.social_dinner_location || '');
     const [socialDinnerMapsUrl, setSocialDinnerMapsUrl] = useState(conference?.social_dinner_maps_url || '');
 
@@ -348,13 +351,42 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Contact Email</label>
-                                    <input 
-                                        name="email"
-                                        type="email" 
-                                        defaultValue={conference?.email || ''}
-                                        placeholder="organizers@acronym.org"
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    />
+<input
+    name="email"
+    type="email"
+    defaultValue={conference?.email || ''}
+    placeholder="organizers@acronym.org"
+    className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+/>
+{/* Email From Domain Selection */}
+<div className="mt-2 flex items-center gap-3">
+    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email From Domain</label>
+    <select
+        value={emailDomain}
+        onChange={(e) => setEmailDomain(e.target.value)}
+        className="flex-1 h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+    >
+        {domainOptions.map((d) => (
+            <option key={d} value={d}>{d}</option>
+        ))}
+    </select>
+    <button
+        type="button"
+        onClick={() => {
+            const newDomain = window.prompt('Enter new email domain (include @):');
+            if (newDomain && newDomain.startsWith('@')) {
+                setDomainOptions([...domainOptions, newDomain]);
+                setEmailDomain(newDomain);
+                alert('Domain added. IT must approve this new domain before use.');
+            } else if (newDomain) {
+                alert('Invalid domain format. Must start with @');
+            }
+        }}
+        className="px-2 py-1 text-xs bg-indigo-50 border border-indigo-100 rounded hover:bg-indigo-100"
+    >Add</button>
+</div>
+{/* Hidden field to send selected domain */}
+<input type="hidden" name="email_from_domain" value={emailDomain} />
                                 </div>
                             </div>
 
