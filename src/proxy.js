@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   '/api/auth/callback',
   '/participants/checkin',
   '/social-dinner/checkin',
+  '/visualizacion-streaming-cipie-2026',
+  '/api/participants/check-access',
 ];
 
 export default async function proxy(request) {
