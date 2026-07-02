@@ -9,8 +9,10 @@ import { query } from './db.js';
  * @returns {Promise<{success: boolean, remaining: number, resetAt: Date}>}
  */
 export async function checkRateLimit(identifier, type, limit, windowSeconds) {
-    // Override the default limit to allow up to 100 requests as requested
-    limit = Math.max(limit, 100);
+    // Override the default limit to allow up to 100 requests as requested, except for streaming_check
+    if (type !== 'streaming_check') {
+        limit = Math.max(limit, 100);
+    }
 
     try {
         const now = new Date();
