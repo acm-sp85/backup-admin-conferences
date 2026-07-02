@@ -35,6 +35,62 @@ export default async function DownloadDocPage({ params }) {
 
     const { config } = await getConferenceConfig(session.conference_id);
 
+    // Group slots if it's CIPIE
+    let slotGroups = [];
+    if (Number(session.conference_id) === 11) {
+        const CIPIE_TIME_SLOTS = [
+            { id: 'ts1', label: '10:00 – 11:00',  startH: 10, startM: 0,  endH: 11, endM: 0  },
+            { id: 'ts2', label: '11:30 – 12:30',  startH: 11, startM: 30, endH: 12, endM: 30 },
+            { id: 'ts3', label: '13:30 – 14:15',  startH: 13, startM: 30, endH: 14, endM: 15 },
+            { id: 'ts4', label: '17:00 – 18:00',  startH: 17, startM: 0,  endH: 18, endM: 0  },
+            { id: 'ts5', label: '18:30 – 20:00',  startH: 18, startM: 30, endH: 20, endM: 0  },
+        ];
+
+        function matchToTimeSlot(startTimeStr) {
+            const d = new Date(startTimeStr);
+            const mins = d.getHours() * 60 + d.getMinutes();
+            for (const ts of CIPIE_TIME_SLOTS) {
+                const sMin = ts.startH * 60 + ts.startM;
+                const eMin = ts.endH * 60 + ts.endM;
+                if (mins >= sMin - 15 && mins < eMin + 5) return ts;
+            }
+            let best = CIPIE_TIME_SLOTS[0], bestDiff = Infinity;
+            for (const ts of CIPIE_TIME_SLOTS) {
+                const diff = Math.abs(mins - (ts.startH * 60 + ts.startM));
+                if (diff < bestDiff) { bestDiff = diff; best = ts; }
+            }
+            return best;
+        }
+
+        const buckets = {};
+        let i = 0;
+        while (i < slots.length) {
+            const slot = slots[i];
+            if (slot.title?.includes('\u21B3')) { i++; continue; }
+
+            const group = [slot];
+            let j = i + 1;
+            while (j < slots.length && slots[j].title?.includes('\u21B3')) {
+                group.push(slots[j]);
+                j++;
+            }
+            i = j;
+
+            const ts = matchToTimeSlot(slot.start_time);
+            const bucketId = ts ? ts.id : 'other';
+
+            if (!buckets[bucketId]) {
+                buckets[bucketId] = { id: bucketId, label: ts ? ts.label : null, slots: [] };
+            }
+            buckets[bucketId].slots.push(...group);
+        }
+        
+        // Convert to array of arrays, ordered by the first slot's start time
+        slotGroups = Object.values(buckets).sort((a, b) => new Date(a.slots[0].start_time) - new Date(b.slots[0].start_time));
+    } else {
+        slotGroups = [{ id: 'all', label: null, slots: slots }];
+    }
+
     // Prepare HTML content for Word
     const htmlContent = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -43,6 +99,7 @@ export default async function DownloadDocPage({ params }) {
         <title>${session.full_session_name}</title>
         <style>
             body { font-family: 'Arial', sans-serif; }
+            .page-break { page-break-before: always; }
             .header { margin-bottom: 30pt; }
             .conf-name { font-size: 12pt; color: #666; text-transform: uppercase; margin-bottom: 5pt; }
             .session-title { font-size: ${Number(session.conference_id) === 11 ? '20pt' : '28pt'}; font-weight: bold; margin-bottom: 10pt; color: ${config.titleColor || '#000000'}; }
@@ -62,58 +119,76 @@ export default async function DownloadDocPage({ params }) {
         </style>
     </head>
     <body>
-        <div class="header">
-            <div class="conf-name">${session.conference_name} - ${new Date(session.start_time).toLocaleDateString(Number(session.conference_id) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-            <div class="session-title">${session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}</div>
-            ${session.full_session_name.includes('(Chair:') ? `
-                <div style="font-size: 16pt; font-style: italic; color: #555; margin-bottom: 15pt;">
-                    Chair: ${formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
+        ${slotGroups.map((group, pageIdx) => `
+            <div class="${pageIdx > 0 ? 'page-break' : ''}">
+                <div class="header">
+                    <div class="conf-name">${session.conference_name} - ${new Date(session.start_time).toLocaleDateString(Number(session.conference_id) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                    <div class="session-title">${session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}</div>
+                    ${session.full_session_name.includes('(Chair:') ? `
+                        <div style="font-size: 16pt; font-style: italic; color: #555; margin-bottom: 15pt;">
+                            Chair: ${formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
+                        </div>
+                    ` : ''}
+                    <div class="time-box">
+                        ${(() => {
+                            if (Number(session.conference_id) === 11 && group.label) {
+                                return group.label;
+                            }
+                            const fmt = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                            if (Number(session.conference_id) === 11 && group.slots.length > 0) {
+                                const topLevel = group.slots.filter(s => !s.title?.includes('\u21B3'));
+                                const first = topLevel[0] || group.slots[0];
+                                const last  = topLevel[topLevel.length - 1] || group.slots[group.slots.length - 1];
+                                return first === last
+                                    ? fmt(first.start_time)
+                                    : `${fmt(first.start_time)} – ${fmt(last.start_time)}`;
+                            }
+                            return `${fmt(session.start_time)} - ${fmt(session.end_time)}`;
+                        })()}
+                    </div>
                 </div>
-            ` : ''}
-            <div class="time-box">
-                ${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+        
+                <table class="main-table">
+                    <tbody>
+                        ${group.slots.map((slot, idx) => `
+                            <tr class="${Number(session.conference_id) === 11 && slot.title?.includes('\u2022') && idx > 0 ? 'border-top' : ''}">
+                                <td class="slot-time">${slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
+                                <td>
+                                    ${slot.title?.includes('\u21B3') ? `
+                                    <table class="nested-container">
+                                        <tbody>
+                                            <tr>
+                                                <td class="nested-arrow">&#8627;</td>
+                                                <td class="nested-content">
+                                    ` : ''}
+                                                <div class="slot-title">${slot.title?.includes('\u21B3') ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') : (slot.title || '(No Title)')}</div>
+                                                ${(() => {
+                                                    if (!slot.presenter_name) return '';
+                                                    let displayName = slot.presenter_name;
+                                                    if (displayName.includes(',')) {
+                                                        const parts = displayName.split(',');
+                                                        displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                    }
+                                                    const formatted = formatName(displayName);
+                                                    const nameSpan = `<span class="presenter-name">${formatted}</span>`;
+                                                    const instText = [slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ');
+                                                    const instSpan = instText ? `<span class="presenter-institution"> - ${instText}</span>` : '';
+                                                    return `<div class="slot-presenter">${nameSpan}${instSpan}</div>`;
+                                                })()}
+                                                <div class="slot-type">${slot.type}</div>
+                                    ${slot.title?.includes('\u21B3') ? `
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
             </div>
-        </div>
- 
-        <table class="main-table">
-            <tbody>
-                ${slots.map((slot, idx) => `
-                    <tr class="${Number(session.conference_id) === 11 && slot.title?.includes('\u2022') && idx > 0 ? 'border-top' : ''}">
-                        <td class="slot-time">${slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
-                        <td>
-                            ${slot.title?.includes('\u21B3') ? `
-                            <table class="nested-container">
-                                <tbody>
-                                    <tr>
-                                        <td class="nested-arrow">&#8627;</td>
-                                        <td class="nested-content">
-                            ` : ''}
-                                        <div class="slot-title">${slot.title?.includes('\u21B3') ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') : (slot.title || '(No Title)')}</div>
-                                        ${(() => {
-                                            if (!slot.presenter_name) return '';
-                                            let displayName = slot.presenter_name;
-                                            if (displayName.includes(',')) {
-                                                const parts = displayName.split(',');
-                                                displayName = `${parts[1].trim()} ${parts[0].trim()}`;
-                                            }
-                                            const formatted = formatName(displayName);
-                                            const nameSpan = `<span class="presenter-name">${formatted}</span>`;
-                                            const instText = [slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ');
-                                            const instSpan = instText ? `<span class="presenter-institution"> - ${instText}</span>` : '';
-                                            return `<div class="slot-presenter">${nameSpan}${instSpan}</div>`;
-                                        })()}
-                                        <div class="slot-type">${slot.type}</div>
-                            ${slot.title?.includes('\u21B3') ? `
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            ` : ''}
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
+        `).join('')}
     </body>
     </html>
     `;

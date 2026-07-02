@@ -8,12 +8,12 @@ export default async function StreamingPage() {
 
   return granted ? (
     <div className="streaming-container">
-      <h1>Live Streaming – CIPIE 2026</h1>
+
       {/* Embedded live stream */}
       <iframe
-        src="https://www.stream.nanoge.org/cipie-2026-prueba/"
+        src="https://www.stream.nanoge.org/embed/cipie-2026-prueba"
         title="CIPIE 2026 stream"
-        style={{ width: '100%', height: '500px', border: 'none' }}
+        style={{ width: '100%', height: '100vh', border: 'none' }}
         allowFullScreen
       ></iframe>
       {/* Logout form */}

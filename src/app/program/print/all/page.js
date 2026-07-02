@@ -82,12 +82,42 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                 </button>
             </div>
 
-            {sessions.map((session, sIdx) => {
+            {sessions.flatMap((session, sIdx) => {
                 const sessionSlots = allSlots.filter(slot => slot.session_id === session.id);
                 
-                return (
+                let slotGroups = [];
+                if (Number(conferenceId) === 11) {
+                    const buckets = {};
+                    let i = 0;
+                    while (i < sessionSlots.length) {
+                        const slot = sessionSlots[i];
+                        if (slot.title?.includes('\u21B3')) { i++; continue; }
+
+                        const group = [slot];
+                        let j = i + 1;
+                        while (j < sessionSlots.length && sessionSlots[j].title?.includes('\u21B3')) {
+                            group.push(sessionSlots[j]);
+                            j++;
+                        }
+                        i = j;
+
+                        const ts = matchToTimeSlot(slot.start_time);
+                        const bucketId = ts ? ts.id : 'other';
+
+                        if (!buckets[bucketId]) {
+                            buckets[bucketId] = { id: bucketId, label: ts ? ts.label : null, slots: [] };
+                        }
+                        buckets[bucketId].slots.push(...group);
+                    }
+                    
+                    slotGroups = Object.values(buckets).sort((a, b) => new Date(a.slots[0].start_time) - new Date(b.slots[0].start_time));
+                } else {
+                    slotGroups = [{ id: 'all', label: null, slots: sessionSlots }];
+                }
+
+                return slotGroups.map((group, gIdx) => (
                     <div 
-                        key={session.id}
+                        key={`${session.id}-${gIdx}`}
                         className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
                         style={{ 
                             width: '210mm',
@@ -123,12 +153,12 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                         <div className="adjustable-content print-content flex flex-col h-full mt-6" style={{ transformOrigin: 'top center' }} suppressHydrationWarning>
                             {/* Header Section */}
                             <div className="mb-12">
-                 <div 
-                            className="font-medium uppercase tracking-widest mb-1 mt-6 text-center"
-                            style={{ fontSize: '16px', color: config.titleColor }}
-                        >
-                           {new Date(session.start_time).toLocaleDateString(Number(conferenceId) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                        </div>
+                                <div 
+                                    className="font-medium uppercase tracking-widest mb-1 mt-6 text-center"
+                                    style={{ fontSize: '16px', color: config.titleColor }}
+                                >
+                                   {new Date(session.start_time).toLocaleDateString(Number(conferenceId) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </div>
                                 
                                 <h1 
                                     className="font-bold leading-tight mb-2"
@@ -149,7 +179,21 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                 <div className="flex gap-4 items-center">
                                     <div className=" text-white px-4 py-1 font-medium text-xl"
                                     style={{ backgroundColor: config.titleColor }}>
-                                        {Number(conferenceId) === 11 ? matchToTimeSlot(session.start_time).label : `${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+                                        {(() => {
+                                            if (Number(conferenceId) === 11 && group.label) {
+                                                return group.label;
+                                            }
+                                            const fmt = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                                            if (Number(conferenceId) === 11 && group.slots.length > 0) {
+                                                const topLevel = group.slots.filter(s => !s.title?.includes('\u21B3'));
+                                                const first = topLevel[0] || group.slots[0];
+                                                const last  = topLevel[topLevel.length - 1] || group.slots[group.slots.length - 1];
+                                                return first === last
+                                                    ? fmt(first.start_time)
+                                                    : `${fmt(first.start_time)} – ${fmt(last.start_time)}`;
+                                            }
+                                            return `${fmt(session.start_time)} - ${fmt(session.end_time)}`;
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -158,7 +202,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             <div className="flex-1">
                                 <table className="w-full border-collapse">
                                     <tbody>
-                                        {sessionSlots.map((slot, idx) => (
+                                        {group.slots.map((slot, idx) => (
                                             <tr key={idx} className={Number(conferenceId) === 11 ? (slot.title?.includes('\u2022') && idx > 0 ? "border-t border-black/20" : "") : "border-b border-black/10 last:border-0"}>
                                                 <td 
                                                     className="py-1 pr-8 font-medium align-top whitespace-nowrap"
@@ -218,7 +262,7 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             </div>
                         </div>
                     </div>
-                );
+                ));
             })}
 
             {/* Print Utility: Forces a print dialog and handles scaling */}

@@ -65,10 +65,41 @@ export default async function ProgramPrintPage({ params }) {
 
     // Fetch conference config
     const { config, bgUrl } = await getConferenceConfig(session.conference_id);
-    console.log(session)
+
+    // Group slots if it's CIPIE
+    let slotGroups = [];
+    if (Number(session.conference_id) === 11) {
+        const buckets = {};
+        let i = 0;
+        while (i < slots.length) {
+            const slot = slots[i];
+            if (slot.title?.includes('\u21B3')) { i++; continue; }
+
+            const group = [slot];
+            let j = i + 1;
+            while (j < slots.length && slots[j].title?.includes('\u21B3')) {
+                group.push(slots[j]);
+                j++;
+            }
+            i = j;
+
+            const ts = matchToTimeSlot(slot.start_time);
+            const bucketId = ts ? ts.id : 'other';
+
+            if (!buckets[bucketId]) {
+                buckets[bucketId] = { id: bucketId, label: ts ? ts.label : null, slots: [] };
+            }
+            buckets[bucketId].slots.push(...group);
+        }
+        
+        // Convert to array of arrays, ordered by the first slot's start time
+        slotGroups = Object.values(buckets).sort((a, b) => new Date(a.slots[0].start_time) - new Date(b.slots[0].start_time));
+    } else {
+        slotGroups = [{ id: 'all', label: null, slots: slots }];
+    }
 
     return (
-        <div className="min-h-screen bg-slate-100 flex items-center justify-center py-10 no-print-bg">
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center py-10 no-print-bg">
             {/* Floating Print Button */}
             <div className="fixed bottom-8 right-8 z-50 print:hidden flex flex-col gap-2">
                 <button 
@@ -80,201 +111,220 @@ export default async function ProgramPrintPage({ params }) {
                 </button>
             </div>
 
-            <div 
-                id="print-container"
-                className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 session-page ${leagueSpartan.className}`}
-                style={{ 
-                    width: '210mm',
-                    height: '297mm',
-                    backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    padding: config.padding || '30px 15px 120px 15px', 
-                    position: 'relative',
-                    boxSizing: 'border-box'
-                }}
-            >
-                {/* Interactive Controls (Hidden on Print) */}
-                <div className="print:hidden absolute top-4 right-[-140px] bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-32 flex flex-col gap-3 z-10" style={{ transform: 'translateX(100%)' }}>
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjust Page</div>
-                    <div>
-                        <label className="text-[10px] font-medium text-slate-500 flex justify-between">
-                            <span>Y-Offset</span>
-                            <span className="y-val" suppressHydrationWarning>0px</span>
-                        </label>
-                        <input type="range" min="-200" max="200" defaultValue="0" className="slider-y w-full accent-blue-600" suppressHydrationWarning />
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-medium text-slate-500 flex justify-between">
-                            <span>Zoom</span>
-                            <span className="zoom-val" suppressHydrationWarning>100%</span>
-                        </label>
-                        <input type="range" min="50" max="150" defaultValue="100" className="slider-zoom w-full accent-blue-600" suppressHydrationWarning />
-                    </div>
-                </div>
-
-                <div id="print-content" className="adjustable-content flex flex-col h-full mt-6" style={{ transformOrigin: 'top center' }} suppressHydrationWarning>
-                    {/* Header Section */}
-                    <div className="mb-12">
-                        <div 
-                            className="font-medium uppercase tracking-widest mb-1 mt-6 opacity-70 text-center"
-                            style={{ fontSize: '16px', color: config.titleColor }}
-                        >
-                           {new Date(session.start_time).toLocaleDateString(Number(session.conference_id) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {slotGroups.map((group, pageIdx) => (
+                <div 
+                    key={pageIdx}
+                    className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 session-page mb-10 print:mb-0 ${leagueSpartan.className}`}
+                    style={{ 
+                        width: '210mm',
+                        height: '297mm',
+                        backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        padding: config.padding || '30px 15px 120px 15px', 
+                        position: 'relative',
+                        boxSizing: 'border-box',
+                        breakAfter: 'page'
+                    }}
+                >
+                    {/* Interactive Controls (Hidden on Print) */}
+                    <div className="print:hidden absolute top-4 right-[-140px] bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-32 flex flex-col gap-3 z-10" style={{ transform: 'translateX(100%)' }}>
+                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjust Page</div>
+                        <div>
+                            <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                <span>Y-Offset</span>
+                                <span className="y-val" suppressHydrationWarning>0px</span>
+                            </label>
+                            <input type="range" min="-200" max="200" defaultValue="0" className="slider-y w-full accent-blue-600" suppressHydrationWarning />
                         </div>
-                        
-                        <h1 
-                            className="font-bold leading-tight mb-2"
-                            style={{ fontSize: Number(session.conference_id) === 11 ? '28px' : (config.titleSize || '48px') }}
-                        >
-                            {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
-                        </h1>
+                        <div>
+                            <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                <span>Zoom</span>
+                                <span className="zoom-val" suppressHydrationWarning>100%</span>
+                            </label>
+                            <input type="range" min="50" max="150" defaultValue="100" className="slider-zoom w-full accent-blue-600" suppressHydrationWarning />
+                        </div>
+                    </div>
 
-                        {session.full_session_name.includes('(Chair:') && (
+                    <div className="adjustable-content flex flex-col h-full mt-6" style={{ transformOrigin: 'top center' }} suppressHydrationWarning>
+                        {/* Header Section */}
+                        <div className="mb-12">
                             <div 
-                                className="font-medium opacity-80 mb-2 italic"
-                                style={{ fontSize: config.chairSize || '20px', color: config.titleColor }}
+                                className="font-medium uppercase tracking-widest mb-1 mt-6 opacity-70 text-center"
+                                style={{ fontSize: '16px', color: config.titleColor }}
                             >
-                                Chair: {formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
+                               {new Date(session.start_time).toLocaleDateString(Number(session.conference_id) === 11 ? 'es-ES' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </div>
-                        )}
+                            
+                            <h1 
+                                className="font-bold leading-tight mb-2"
+                                style={{ fontSize: Number(session.conference_id) === 11 ? '28px' : (config.titleSize || '48px') }}
+                            >
+                                {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
+                            </h1>
 
-                        <div className="flex gap-4 items-center">
-                            <div className=" text-white px-4 py-2 font-medium text-xl"
-                            style={{ backgroundColor: config.titleColor }}>
-                                {Number(session.conference_id) === 11 ? matchToTimeSlot(session.start_time).label : `${new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - ${new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+                            {session.full_session_name.includes('(Chair:') && (
+                                <div 
+                                    className="font-medium opacity-80 mb-2 italic"
+                                    style={{ fontSize: config.chairSize || '20px', color: config.titleColor }}
+                                >
+                                    Chair: {formatName(session.full_session_name.match(/\(Chair:\s*(.*?)\)/)?.[1])}
+                                </div>
+                            )}
+
+                            <div className="flex gap-4 items-center">
+                                <div className=" text-white px-4 py-2 font-medium text-xl"
+                                style={{ backgroundColor: config.titleColor }}>
+                                    {(() => {
+                                        if (Number(session.conference_id) === 11 && group.label) {
+                                            return group.label;
+                                        }
+                                        const fmt = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                                        if (Number(session.conference_id) === 11 && group.slots.length > 0) {
+                                            const topLevel = group.slots.filter(s => !s.title?.includes('\u21B3'));
+                                            const first = topLevel[0] || group.slots[0];
+                                            const last  = topLevel[topLevel.length - 1] || group.slots[group.slots.length - 1];
+                                            return first === last
+                                                ? fmt(first.start_time)
+                                                : `${fmt(first.start_time)} – ${fmt(last.start_time)}`;
+                                        }
+                                        return `${fmt(session.start_time)} - ${fmt(session.end_time)}`;
+                                    })()}
+                                </div>
                             </div>
-                            {/* <div className="text-2xl font-bold opacity-80 italic">
-                                {session.session_name}
-                            </div> */}
                         </div>
-                    </div>
 
-                    {/* Slots Section */}
-                    <div className="flex-1">
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                {slots.map((slot, idx) => (
-                                    <tr key={idx} className={Number(session.conference_id) === 11 ? (slot.title?.includes('\u2022') && idx > 0 ? "border-t border-black/20" : "") : "border-b border-black/10 last:border-0"}>
-                                        <td 
-                                            className="py-1 pr-8 font-medium align-top whitespace-nowrap"
-                                            style={{ fontSize: config.contentSize, color: config.contentColor }}
-                                        >
-                                            {slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                                        </td>
-                                        <td className="py-1 align-top">
-                                            <div className={slot.title?.includes('\u21B3') ? 'flex gap-2' : ''}>
-                                                {slot.title?.includes('\u21B3') && (
-                                                    <div className="shrink-0 flex-none whitespace-pre opacity-80 pt-[1px]">
-                                                        {'\u00A0\u00A0\u00A0\u00A0\u21B3'}
-                                                    </div>
-                                                )}
-                                                <div className={slot.title?.includes('\u21B3') ? 'flex-1' : ''}>
-                                                    <div 
-                                                        className="font-semibold mb-1"
-                                                        style={{ fontSize: config.contentSize, color: config.contentColor }}
-                                                    >
-                                                        {slot.title?.includes('\u21B3') 
-                                                            ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') 
-                                                            : slot.title || '(No Title)'}
-                                                    </div>
-                                                    {slot.presenter_name && (
-                                                        <div 
-                                                            className="font-normal opacity-85"
-                                                            style={{ fontSize: `calc(${config.contentSize} * 0.8)`, color: config.contentColor }}
-                                                        >
-                                                            <span style={{ color: config.titleColor, fontWeight: 'bold' }}>
-                                                                {(() => {
-                                                                    let displayName = slot.presenter_name;
-                                                                    if (displayName.includes(',')) {
-                                                                        const parts = displayName.split(',');
-                                                                        displayName = `${parts[1].trim()} ${parts[0].trim()}`;
-                                                                    }
-                                                                    return formatName(displayName);
-                                                                })()}
-                                                            </span>
-                                                            {(slot.presenter_entity || slot.presenter_country) && (
-                                                                <span style={{ opacity: 0.8 }}>
-                                                                    {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
-                                                                </span>
-                                                            )}
+                        {/* Slots Section */}
+                        <div className="flex-1">
+                            <table className="w-full border-collapse">
+                                <tbody>
+                                    {group.slots.map((slot, idx) => (
+                                        <tr key={idx} className={Number(session.conference_id) === 11 ? (slot.title?.includes('\u2022') && idx > 0 ? "border-t border-black/20" : "") : "border-b border-black/10 last:border-0"}>
+                                            <td 
+                                                className="py-1 pr-8 font-medium align-top whitespace-nowrap"
+                                                style={{ fontSize: config.contentSize, color: config.contentColor }}
+                                            >
+                                                {slot.title?.includes('\u00A0\u00A0') ? '' : new Date(slot.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                            </td>
+                                            <td className="py-1 align-top">
+                                                <div className={slot.title?.includes('\u21B3') ? 'flex gap-2' : ''}>
+                                                    {slot.title?.includes('\u21B3') && (
+                                                        <div className="shrink-0 flex-none whitespace-pre opacity-80 pt-[1px]">
+                                                            {'\u00A0\u00A0\u00A0\u00A0\u21B3'}
                                                         </div>
                                                     )}
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
-                                                    style={{ color: config.contentColor, opacity: 0.6 }}>
-                                                        {slot.type}
+                                                    <div className={slot.title?.includes('\u21B3') ? 'flex-1' : ''}>
+                                                        <div 
+                                                            className="font-semibold mb-1"
+                                                            style={{ fontSize: config.contentSize, color: config.contentColor }}
+                                                        >
+                                                            {slot.title?.includes('\u21B3') 
+                                                                ? slot.title.replace('\u00A0\u00A0\u00A0\u00A0\u21B3 ', '') 
+                                                                : slot.title || '(No Title)'}
+                                                        </div>
+                                                        {slot.presenter_name && (
+                                                            <div 
+                                                                className="font-normal opacity-85"
+                                                                style={{ fontSize: `calc(${config.contentSize} * 0.8)`, color: config.contentColor }}
+                                                            >
+                                                                <span style={{ color: config.titleColor, fontWeight: 'bold' }}>
+                                                                    {(() => {
+                                                                        let displayName = slot.presenter_name;
+                                                                        if (displayName.includes(',')) {
+                                                                            const parts = displayName.split(',');
+                                                                            displayName = `${parts[1].trim()} ${parts[0].trim()}`;
+                                                                        }
+                                                                        return formatName(displayName);
+                                                                    })()}
+                                                                </span>
+                                                                {(slot.presenter_entity || slot.presenter_country) && (
+                                                                    <span style={{ opacity: 0.8 }}>
+                                                                        {` - ${[slot.presenter_entity, slot.presenter_country].filter(Boolean).join(', ')}`}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <div className="text-[10px] font-bold uppercase tracking-widest mt-2"
+                                                        style={{ color: config.contentColor, opacity: 0.6 }}>
+                                                            {slot.type}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ))}
 
             {/* Print Utility: Forces a print dialog and handles scaling */}
             <script dangerouslySetInnerHTML={{ __html: `
                 window.onload = () => {
-                    const container = document.getElementById('print-container');
-                    const content = document.getElementById('print-content');
-                    
-                    const sliderY = document.querySelector('.slider-y');
-                    const sliderZoom = document.querySelector('.slider-zoom');
-                    const yVal = document.querySelector('.y-val');
-                    const zoomVal = document.querySelector('.zoom-val');
+                    const pages = document.querySelectorAll('.session-page');
                     const printBtn = document.getElementById('print-btn');
 
                     if (printBtn) {
                         printBtn.addEventListener('click', () => window.print());
                     }
-
-                    let currentScale = 1;
                     
-                    const tryScale = () => {
-                        const style = window.getComputedStyle(container);
-                        const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-                        const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-                        const availableHeight = container.offsetHeight - paddingY;
-                        const availableWidth = container.offsetWidth - paddingX;
-                        
-                        // Reset scale to measure real content size
-                        content.style.transform = 'none';
-                        content.style.width = '100%';
-                        
-                        const contentHeight = content.scrollHeight;
-                        const contentWidth = content.scrollWidth;
-                        
-                        if (contentHeight > availableHeight || contentWidth > availableWidth) {
-                            const scaleH = availableHeight / contentHeight;
-                            const scaleW = availableWidth / contentWidth;
-                            currentScale = Math.min(scaleH, scaleW) - 0.01;
-                        } else {
-                            currentScale = 1;
-                        }
-                        
-                        sliderZoom.value = Math.round(currentScale * 100);
-                        updateTransform();
+                    const tryScaleAll = () => {
+                        pages.forEach(container => {
+                            const content = container.querySelector('.adjustable-content');
+                            if (!content) return;
+
+                            const sliderY = container.querySelector('.slider-y');
+                            const sliderZoom = container.querySelector('.slider-zoom');
+                            const yVal = container.querySelector('.y-val');
+                            const zoomVal = container.querySelector('.zoom-val');
+
+                            let currentScale = 1;
+                            
+                            const style = window.getComputedStyle(container);
+                            const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+                            const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                            const availableHeight = container.offsetHeight - paddingY;
+                            const availableWidth = container.offsetWidth - paddingX;
+                            
+                            // Reset scale to measure real content size
+                            content.style.transform = 'none';
+                            content.style.width = '100%';
+                            
+                            const contentHeight = content.scrollHeight;
+                            const contentWidth = content.scrollWidth;
+                            
+                            if (contentHeight > availableHeight || contentWidth > availableWidth) {
+                                const scaleH = availableHeight / contentHeight;
+                                const scaleW = availableWidth / contentWidth;
+                                currentScale = Math.min(scaleH, scaleW) - 0.01;
+                            } else {
+                                currentScale = 1;
+                            }
+                            
+                            sliderZoom.value = Math.round(currentScale * 100);
+
+                            const updateTransform = () => {
+                                const scale = sliderZoom.value / 100;
+                                const yOffset = sliderY.value;
+                                
+                                zoomVal.textContent = sliderZoom.value + '%';
+                                yVal.textContent = yOffset + 'px';
+                                
+                                content.style.transform = \`translateY(\${yOffset}px) scale(\${scale})\`;
+                            };
+
+                            sliderY.addEventListener('input', updateTransform);
+                            sliderZoom.addEventListener('input', updateTransform);
+
+                            updateTransform();
+                        });
                     };
 
-                    const updateTransform = () => {
-                        const scale = sliderZoom.value / 100;
-                        const yOffset = sliderY.value;
-                        
-                        zoomVal.textContent = sliderZoom.value + '%';
-                        yVal.textContent = yOffset + 'px';
-                        
-                        content.style.transform = \`translateY(\${yOffset}px) scale(\${scale})\`;
-                    };
-
-                    sliderY.addEventListener('input', updateTransform);
-                    sliderZoom.addEventListener('input', updateTransform);
-
-                    tryScale();
+                    tryScaleAll();
                     setTimeout(() => {
-                        tryScale(); 
+                        tryScaleAll(); 
                     }, 500);
                 }
             ` }} />
@@ -298,11 +348,13 @@ export default async function ProgramPrintPage({ params }) {
                         min-height: 0 !important;
                         display: block !important;
                     }
-                    #print-container {
+                    .session-page {
                         box-shadow: none !important;
                         margin: 0 !important;
                         width: 210mm !important;
                         height: 297mm !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
                     }
                 }
                 .no-print-bg {
