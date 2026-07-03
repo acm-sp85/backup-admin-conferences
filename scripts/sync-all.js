@@ -305,9 +305,9 @@ async function syncAll() {
               )
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               ON DUPLICATE KEY UPDATE
-                amount = VALUES(amount), balance = VALUES(balance), status = VALUES(status), invoice_code = VALUES(invoice_code),
-                client_name = VALUES(client_name), client_country_id = VALUES(client_country_id),
-                group_name = VALUES(group_name), tickets_info = VALUES(tickets_info)
+                amount = IF(is_manual = 1, amount, VALUES(amount)), balance = IF(is_manual = 1, balance, VALUES(balance)), status = IF(is_manual = 1, status, VALUES(status)), invoice_code = IF(is_manual = 1, invoice_code, VALUES(invoice_code)),
+                client_name = IF(is_manual = 1, client_name, VALUES(client_name)), client_country_id = IF(is_manual = 1, client_country_id, VALUES(client_country_id)),
+                group_name = IF(is_manual = 1, group_name, VALUES(group_name)), tickets_info = IF(is_manual = 1, tickets_info, VALUES(tickets_info))
             `, [
               registrationId, pay.total || 0, pay.balance !== undefined ? pay.balance : null, pay.currency || 'EUR', pay.status || 'Paid',
               pay.method || 'Unknown', mongoId, pay.code || null, pay.client?.name || null,
@@ -564,7 +564,7 @@ async function syncAll() {
           const [toArchive] = await mariadb.execute(`
               SELECT p.* FROM payments p 
               JOIN registrations r ON p.registration_id = r.id
-              WHERE r.conference_id = ? AND p.mongo_id NOT IN (${mongoIds})
+              WHERE r.conference_id = ? AND p.mongo_id NOT IN (${mongoIds}) AND p.is_manual = 0
           `, [conferenceId]);
           for (const row of toArchive) {
               await mariadb.execute(
@@ -575,7 +575,7 @@ async function syncAll() {
           const [delPays] = await mariadb.execute(`
               DELETE FROM payments 
               WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
-              AND mongo_id NOT IN (${mongoIds})
+              AND mongo_id NOT IN (${mongoIds}) AND is_manual = 0
           `, [conferenceId]);
           if (delPays.affectedRows > 0) console.log(`🗑️  Archived and removed ${delPays.affectedRows} stale payments`);
       }
