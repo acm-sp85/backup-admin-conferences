@@ -10,19 +10,22 @@ import {
     resetCheckinActivity, 
     sendActivityQREmail,
     searchConferenceParticipantsLocal,
-    updateActivityEmailText,
+    updateActivityEmailTemplate,
     updateAttendeeTicketsCount
 } from '@/app/actions/activities';
 import ActivityQRBadge from './ActivityQRBadge';
 
-export default function ActivityAttendeesManager({ activityId, conferenceId, initialAttendees, activityName, initialCustomEmailText }) {
+export default function ActivityAttendeesManager({ activityId, conferenceId, initialAttendees, activityName, initialEmailTemplate }) {
     const [attendees, setAttendees] = useState(initialAttendees);
     const [isAdding, setIsAdding] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     
-    // Custom email state
-    const [customEmailText, setCustomEmailText] = useState(initialCustomEmailText || '');
+    // Email Template State
+    const [emailSubject, setEmailSubject] = useState(initialEmailTemplate?.subject || '');
+    const [emailBody, setEmailBody] = useState(initialEmailTemplate?.body || '');
+    const [includeQr, setIncludeQr] = useState(initialEmailTemplate?.includeQr ?? true);
     const [isSavingEmail, setIsSavingEmail] = useState(false);
+    const [previewMode, setPreviewMode] = useState(false);
     
     // Add Manual State
     const [searchQuery, setSearchQuery] = useState('');
@@ -156,13 +159,13 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
         }
     };
 
-    const handleSaveEmailText = async () => {
+    const handleSaveEmailTemplate = async () => {
+        setIsSavingEmail(true);
         try {
-            setIsSavingEmail(true);
-            await updateActivityEmailText(activityId, customEmailText);
-            alert('Custom email text saved successfully!');
+            await updateActivityEmailTemplate(activityId, emailSubject, emailBody, includeQr);
+            alert('Email template saved successfully!');
         } catch (e) {
-            alert('Error saving email text: ' + e.message);
+            alert('Error saving email template: ' + e.message);
         } finally {
             setIsSavingEmail(false);
         }
@@ -268,25 +271,98 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
     return (
         <div className="space-y-6">
             <div className="card p-5 border border-[var(--border)] bg-slate-50/30">
-                <div className="flex justify-between items-start mb-3 gap-4">
+                <div className="flex justify-between items-start mb-4">
                     <div>
-                        <h4 className="font-semibold text-sm">Customizable Email Message</h4>
-                        <p className="text-xs text-[var(--muted)] mt-0.5">This text will be included in the QR ticket email sent to the attendees of this activity.</p>
+                        <h4 className="font-semibold text-sm">Email Template Settings</h4>
+                        <p className="text-xs text-[var(--muted)] mt-0.5">Customize the email sent to attendees when delivering their QR ticket.</p>
                     </div>
-                    <button 
-                        onClick={handleSaveEmailText}
-                        disabled={isSavingEmail}
-                        className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0"
-                    >
-                        {isSavingEmail ? 'Saving...' : 'Save Message'}
-                    </button>
+                    <div className="flex gap-2">
+                        <div className="flex bg-slate-200/50 p-1 rounded-lg">
+                            <button
+                                onClick={() => setPreviewMode(false)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!previewMode ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Edit
+                            </button>
+                            <button
+                                onClick={() => setPreviewMode(true)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${previewMode ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Preview
+                            </button>
+                        </div>
+                        <button 
+                            onClick={handleSaveEmailTemplate}
+                            disabled={isSavingEmail}
+                            className="px-4 py-2 bg-black text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50 shrink-0"
+                        >
+                            {isSavingEmail ? 'Saving...' : 'Save Settings'}
+                        </button>
+                    </div>
                 </div>
-                <textarea 
-                    value={customEmailText}
-                    onChange={(e) => setCustomEmailText(e.target.value)}
-                    className="input-base w-full min-h-[100px] font-sans text-sm bg-white"
-                    placeholder="e.g. We are thrilled to welcome you to the Gala Dinner! The buses depart at 19:30 from the main lobby. Dress code is semi-formal..."
-                />
+
+                {!previewMode ? (
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1.5">Email Subject</label>
+                            <input 
+                                type="text"
+                                value={emailSubject}
+                                onChange={(e) => setEmailSubject(e.target.value)}
+                                className="input-base w-full bg-white text-sm"
+                                placeholder={`e.g. Your ticket for ${activityName}`}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-slate-700 mb-1.5">Email Body (HTML supported)</label>
+                            <div className="mb-2 text-xs text-slate-500 flex flex-wrap gap-2">
+                                <span>Variables:</span>
+                                <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{'${name}'}</code>
+                                <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{'${activityName}'}</code>
+                                <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{'${tickets}'}</code>
+                                <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">{'${qrCode}'}</code> (optional custom placement)
+                            </div>
+                            <textarea 
+                                value={emailBody}
+                                onChange={(e) => setEmailBody(e.target.value)}
+                                className="input-base w-full min-h-[160px] font-mono text-xs bg-white leading-relaxed"
+                                placeholder={`<p>Hello \${name},</p>\n<p>Here is your ticket for \${activityName}.</p>`}
+                            />
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer mt-4 border-t pt-4">
+                            <input 
+                                type="checkbox"
+                                checked={includeQr}
+                                onChange={(e) => setIncludeQr(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+                            />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-slate-900">Include QR Code</span>
+                                <span className="text-xs text-slate-500">If checked, a large QR code will be generated and embedded in the email automatically.</span>
+                            </div>
+                        </label>
+                    </div>
+                ) : (
+                    <div className="bg-white border rounded-lg p-6 max-w-2xl mx-auto shadow-sm">
+                        <div className="border-b pb-4 mb-4">
+                            <div className="text-sm"><strong>Subject:</strong> {emailSubject ? emailSubject.replace(/\$\{name\}/g, 'John Doe').replace(/\$\{activityName\}/g, activityName).replace(/\$\{tickets\}/g, '2') : `Your QR Ticket for ${activityName}`}</div>
+                        </div>
+                        <div className="prose prose-sm max-w-none text-slate-700"
+                            dangerouslySetInnerHTML={{ 
+                                __html: (emailBody || `<p>Hello \${name},</p><p>You are registered for <strong>\${activityName}</strong>.</p>`)
+                                    .replace(/\$\{name\}/g, 'John Doe')
+                                    .replace(/\$\{activityName\}/g, activityName)
+                                    .replace(/\$\{tickets\}/g, '2')
+                                    .replace(/\$\{qrCode\}/g, includeQr ? '<div style="margin:20px 0;text-align:center;padding:20px;background:#f5f5f7;border-radius:12px;"><div style="width:150px;height:150px;background:#ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#666">[QR CODE HERE]</div></div>' : '') 
+                            }} 
+                        />
+                        {includeQr && !emailBody.includes('${qrCode}') && (
+                            <div style={{ margin: '20px 0', textAlign: 'center', padding: '20px', background: '#f5f5f7', borderRadius: '12px' }}>
+                                <div style={{ width: '150px', height: '150px', background: '#ddd', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>[QR CODE HERE]</div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-[var(--border)] shadow-sm">

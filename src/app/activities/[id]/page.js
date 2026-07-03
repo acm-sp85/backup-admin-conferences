@@ -88,7 +88,11 @@ export default async function ActivityDetailsPage({ params }) {
                 conferenceId={activity.conference_id} 
                 initialAttendees={attendees} 
                 activityName={activity.name}
-                initialCustomEmailText={activity.custom_email_text}
+                initialEmailTemplate={{
+                    subject: activity.email_subject || '',
+                    body: activity.email_body_template || '',
+                    includeQr: activity.include_qr !== 0 // handles null as true
+                }}
             />
 
         </DashboardLayout>

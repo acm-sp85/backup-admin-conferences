@@ -31,6 +31,27 @@ export default async function MigratePage() {
         results.push(`ℹ️ registrations.is_guest: ${e.message}`);
     }
 
+    try {
+        await query(`ALTER TABLE extra_activities ADD COLUMN email_subject VARCHAR(255) DEFAULT NULL`);
+        results.push('✅ Added email_subject to extra_activities');
+    } catch (e) {
+        results.push(`ℹ️ extra_activities.email_subject: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE extra_activities ADD COLUMN email_body_template TEXT DEFAULT NULL`);
+        results.push('✅ Added email_body_template to extra_activities');
+    } catch (e) {
+        results.push(`ℹ️ extra_activities.email_body_template: ${e.message}`);
+    }
+
+    try {
+        await query(`ALTER TABLE extra_activities ADD COLUMN include_qr BOOLEAN NOT NULL DEFAULT 1`);
+        results.push('✅ Added include_qr to extra_activities');
+    } catch (e) {
+        results.push(`ℹ️ extra_activities.include_qr: ${e.message}`);
+    }
+
     // ---- Program Manual Override Feature ----
     try {
         await query(`ALTER TABLE program_sessions ADD COLUMN is_manual BOOLEAN DEFAULT 0`);

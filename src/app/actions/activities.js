@@ -42,13 +42,13 @@ export async function updateActivity(activityId, name, date, description) {
     return { success: true };
 }
 
-export async function updateActivityEmailText(activityId, customEmailText) {
+export async function updateActivityEmailTemplate(activityId, subject, bodyTemplate, includeQr) {
     const session = await verifySession();
     if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
 
     await query(
-        'UPDATE extra_activities SET custom_email_text = ? WHERE id = ?',
-        [customEmailText || null, activityId]
+        'UPDATE extra_activities SET email_subject = ?, email_body_template = ?, include_qr = ? WHERE id = ?',
+        [subject || null, bodyTemplate || null, includeQr ? 1 : 0, activityId]
     );
 
     revalidatePath(`/activities/${activityId}`);
@@ -211,6 +211,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
 
     const [attendee] = await query(`
         SELECT a.name, a.email, a.qr_token, a.tickets_count, act.name as activity_name, act.custom_email_text, 
+               act.email_subject, act.email_body_template, act.include_qr,
                c.id as conference_id, c.name as conference_name, c.email as conference_email,
                c.logo_url, c.banner_url, c.accent_color,
                p.email_alias
@@ -240,38 +241,89 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     const qrBase64 = await generateQR(validationUrl);
 
     const headerHtml = renderHeader(brand);
-    const ticketsLabel = attendee.tickets_count > 1 ? ` (${attendee.tickets_count} tickets)` : '';
-    const subject = `Your QR Ticket${attendee.tickets_count > 1 ? 's' : ''} for ${attendee.activity_name}${ticketsLabel} - ${brand.name}`;
-    const customMessageHtml = attendee.custom_email_text 
-        ? `<div style="margin-top: 15px; margin-bottom: 25px; padding: 15px; border-left: 4px solid ${brand.accentColor}; background-color: #f8fafc; color: #334155; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${attendee.custom_email_text}</div>` 
-        : '';
-
-    const registrationDetails = attendee.tickets_count > 1 
-        ? `You have <strong>${attendee.tickets_count} tickets</strong> registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`
-        : `You are registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`;
-
-    const qrDescription = attendee.tickets_count > 1
-        ? `Show this QR code at the entrance to check-in your ${attendee.tickets_count} tickets.`
-        : `Show this QR code to check-in to this activity.`;
-
-    const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #0f172a;">
-            ${headerHtml}
-            <h2 style="color: #1d1d1f; font-size: 20px; margin-bottom: 15px;">Hello ${attendee.name},</h2>
-            <p style="font-size: 14px; line-height: 1.5;">${registrationDetails}</p>
-            ${customMessageHtml}
-            <p style="font-size: 14px; line-height: 1.5; margin-top: 15px;">Please present the QR code below at the entrance for scanning:</p>
-            
-            <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
-                <img src="${qrBase64}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
-                <p style="margin: 5px 0; font-size: 12px; color: #86868b;">${qrDescription}</p>
-            </div>
-            
-            <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
-                This is an automated message from ${brand.name}. For support, contact <a href="mailto:${brand.email}" style="color: ${brand.accentColor}; text-decoration: none;">${brand.email}</a>.
-            </p>
+    
+    const qrBlock = `
+        <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+            <img src="${qrBase64}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+            <p style="margin: 5px 0; font-size: 12px; color: #86868b;">Show this QR code at the entrance to check-in your ${attendee.tickets_count > 1 ? attendee.tickets_count + ' tickets' : 'ticket'}.</p>
         </div>
     `;
+
+    let subject, html;
+
+    if (attendee.email_body_template) {
+        // --- NEW TEMPLATE LOGIC ---
+        subject = attendee.email_subject || `Your QR Ticket${attendee.tickets_count > 1 ? 's' : ''} for ${attendee.activity_name} - ${brand.name}`;
+        subject = subject.replace(/\$\{name\}/g, attendee.name)
+                         .replace(/\$\{activityName\}/g, attendee.activity_name)
+                         .replace(/\$\{tickets\}/g, attendee.tickets_count)
+                         .replace(/\$\{conferenceName\}/g, brand.name);
+
+        let bodyHtml = attendee.email_body_template
+                         .replace(/\$\{name\}/g, attendee.name)
+                         .replace(/\$\{activityName\}/g, attendee.activity_name)
+                         .replace(/\$\{tickets\}/g, attendee.tickets_count)
+                         .replace(/\$\{conferenceName\}/g, brand.name);
+
+        if (attendee.include_qr) {
+            if (bodyHtml.includes('${qrCode}')) {
+                bodyHtml = bodyHtml.replace(/\$\{qrCode\}/g, qrBlock);
+            } else {
+                bodyHtml += qrBlock;
+            }
+        } else {
+            bodyHtml = bodyHtml.replace(/\$\{qrCode\}/g, '');
+        }
+
+        html = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #0f172a;">
+                ${headerHtml}
+                ${bodyHtml}
+                <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+                    This is an automated message from ${brand.name}. For support, contact <a href="mailto:${brand.email}" style="color: ${brand.accentColor}; text-decoration: none;">${brand.email}</a>.
+                </p>
+            </div>
+        `;
+    } else {
+        // --- FALLBACK TO OLD LOGIC ---
+        const ticketsLabel = attendee.tickets_count > 1 ? ` (${attendee.tickets_count} tickets)` : '';
+        subject = `Your QR Ticket${attendee.tickets_count > 1 ? 's' : ''} for ${attendee.activity_name}${ticketsLabel} - ${brand.name}`;
+        const customMessageHtml = attendee.custom_email_text 
+            ? `<div style="margin-top: 15px; margin-bottom: 25px; padding: 15px; border-left: 4px solid ${brand.accentColor}; background-color: #f8fafc; color: #334155; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${attendee.custom_email_text}</div>` 
+            : '';
+
+        const registrationDetails = attendee.tickets_count > 1 
+            ? `You have <strong>${attendee.tickets_count} tickets</strong> registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`
+            : `You are registered for <strong>${attendee.activity_name}</strong> at <strong>${brand.name}</strong>.`;
+
+        let finalQrBlock = '';
+        if (attendee.include_qr) {
+            const qrDescription = attendee.tickets_count > 1
+                ? `Show this QR code at the entrance to check-in your ${attendee.tickets_count} tickets.`
+                : `Show this QR code to check-in to this activity.`;
+            finalQrBlock = `
+                <p style="font-size: 14px; line-height: 1.5; margin-top: 15px;">Please present the QR code below at the entrance for scanning:</p>
+                <div style="margin: 30px 0; padding: 20px; background: #f5f5f7; border-radius: 12px; text-align: center;">
+                    <img src="${qrBase64}" alt="QR Code" style="width: 240px; height: 240px; margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto;" />
+                    <p style="margin: 5px 0; font-size: 12px; color: #86868b;">${qrDescription}</p>
+                </div>
+            `;
+        }
+
+        html = `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #0f172a;">
+                ${headerHtml}
+                <h2 style="color: #1d1d1f; font-size: 20px; margin-bottom: 15px;">Hello ${attendee.name},</h2>
+                <p style="font-size: 14px; line-height: 1.5;">${registrationDetails}</p>
+                ${customMessageHtml}
+                ${finalQrBlock}
+                
+                <p style="font-size: 12px; color: #86868b; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center;">
+                    This is an automated message from ${brand.name}. For support, contact <a href="mailto:${brand.email}" style="color: ${brand.accentColor}; text-decoration: none;">${brand.email}</a>.
+                </p>
+            </div>
+        `;
+    }
 
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
