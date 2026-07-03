@@ -110,10 +110,12 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     const payments = person.all_payments_json ? (typeof person.all_payments_json === 'string' ? JSON.parse(person.all_payments_json) : person.all_payments_json) : [];
     
     // Calculate total debt: use balance if it exists, otherwise use amount if not paid
-    const totalDebt = payments.reduce((sum, pay) => {
-        const balance = pay?.balance !== null ? Number(pay?.balance) : (pay?.status?.toLowerCase() !== 'paid' ? Number(pay?.amount || 0) : 0);
+    const totalDebt = Array.isArray(payments) ? payments.reduce((sum, pay) => {
+        if (!pay) return sum;
+        if (pay.status?.toLowerCase() === 'paid') return sum;
+        const balance = pay.balance !== null ? Number(pay.balance) : Number(pay.amount);
         return sum + balance;
-    }, 0);
+    }, 0) : 0;
 
     // Filter out nulls and sort by date latest first
     const validPayments = Array.isArray(payments) ? payments.filter(p => p !== null) : [];

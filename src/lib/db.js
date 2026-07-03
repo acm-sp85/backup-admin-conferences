@@ -46,6 +46,7 @@ export const hasAccess = async (email) => {
   const rows = await query(
     `SELECT SUM(
         CASE
+          WHEN LOWER(status) = 'paid' THEN 0
           WHEN balance IS NOT NULL THEN balance
           WHEN status IS NOT NULL AND LOWER(status) <> 'paid' THEN amount
           ELSE 0

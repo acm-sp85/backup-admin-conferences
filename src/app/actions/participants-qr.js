@@ -96,11 +96,19 @@ export async function validateParticipantTicket(token) {
     // Check for pending balance
     const payments = await query('SELECT amount, balance, status FROM payments WHERE registration_id = ?', [ticket.registration_id]);
     const totalDebt = payments.reduce((sum, pay) => {
-        const b = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
+        if (pay.status?.toLowerCase() === 'paid') return sum;
+        const b = pay.balance !== null ? Number(pay.balance) : Number(pay.amount);
         return sum + b;
     }, 0);
 
     if (totalDebt > 0) {
+        // Automatically settle all pending payments for this registration
+        await query(
+            `UPDATE payments 
+             SET balance = 0, status = 'Paid', payment_method = 'Cash at Door', is_manual = 1 
+             WHERE registration_id = ? AND (balance > 0 OR (status IS NOT NULL AND LOWER(status) <> 'paid'))`,
+            [ticket.registration_id]
+        );
         return {
             success: false,
             hasDebt: true,

@@ -59,8 +59,8 @@ export default async function ParticipantsPage({ searchParams }) {
   const params = [];
 
   if (search) {
-    sql += ` AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ?)`;
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    sql += ` AND (p.firstName LIKE ? OR p.lastName LIKE ? OR p.email LIKE ? OR p.registration_type LIKE ?)`;
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (conference) {

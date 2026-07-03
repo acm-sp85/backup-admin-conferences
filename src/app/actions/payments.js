@@ -10,7 +10,8 @@ export async function addManualPayment(registrationId, data) {
         throw new Error('Unauthorized');
     }
 
-    const { amount = 0, balance = 0, status = 'Pending', payment_method = 'Manual', invoice_code = null } = data;
+    let { amount = 0, balance = 0, status = 'Pending', payment_method = 'Manual', invoice_code = null } = data;
+    if (status.toLowerCase() === 'paid') balance = 0;
 
     await query(
         `INSERT INTO payments (registration_id, amount, balance, status, payment_method, invoice_code, is_manual)
@@ -28,7 +29,8 @@ export async function updatePayment(paymentId, data) {
         throw new Error('Unauthorized');
     }
 
-    const { amount = 0, balance = 0, status = 'Pending', payment_method = 'Manual', invoice_code = null } = data;
+    let { amount = 0, balance = 0, status = 'Pending', payment_method = 'Manual', invoice_code = null } = data;
+    if (status.toLowerCase() === 'paid') balance = 0;
 
     // We set is_manual = 1 so that it won't be overwritten by future syncs
     await query(

@@ -47,7 +47,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
           <div className="relative">
             <input
               type="text"
-              placeholder="Name, email..."
+              placeholder="Name, email, user-type..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input-base w-full"
