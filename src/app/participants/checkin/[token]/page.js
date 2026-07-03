@@ -2,6 +2,8 @@ import { validateParticipantTicket } from '../../../actions/participants-qr';
 import { CheckCircle2, XCircle, Clock, User, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ParticipantCheckinPage({ params }) {
     const { token } = await params;
     const result = await validateParticipantTicket(token);

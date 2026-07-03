@@ -4,10 +4,11 @@ import { useState } from 'react';
 import ParticipantBadge from './ParticipantBadge';
 import ParticipantQRBadge from './ParticipantQRBadge';
 import ParticipantVoterToggle from './ParticipantVoterToggle';
-import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award, Download } from 'lucide-react';
+import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award, Download, Pencil, Plus, Save, X, Hand } from 'lucide-react';
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
-import { updateParticipantType } from '../actions/participants';
+import { updateParticipantType, toggleParticipantRemoved } from '../actions/participants';
+import { addManualPayment, updatePayment, deletePayment } from '../actions/payments';
 
 export default function ParticipantRow({ person, activeConfId, isCompleted, userRole, selected, onSelect, registrationTypes }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -20,6 +21,11 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     const [isSendingCert, setIsSendingCert] = useState(false);
     const [userTypeInput, setUserTypeInput] = useState(person.registration_type || 'Standard');
     const [isSavingType, setIsSavingType] = useState(false);
+    const [isRemoving, setIsRemoving] = useState(false);
+    
+    const [editingPayment, setEditingPayment] = useState(null);
+    const [isSavingPayment, setIsSavingPayment] = useState(false);
+    const [isAddingPayment, setIsAddingPayment] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -115,6 +121,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     
     // Get latest info for the summary display
     const latestPayment = sortedPayments[0] || null;
+    const hasManualPayments = sortedPayments.some(p => p.is_manual === 1);
 
     const isPaid = statuses.length > 0 && statuses.every(s => s === 'paid') && totalDebt <= 0;
     const isPending = statuses.includes('pending') || totalDebt > 0;
@@ -134,14 +141,18 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                 <td className="py-4" onClick={(e) => e.stopPropagation()}>
                     <input 
                         type="checkbox" 
-                        checked={selected}
+                        checked={selected && !person.is_removed}
                         onChange={onSelect}
-                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 ml-1"
+                        disabled={person.is_removed}
+                        className={`rounded focus:ring-indigo-500 ml-1 ${person.is_removed ? 'border-slate-200 bg-slate-100 cursor-not-allowed' : 'border-slate-300 text-indigo-600'}`}
                     />
                 </td>
                 <td className="py-4">
                     <div className="flex items-center gap-2">
-                        <div className="font-medium text-[var(--foreground)]">{person.name}</div>
+                        <div className={`font-medium ${person.is_removed ? 'line-through opacity-50 text-[var(--muted)]' : 'text-[var(--foreground)]'}`}>
+                            {person.name}
+                            {person.is_removed && <span className="ml-2 text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded not-italic no-underline">REMOVED</span>}
+                        </div>
                         <span className={`text-[var(--muted)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                         </span>
@@ -218,15 +229,22 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                         <span className="text-[var(--muted)] text-xs">—</span>
                     ) : (
                         <div className="flex flex-col gap-0.5">
-                            <span className="badge" style={{
-                                background: isPaid ? '#e8faf0' : isPending ? '#fff8e8' : '#f5f5f7',
-                                color: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#86868b',
-                                fontSize: '9px',
-                                padding: '2px 6px'
-                            }}>
-                                <span className="w-[4px] h-[4px] rounded-full" style={{ background: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#aeaeb2' }} />
-                                {isPaid ? 'Paid' : isPending ? 'Pending' : 'Mixed'}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="badge" style={{
+                                    background: isPaid ? '#e8faf0' : isPending ? '#fff8e8' : '#f5f5f7',
+                                    color: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#86868b',
+                                    fontSize: '9px',
+                                    padding: '2px 6px'
+                                }}>
+                                    <span className="w-[4px] h-[4px] rounded-full" style={{ background: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#aeaeb2' }} />
+                                    {isPaid ? 'Paid' : isPending ? 'Pending' : 'Mixed'}
+                                </span>
+                                {hasManualPayments && (
+                                    <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="Contains manually protected payments">
+                                        <Hand className="w-2.5 h-2.5"/> MANUAL
+                                    </span>
+                                )}
+                            </div>
                         <div className="flex flex-col gap-1 mt-1">
                             {totalDebt > 0 ? (
                                 <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
@@ -483,14 +501,153 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                                 {isSavingType && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
                                             </div>
                                         </div>
+
+                                        {(userRole === 'superadmin' || userRole === 'admin') && (
+                                            <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
+                                                <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">
+                                                    <Trash2 className="w-3 h-3" />
+                                                    Danger Zone
+                                                </div>
+                                                <button
+                                                    disabled={isRemoving}
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (prompt(`Type the participant's email (${person.email}) to confirm:`) !== person.email) return;
+                                                        setIsRemoving(true);
+                                                        try {
+                                                            await toggleParticipantRemoved(person.id, activeConfId, !person.is_removed);
+                                                        } catch (err) {
+                                                            alert('Error: ' + err.message);
+                                                        } finally {
+                                                            setIsRemoving(false);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center justify-center px-3 py-2 text-white rounded-xl text-[10px] font-bold transition-colors disabled:opacity-50 ${person.is_removed ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}
+                                                >
+                                                    {isRemoving ? <Loader2 className="w-3 h-3 animate-spin inline mr-2" /> : null}
+                                                    {person.is_removed ? 'Restore to Conference' : 'Remove from Conference'}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-4 flex items-center gap-1.5">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                                        Payment History & Tickets
-                                    </h4>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-0 flex items-center gap-1.5">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                                            Payment History & Tickets
+                                        </h4>
+                                        {(userRole === 'admin' || userRole === 'superadmin') && !isAddingPayment && !editingPayment && (
+                                            <button 
+                                                onClick={() => { setIsAddingPayment(true); setEditingPayment({ amount: 0, balance: 0, status: 'Pending', method: 'Manual' }); }}
+                                                className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold hover:bg-indigo-100 flex items-center gap-1 transition-colors"
+                                            >
+                                                <Plus className="w-3 h-3" /> Add Record
+                                            </button>
+                                        )}
+                                    </div>
                                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
+                                        {(isAddingPayment || editingPayment) && (
+                                            <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 mb-3 animate-in fade-in slide-in-from-top-2">
+                                                <div className="text-[10px] font-bold text-indigo-800 mb-2">{isAddingPayment ? 'Add Manual Record' : 'Edit Payment'}</div>
+                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Amount</label>
+                                                        <input type="number" step="0.01" value={editingPayment.amount !== undefined ? editingPayment.amount : ''} onChange={e => setEditingPayment({...editingPayment, amount: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Unpaid Balance (Debt)</label>
+                                                        <input type="number" step="0.01" value={editingPayment.balance !== undefined && editingPayment.balance !== null ? editingPayment.balance : ''} onChange={e => setEditingPayment({...editingPayment, balance: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Status</label>
+                                                        <select value={editingPayment.status || 'Pending'} onChange={e => setEditingPayment({...editingPayment, status: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                                                            <option value="Paid">Paid</option>
+                                                            <option value="Pending">Pending</option>
+                                                            <option value="Cancelled">Cancelled</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Method</label>
+                                                        <input type="text" value={editingPayment.method || ''} onChange={e => setEditingPayment({...editingPayment, method: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" placeholder="e.g. Bank Transfer" />
+                                                    </div>
+                                                    {!isAddingPayment && (
+                                                        <div className="col-span-2 mt-1">
+                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={editingPayment.is_manual === 0 || editingPayment.is_manual === false} 
+                                                                    onChange={e => setEditingPayment({...editingPayment, is_manual: e.target.checked ? 0 : 1})}
+                                                                    className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                                                />
+                                                                <span className="text-[10px] text-[var(--muted)] font-medium">Allow SCITO sync to overwrite these manual edits (Unprotect)</span>
+                                                            </label>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-end items-center gap-3 mt-4">
+                                                    {!isAddingPayment && (
+                                                        <button 
+                                                            disabled={isSavingPayment}
+                                                            onClick={async () => {
+                                                                if (!confirm('Are you sure you want to delete this payment record?')) return;
+                                                                setIsSavingPayment(true);
+                                                                try {
+                                                                    await deletePayment(editingPayment.id);
+                                                                    setIsAddingPayment(false);
+                                                                    setEditingPayment(null);
+                                                                } catch (err) {
+                                                                    alert('Error deleting payment: ' + err.message);
+                                                                } finally {
+                                                                    setIsSavingPayment(false);
+                                                                }
+                                                            }}
+                                                            className="text-red-500 hover:text-red-700 text-[10px] font-bold flex items-center gap-1 mr-auto disabled:opacity-50"
+                                                        >
+                                                            <Trash2 className="w-3 h-3"/> Delete
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        disabled={isSavingPayment}
+                                                        onClick={() => { setIsAddingPayment(false); setEditingPayment(null); }}
+                                                        className="px-2 py-1 text-slate-500 hover:text-slate-700 text-[10px] font-bold flex items-center gap-1"
+                                                    ><X className="w-3 h-3"/> Cancel</button>
+                                                    <button 
+                                                        disabled={isSavingPayment}
+                                                        onClick={async () => {
+                                                            setIsSavingPayment(true);
+                                                            try {
+                                                                if (isAddingPayment) {
+                                                                    await addManualPayment(person.primary_registration_id, {
+                                                                        amount: editingPayment.amount,
+                                                                        balance: editingPayment.balance,
+                                                                        status: editingPayment.status,
+                                                                        payment_method: editingPayment.method
+                                                                    });
+                                                                } else {
+                                                                    await updatePayment(editingPayment.id, {
+                                                                        amount: editingPayment.amount,
+                                                                        balance: editingPayment.balance,
+                                                                        status: editingPayment.status,
+                                                                        payment_method: editingPayment.method,
+                                                                        is_manual: editingPayment.is_manual !== undefined ? (editingPayment.is_manual ? 1 : 0) : 1
+                                                                    });
+                                                                }
+                                                                setIsAddingPayment(false);
+                                                                setEditingPayment(null);
+                                                            } catch (err) {
+                                                                alert('Error saving payment: ' + err.message);
+                                                            } finally {
+                                                                setIsSavingPayment(false);
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1"
+                                                    >
+                                                        {isSavingPayment ? <Loader2 className="w-3 h-3 animate-spin"/> : <Save className="w-3 h-3"/>} Save
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {sortedPayments.length > 0 ? sortedPayments.map((pay, pIdx) => {
                                             const tickets = pay.tickets ? (typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets) : [];
                                             const pStatus = pay.status?.toLowerCase();
@@ -500,16 +657,30 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                             return (
                                                 <div key={pIdx} className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                                                     <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-[9px] font-mono text-[var(--muted)] uppercase tracking-tighter">#{pay.invoice || 'INV-' + pIdx}</span>
-                                                        <span className="badge" style={{
-                                                            background: pIsPaid ? '#e8faf0' : pIsPending ? '#fff8e8' : '#fef2f2',
-                                                            color: pIsPaid ? '#34c759' : pIsPending ? '#ff9f0a' : '#ef4444',
-                                                            fontSize: '8px',
-                                                            padding: '1px 5px',
-                                                            borderRadius: '100px'
-                                                        }}>
-                                                            {pay.status || 'NDEF'}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] font-mono text-[var(--muted)] uppercase tracking-tighter">#{pay.invoice_code || pay.invoice || 'INV-' + pIdx}</span>
+                                                            {pay.is_manual ? <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="Protected from SCITO sync"><Hand className="w-2.5 h-2.5"/> MANUAL</span> : null}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {(userRole === 'admin' || userRole === 'superadmin') && !editingPayment && !isAddingPayment && (
+                                                                <button 
+                                                                    onClick={() => { setIsAddingPayment(false); setEditingPayment({...pay, method: pay.payment_method || pay.method, is_manual: 1}); }} 
+                                                                    className="text-slate-400 hover:text-indigo-600 p-0.5 transition-colors" 
+                                                                    title="Edit Payment"
+                                                                >
+                                                                    <Pencil className="w-3 h-3"/>
+                                                                </button>
+                                                            )}
+                                                            <span className="badge" style={{
+                                                                background: pIsPaid ? '#e8faf0' : pIsPending ? '#fff8e8' : '#fef2f2',
+                                                                color: pIsPaid ? '#34c759' : pIsPending ? '#ff9f0a' : '#ef4444',
+                                                                fontSize: '8px',
+                                                                padding: '1px 5px',
+                                                                borderRadius: '100px'
+                                                            }}>
+                                                                {pay.status || 'NDEF'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <ul className="space-y-1.5">
                                                         {tickets.map((t, tIdx) => (

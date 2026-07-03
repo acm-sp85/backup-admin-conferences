@@ -236,3 +236,22 @@ export async function updateParticipantType(participantId, registrationType) {
     revalidatePath('/participants');
     return { success: true };
 }
+
+export async function toggleParticipantRemoved(participantId, conferenceId, isRemoved) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+        throw new Error('Unauthorized');
+    }
+
+    if (!participantId || !conferenceId) {
+        throw new Error('Missing participant ID or conference ID');
+    }
+
+    await query(
+        'UPDATE registrations SET is_removed = ? WHERE participant_id = ? AND conference_id = ?',
+        [isRemoved ? 1 : 0, participantId, conferenceId]
+    );
+
+    revalidatePath('/participants');
+    return { success: true };
+}

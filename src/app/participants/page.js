@@ -17,7 +17,7 @@ export default async function ParticipantsPage({ searchParams }) {
     redirect(session ? '/voting' : '/login');
   }
 
-  const { search, conference, status, sortBy = 'created_at', order = 'desc' } = await searchParams;
+  const { search, conference, status, show_removed, sortBy = 'created_at', order = 'desc' } = await searchParams;
   const conferences = await query('SELECT id, acronym, start_date, end_date FROM conferences ORDER BY acronym ASC');
 
   // Persistence: If no conference in URL, check cookie
@@ -67,7 +67,7 @@ export default async function ParticipantsPage({ searchParams }) {
     sql += ` AND p.id IN (
       SELECT participant_id FROM registrations r2 
       JOIN conferences c2 ON r2.conference_id = c2.id 
-      WHERE c2.acronym = ? AND r2.is_guest = 0
+      WHERE c2.acronym = ? AND r2.is_guest = 0 ${show_removed === 'true' ? '' : 'AND (r2.is_removed = 0 OR r2.is_removed IS NULL)'}
     )`;
     params.push(conference);
   } else {
@@ -75,6 +75,11 @@ export default async function ParticipantsPage({ searchParams }) {
     sql += ` AND p.id NOT IN (
       SELECT DISTINCT participant_id FROM registrations WHERE is_guest = 1
     )`;
+    if (show_removed !== 'true') {
+      sql += ` AND p.id NOT IN (
+        SELECT DISTINCT participant_id FROM registrations WHERE is_removed = 1
+      )`;
+    }
   }
 
 
@@ -140,6 +145,7 @@ export default async function ParticipantsPage({ searchParams }) {
       qr_token: primaryReg?.qr_token,
       cert_sent_at: primaryReg?.cert_sent_at,
       cluster_for_review: primaryReg?.cluster_for_review,
+      is_removed: primaryReg?.is_removed,
       all_payments_json: JSON.stringify(pPayments) 
     };
   });
@@ -237,7 +243,7 @@ export default async function ParticipantsPage({ searchParams }) {
               userRole={session.role}
               sortBy={sortBy}
               order={order}
-              searchParams={{ search, conference, status }}
+              searchParams={{ search, conference, status, show_removed }}
               registrationTypes={union}
             />
           );

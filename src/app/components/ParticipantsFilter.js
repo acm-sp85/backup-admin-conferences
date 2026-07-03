@@ -12,15 +12,16 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [conference, setConference] = useState(searchParams.get('conference') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
+  const [showRemoved, setShowRemoved] = useState(searchParams.get('show_removed') === 'true');
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateFilters(search, conference, status);
+      updateFilters(search, conference, status, showRemoved);
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const updateFilters = (s, c, st) => {
+  const updateFilters = (s, c, st, sr) => {
     const params = new URLSearchParams(searchParams);
     if (s) params.set('search', s); else params.delete('search');
     if (c) {
@@ -31,6 +32,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
       document.cookie = `last_conference=; path=/; max-age=0`;
     }
     if (st) params.set('status', st); else params.delete('status');
+    if (sr) params.set('show_removed', 'true'); else params.delete('show_removed');
 
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
@@ -63,7 +65,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
         <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Conference</label>
         <select
           value={conference}
-          onChange={(e) => { setConference(e.target.value); updateFilters(search, e.target.value, status); }}
+          onChange={(e) => { setConference(e.target.value); updateFilters(search, e.target.value, status, showRemoved); }}
           className="input-base w-full"
         >
           <option value="">All</option>
@@ -78,7 +80,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
           <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Payment</label>
           <select
             value={status}
-            onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value); }}
+            onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value, showRemoved); }}
             className="input-base w-full"
           >
             <option value="">Any</option>
@@ -89,9 +91,22 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
         </div>
       )}
 
-      {(search || conference || status) && (
+      <div className="flex items-center gap-2 pb-[7px]">
+        <input 
+          type="checkbox" 
+          id="showRemoved" 
+          checked={showRemoved} 
+          onChange={(e) => { setShowRemoved(e.target.checked); updateFilters(search, conference, status, e.target.checked); }}
+          className="rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+        />
+        <label htmlFor="showRemoved" className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider cursor-pointer">
+          Show removed
+        </label>
+      </div>
+
+      {(search || conference || status || showRemoved) && (
         <button
-          onClick={() => { setSearch(''); setConference(''); setStatus(''); updateFilters('', '', ''); }}
+          onClick={() => { setSearch(''); setConference(''); setStatus(''); setShowRemoved(false); updateFilters('', '', '', false); }}
           className="text-[10px] font-semibold text-[#ff3b30] hover:underline pb-[7px]"
         >
           Clear

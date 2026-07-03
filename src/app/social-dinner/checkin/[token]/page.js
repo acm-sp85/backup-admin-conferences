@@ -1,6 +1,8 @@
 import { validateTicket } from '@/app/actions/social-dinner';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CheckInPage({ params }) {
     const { token } = await params;
     const result = await validateTicket(token);

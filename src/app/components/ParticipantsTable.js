@@ -38,7 +38,7 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
         if (selectedIds.size > 0) {
             setSelectedIds(new Set());
         } else {
-            setSelectedIds(new Set(participants.map(p => p.primary_registration_id).filter(id => id)));
+            setSelectedIds(new Set(participants.filter(p => !p.is_removed).map(p => p.primary_registration_id).filter(id => id)));
         }
     };
 
@@ -74,7 +74,7 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
     const selectCheckedIn = () => {
         const checkedInIds = new Set(
             participants
-                .filter(p => p.qr_scanned_at && p.primary_registration_id)
+                .filter(p => !p.is_removed && p.qr_scanned_at && p.primary_registration_id)
                 .map(p => p.primary_registration_id)
         );
         setSelectedIds(checkedInIds);
