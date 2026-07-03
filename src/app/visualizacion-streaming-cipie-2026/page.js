@@ -24,6 +24,6 @@ export default async function StreamingPage() {
       </form>
     </div>
   ) : (
-    <EmailAccessModal />
+    <EmailAccessModal conference="CIPIE26" />
   );
 }

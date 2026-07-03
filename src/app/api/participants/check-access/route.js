@@ -11,20 +11,20 @@ export async function POST(req) {
       return NextResponse.json({ granted: false, message: 'Demasiados intentos. Por favor, espera un minuto.' }, { status: 429 });
     }
 
-    const { email } = await req.json();
+    const { email, conference } = await req.json();
     if (!email) {
       return NextResponse.json({ granted: false, message: 'Email required' }, { status: 400 });
     }
-    const granted = await hasAccess(email);
+    const granted = await hasAccess(email, conference);
     if (granted) {
       const response = NextResponse.json({ granted: true });
       // Set HttpOnly cookie to remember access
       response.cookies.set('accessGranted', 'true', { httpOnly: true, path: '/', maxAge: 60 * 60 * 24 }); // 1 day
       return response;
     }
-    return NextResponse.json({ granted: false, message: 'Acceso denegado. Consulta con la organización si tienes alguna duda. O revisa que el email sea correcto.' }, { status: 403 });
+    return NextResponse.json({ granted: false, message: 'Error de acceso. Revisa que el email sea correcto o contacta con la organización: <a href="mailto:hola@cipie2026.com" style="text-decoration: underline; font-weight: bold;">hola@cipie2026.com</a>' }, { status: 403 });
   } catch (err) {
     console.error('Access check error', err);
-    return NextResponse.json({ granted: false, message: 'Server error' }, { status: 500 });
+    return NextResponse.json({ granted: false, message: 'Error de acceso. Revisa que el email sea correcto o contacta con la organización.' }, { status: 500 });
   }
 }

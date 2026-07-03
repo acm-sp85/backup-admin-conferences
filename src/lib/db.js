@@ -29,15 +29,30 @@ export const query = async (sql, params) => {
     return results;
 };
 
-export const hasAccess = async (email) => {
+export const hasAccess = async (email, conferenceAcronym = null) => {
   // Find participant by email
   const participants = await query(`SELECT id FROM participants WHERE email = ?`, [email]);
   if (!participants || participants.length === 0) return false;
   const participantId = participants[0].id;
 
-  // Get all registrations for this participant
-  const registrations = await query(`SELECT id FROM registrations WHERE participant_id = ?`, [participantId]);
-  if (!registrations || registrations.length === 0) return true; // No registrations means no pending balance
+  // Get registrations for this participant
+  let regSql = `
+    SELECT r.id 
+    FROM registrations r
+    JOIN conferences c ON r.conference_id = c.id
+    WHERE r.participant_id = ? 
+      AND r.is_guest = 0 
+      AND (r.is_removed = 0 OR r.is_removed IS NULL)
+  `;
+  const regParams = [participantId];
+
+  if (conferenceAcronym) {
+    regSql += ` AND c.acronym = ?`;
+    regParams.push(conferenceAcronym);
+  }
+
+  const registrations = await query(regSql, regParams);
+  if (!registrations || registrations.length === 0) return false; // Must have a valid registration to get access
 
   const regIds = registrations.map((r) => r.id);
   const placeholders = regIds.map(() => '?').join(',');

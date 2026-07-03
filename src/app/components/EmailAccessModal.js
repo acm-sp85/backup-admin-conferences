@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import styles from './EmailAccessModal.module.css';
 
-export default function EmailAccessModal() {
+export default function EmailAccessModal({ conference = null }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ export default function EmailAccessModal() {
       const res = await fetch('/api/participants/check-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, conference }),
         credentials: 'same-origin',
       });
       const data = await res.json();
@@ -48,7 +48,7 @@ export default function EmailAccessModal() {
             {loading ? 'Checking…' : 'Enter'}
           </button>
         </form>
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className={styles.error} dangerouslySetInnerHTML={{ __html: error }} />}
       </div>
     </div>
   );
