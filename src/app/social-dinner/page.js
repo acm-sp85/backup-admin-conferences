@@ -45,6 +45,8 @@ export default async function SocialDinnerPage({ searchParams }) {
   let sql = `
     SELECT 
       p.id as participant_id, 
+      p.firstName,
+      p.lastName,
       CONCAT(COALESCE(p.firstName, ''), ' ', COALESCE(p.lastName, '')) as name,
       p.email, 
       p.email_alias,
@@ -174,6 +176,8 @@ export default async function SocialDinnerPage({ searchParams }) {
     attendees.push({
       id: `${p.participant_id}-${p.registration_id}`,
       name: p.name,
+      firstName: p.firstName,
+      lastName: p.lastName,
       email: p.email,
       email_alias: p.email_alias,
       registration_id: p.registration_id,

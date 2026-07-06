@@ -174,6 +174,7 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   // Sanitize
   html = sanitizeHtml(html, {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'style']),
+    allowVulnerableTags: true,
     allowedAttributes: {
       a: ['href', 'name', 'target'],
       img: ['src', 'alt', 'style'],

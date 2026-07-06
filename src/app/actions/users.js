@@ -9,6 +9,7 @@ import { headers } from 'next/headers';
 import { verifySession, encrypt } from '@/lib/auth';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { resolveEmail } from '@/lib/email-resolver';
+import { logAction } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -47,6 +48,7 @@ export async function inviteUser(prevState, formData) {
                 [email, role, firstName, lastName]
             );
             userId = res.insertId;
+            await logAction('CREATE', 'USER', userId, { email, role });
         }
 
         // Generate Magic Link
@@ -98,6 +100,8 @@ export async function inviteUser(prevState, formData) {
 
         console.log(`📧 Invitation email sent to ${email}`);
 
+        await logAction('SEND_EMAIL', 'USER_INVITE', userId, { deliveryEmail, role });
+
         revalidatePath('/users');
         return { success: true };
     } catch (error) {
@@ -116,6 +120,7 @@ export async function deleteUser(userId) {
 
     try {
         await query('DELETE FROM users WHERE id = ?', [userId]);
+        await logAction('DELETE', 'USER', userId);
         revalidatePath('/users');
         return { success: true };
     } catch (error) {
@@ -132,6 +137,7 @@ export async function updateUserRole(userId, newRole) {
     try {
         console.log(`Attempting to update user ${userId} to role: ${newRole}`);
         const result = await query('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
+        await logAction('UPDATE', 'USER_ROLE', userId, { newRole });
         console.log('Update result:', result);
         revalidatePath('/users');
         return { success: true };

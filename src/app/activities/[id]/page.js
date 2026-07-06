@@ -30,7 +30,7 @@ export default async function ActivityDetailsPage({ params }) {
     }
 
     const attendees = await query(`
-        SELECT a.*, p.email_alias 
+        SELECT a.*, p.email_alias, p.firstName, p.lastName
         FROM extra_activity_attendees a
         LEFT JOIN participants p ON a.participant_id = p.id
         WHERE a.activity_id = ?

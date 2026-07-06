@@ -52,6 +52,26 @@ export default async function MigratePage() {
         results.push(`ℹ️ extra_activities.include_qr: ${e.message}`);
     }
 
+    try {
+        await query(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                admin_email VARCHAR(255) NOT NULL,
+                action_type VARCHAR(50) NOT NULL,
+                entity_type VARCHAR(50) NOT NULL,
+                entity_id VARCHAR(255) NULL,
+                details JSON NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_admin_email (admin_email),
+                INDEX idx_action_type (action_type),
+                INDEX idx_entity_type (entity_type)
+            );
+        `);
+        results.push('✅ Created audit_logs table');
+    } catch (e) {
+        results.push(`ℹ️ audit_logs: ${e.message}`);
+    }
+
     // ---- Program Manual Override Feature ----
     try {
         await query(`ALTER TABLE program_sessions ADD COLUMN is_manual BOOLEAN DEFAULT 0`);

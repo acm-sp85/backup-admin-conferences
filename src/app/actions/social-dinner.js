@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
 import { resolveEmail } from '@/lib/email-resolver';
+import { logAction } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -143,6 +144,8 @@ export async function sendSocialDinnerQR(registrationId) {
         [registrationId]
     );
 
+    await logAction('SEND_EMAIL', 'SOCIAL_DINNER_TICKET', registrationId);
+
     revalidatePath('/social-dinner');
     return { success: true };
 }
@@ -174,6 +177,8 @@ export async function addManualSocialDinnerTicket(registrationId) {
         [registrationId, token]
     );
 
+    await logAction('CREATE', 'SOCIAL_DINNER_TICKET', registrationId, { note: 'Manual ticket added to existing registration' });
+
     revalidatePath('/social-dinner');
     return { success: true };
 }
@@ -195,6 +200,8 @@ export async function removeSocialDinnerTicket(ticketId) {
         // Sync ticket - hide it and mark as manual to prevent sync from bringing it back or deleting it
         await query('UPDATE social_dinner_tickets SET is_manual = 1, is_hidden = 1 WHERE id = ?', [ticketId]);
     }
+
+    await logAction('DELETE', 'SOCIAL_DINNER_TICKET', ticketId, { isSyncTicket: ticket.payment_id !== null });
 
     revalidatePath('/social-dinner');
     return { success: true };
@@ -362,6 +369,8 @@ export async function addGuestAndSocialDinnerTicket(name, email, conferenceAcron
         'INSERT INTO social_dinner_tickets (registration_id, payment_id, ticket_index, token, is_manual) VALUES (?, NULL, NULL, ?, 1)',
         [registrationId, token]
     );
+
+    await logAction('CREATE', 'SOCIAL_DINNER_TICKET', registrationId, { note: 'Guest created and ticket added', guestEmail: trimmedEmail });
 
     revalidatePath('/social-dinner');
     return { success: true };

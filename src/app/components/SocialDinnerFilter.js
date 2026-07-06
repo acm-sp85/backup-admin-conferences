@@ -15,10 +15,11 @@ export default function SocialDinnerFilter({ conferences, attendees }) {
   const exportToCSV = () => {
     if (!attendees || attendees.length === 0) return;
     
-    const headers = ['Name', 'Email', 'Conference', 'Payment Status', 'Dietary Preference', 'Amount', 'Currency', 'Invoice', 'Date'];
+    const headers = ['First Name', 'Last Name', 'Email', 'Conference', 'Payment Status', 'Dietary Preference', 'Amount', 'Currency', 'Invoice', 'Date'];
     
     const rows = attendees.map(a => [
-      a.name,
+      a.firstName || '',
+      a.lastName || '',
       a.email,
       a.conference,
       a.payment_status,

@@ -3,6 +3,7 @@
 import { query } from '../../lib/db';
 import { revalidatePath } from 'next/cache';
 import { verifySession } from '@/lib/auth';
+import { logAction } from '@/lib/logger';
 
 export async function addManualPayment(registrationId, data) {
     const session = await verifySession();
@@ -18,6 +19,8 @@ export async function addManualPayment(registrationId, data) {
          VALUES (?, ?, ?, ?, ?, ?, 1)`,
         [registrationId, amount, balance, status, payment_method, invoice_code]
     );
+
+    await logAction('CREATE', 'PAYMENT', registrationId, { note: 'Manual payment added', data });
 
     revalidatePath('/participants');
     return { success: true };
@@ -40,6 +43,8 @@ export async function updatePayment(paymentId, data) {
         [amount, balance, status, payment_method, invoice_code, paymentId]
     );
 
+    await logAction('UPDATE', 'PAYMENT', paymentId, { note: 'Payment manually overridden', data });
+
     revalidatePath('/participants');
     return { success: true };
 }
@@ -54,6 +59,8 @@ export async function deletePayment(paymentId) {
     // they can (though it might just get re-synced if it still exists in SCITO, unless they delete it in SCITO).
     // Let's just delete it.
     await query('DELETE FROM payments WHERE id = ?', [paymentId]);
+
+    await logAction('DELETE', 'PAYMENT', paymentId, { note: 'Payment deleted manually' });
 
     revalidatePath('/participants');
     return { success: true };

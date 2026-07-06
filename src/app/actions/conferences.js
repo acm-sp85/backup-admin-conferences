@@ -3,6 +3,7 @@
 import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { logAction } from '@/lib/logger';
 
 export async function createConference(formData) {
     const session = await verifySession();
@@ -74,6 +75,7 @@ export async function createConference(formData) {
               registration_maps_url
             ]
           );
+        await logAction('CREATE', 'CONFERENCE', null, { acronym, name });
         revalidatePath('/');
         return { success: true };
     } catch (error) {
@@ -90,6 +92,7 @@ export async function deleteConference(id) {
 
     try {
         await query('DELETE FROM conferences WHERE id = ?', [id]);
+        await logAction('DELETE', 'CONFERENCE', id);
         revalidatePath('/');
         return { success: true };
     } catch (error) {
@@ -209,6 +212,7 @@ export async function updateConference(id, formData) {
               id
             ]
           );
+        await logAction('UPDATE', 'CONFERENCE', id, { name, acronym });
         revalidatePath('/');
         return { success: true };
     } catch (error) {

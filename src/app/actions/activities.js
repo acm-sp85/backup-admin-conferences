@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { EMAIL_CONFIG, getBranding, renderHeader } from '@/lib/email-templates';
 import { resolveEmail } from '@/lib/email-resolver';
+import { logAction } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -24,6 +25,8 @@ export async function createActivity(conferenceId, name, date, description) {
         [conferenceId, name, date || null, description || null, null]
     );
 
+    await logAction('CREATE', 'ACTIVITY', null, { conference_id: conferenceId, name });
+
     revalidatePath('/activities');
     return { success: true };
 }
@@ -36,6 +39,8 @@ export async function updateActivity(activityId, name, date, description) {
         'UPDATE extra_activities SET name = ?, date = ?, description = ? WHERE id = ?',
         [name, date || null, description || null, activityId]
     );
+
+    await logAction('UPDATE', 'ACTIVITY', activityId, { name, date });
 
     revalidatePath('/activities');
     revalidatePath(`/activities/${activityId}`);
@@ -51,6 +56,8 @@ export async function updateActivityEmailTemplate(activityId, subject, bodyTempl
         [subject || null, bodyTemplate || null, includeQr ? 1 : 0, activityId]
     );
 
+    await logAction('UPDATE', 'ACTIVITY', activityId, { note: 'Updated email template settings' });
+
     revalidatePath(`/activities/${activityId}`);
     return { success: true };
 }
@@ -60,6 +67,8 @@ export async function deleteActivity(activityId) {
     if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
 
     await query('DELETE FROM extra_activities WHERE id = ?', [activityId]);
+
+    await logAction('DELETE', 'ACTIVITY', activityId);
 
     revalidatePath('/activities');
     return { success: true };
@@ -140,6 +149,7 @@ export async function removeAttendee(attendeeId, activityId) {
     if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
 
     await query('DELETE FROM extra_activity_attendees WHERE id = ?', [attendeeId]);
+    await logAction('DELETE', 'ACTIVITY_ATTENDEE', attendeeId, { activityId });
     revalidatePath(`/activities/${activityId}`);
     return { success: true };
 }
@@ -338,6 +348,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     }
 
     await query('UPDATE extra_activity_attendees SET email_sent_at = NOW() WHERE id = ?', [attendeeId]);
+    await logAction('SEND_EMAIL', 'ACTIVITY_TICKET', attendeeId, { activityId });
     revalidatePath(`/activities/${activityId}`);
     return { success: true };
 }
@@ -369,6 +380,8 @@ export async function updateAttendeeTicketsCount(attendeeId, newCount) {
         'UPDATE extra_activity_attendees SET tickets_count = ? WHERE id = ?',
         [newCount, attendeeId]
     );
+
+    await logAction('UPDATE', 'ACTIVITY_ATTENDEE', attendeeId, { newCount });
 
     const [attendee] = await query('SELECT activity_id FROM extra_activity_attendees WHERE id = ?', [attendeeId]);
     if (attendee) {

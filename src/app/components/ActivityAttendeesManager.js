@@ -210,16 +210,26 @@ export default function ActivityAttendeesManager({ activityId, conferenceId, ini
     };
 
     const handleExportCSV = () => {
-        const headers = ['Name', 'Email', 'Tickets Count', 'Checked In', 'Checked In At', 'Email Sent At', 'Registration Type'];
-        const rows = attendees.map(a => [
-            a.name,
-            a.email,
-            a.tickets_count || 1,
-            a.scanned_at ? 'Yes' : 'No',
-            a.scanned_at ? new Date(a.scanned_at).toLocaleString('en-US', { hour12: false }) : '',
-            a.email_sent_at ? new Date(a.email_sent_at).toLocaleString('en-US', { hour12: false }) : '',
-            a.participant_id ? 'Conference Participant' : 'Custom'
-        ]);
+        const headers = ['First Name', 'Last Name', 'Email', 'Tickets Count', 'Checked In', 'Checked In At', 'Email Sent At', 'Registration Type'];
+        const rows = attendees.map(a => {
+            let firstName = a.firstName || '';
+            let lastName = a.lastName || '';
+            if (!a.firstName && !a.lastName && a.name) {
+                const parts = a.name.split(' ');
+                firstName = parts[0];
+                lastName = parts.slice(1).join(' ');
+            }
+            return [
+                firstName,
+                lastName,
+                a.email,
+                a.tickets_count || 1,
+                a.scanned_at ? 'Yes' : 'No',
+                a.scanned_at ? new Date(a.scanned_at).toLocaleString('en-US', { hour12: false }) : '',
+                a.email_sent_at ? new Date(a.email_sent_at).toLocaleString('en-US', { hour12: false }) : '',
+                a.participant_id ? 'Conference Participant' : 'Custom'
+            ];
+        });
 
         const csvContent = [
             headers.join(','),

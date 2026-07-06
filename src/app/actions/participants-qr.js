@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
 import { getEmailTemplate } from '@/lib/email-dispatcher';
 import { resolveEmail } from '@/lib/email-resolver';
+import { logAction } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -58,6 +59,8 @@ export async function sendParticipantCheckinQR(registrationId) {
         'UPDATE participant_qr_tokens SET email_sent_at = NOW() WHERE registration_id = ?',
         [registrationId]
     );
+
+    await logAction('SEND_EMAIL', 'PARTICIPANT_CHECKIN_QR', registrationId);
 
     revalidatePath('/participants');
     return { success: true };
@@ -189,6 +192,8 @@ export async function updateBadgeConfig(conferenceId, config, bgUrl) {
         [JSON.stringify(config), bgUrl, conferenceId]
     );
 
+    await logAction('UPDATE', 'CONFERENCE_BADGE', conferenceId);
+
     revalidatePath('/participants');
     return { success: true };
 }
@@ -220,6 +225,8 @@ export async function updateParticipantEmailAlias(participantId, emailAlias) {
             'UPDATE participants SET email_alias = ? WHERE id = ?',
             [trimmed, participantId]
         );
+
+        await logAction('UPDATE', 'PARTICIPANT_ALIAS', participantId, { emailAlias: trimmed });
 
         revalidatePath('/participants');
         return { success: true };
