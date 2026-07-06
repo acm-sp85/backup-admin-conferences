@@ -966,137 +966,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
 
                         {/* TAB 3: Email Templates */}
                         <div className={activeTab === 'emails' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'hidden'}>
-                            {/* Template Block: Magic Link */}
-                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <div className="flex justify-between items-center px-1 mb-1">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Magic Link Body</label>
-                                    <div className="flex items-center gap-1.5">
-                                        <button 
-                                            type="button"
-                                            onClick={() => resetToDefault('magicLink')}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            Use Default Message
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setViewMode(v => ({ ...v, magicLink: v.magicLink === 'preview' ? 'html' : 'preview' }))}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            {viewMode.magicLink === 'preview' ? 'Edit HTML' : 'View Preview'}
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <input type="hidden" name="email_magic_link_body" value={templates.magicLink} />
-                                {viewMode.magicLink === 'preview' ? (
-                                    <div 
-                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
-                                        dangerouslySetInnerHTML={{ __html: templates.magicLink.replace(/\${magicLink}/g, '#').replace(/\${name}/g, 'Voter') }}
-                                    />
-                                ) : (
-                                    <textarea 
-                                        value={templates.magicLink}
-                                        onChange={(e) => setTemplates(t => ({ ...t, magicLink: e.target.value }))}
-                                        placeholder="Use ${magicLink} for the login URL."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
-                                    />
-                                )}
-                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${magicLink}"} placeholder.</p>
-                            </div>
-
-                            {/* Template Block: Voting Invite */}
-                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <div className="flex justify-between items-center px-1 mb-1">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Poster Voting Invite</label>
-                                    <div className="flex items-center gap-1.5">
-                                        <button 
-                                            type="button"
-                                            onClick={() => resetToDefault('posterVotingInvite')}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            Use Default Message
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setViewMode(v => ({ ...v, posterVotingInvite: v.posterVotingInvite === 'preview' ? 'html' : 'preview' }))}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            {viewMode.posterVotingInvite === 'preview' ? 'Edit HTML' : 'View Preview'}
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <input type="hidden" name="email_poster_voting_invite_body" value={templates.posterVotingInvite} />
-                                {viewMode.posterVotingInvite === 'preview' ? (
-                                    <div 
-                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
-                                        dangerouslySetInnerHTML={{ __html: templates.posterVotingInvite.replace(/\${magicLink}/g, '#').replace(/\${name}/g, 'John Doe') }}
-                                    />
-                                ) : (
-                                    <textarea 
-                                        value={templates.posterVotingInvite}
-                                        onChange={(e) => setTemplates(t => ({ ...t, posterVotingInvite: e.target.value }))}
-                                        placeholder="Use ${name} and ${magicLink} placeholders."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
-                                    />
-                                )}
-                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} and {"${magicLink}"} placeholders.</p>
-                            </div>
-
-                            {/* Template Block: Social Dinner */}
-                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <div className="flex justify-between items-center px-1 mb-1">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Social Dinner Tickets</label>
-                                    <div className="flex items-center gap-1.5">
-                                        <button 
-                                            type="button"
-                                            onClick={() => resetToDefault('socialDinnerTickets')}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            Use Default Message
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setViewMode(v => ({ ...v, socialDinnerTickets: v.socialDinnerTickets === 'preview' ? 'html' : 'preview' }))}
-                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
-                                        >
-                                            {viewMode.socialDinnerTickets === 'preview' ? 'Edit HTML' : 'View Preview'}
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <input type="hidden" name="email_social_dinner_tickets_body" value={templates.socialDinnerTickets} />
-                                {viewMode.socialDinnerTickets === 'preview' ? (
-                                    <div 
-                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
-                                        dangerouslySetInnerHTML={{ 
-                                            __html: (() => {
-                                                const formattedDate = formatSocialDinnerDate(socialDinnerDate, '', socialDinnerTimezone);
-                                                const formattedLocation = socialDinnerMapsUrl 
-                                                    ? `<a href="${socialDinnerMapsUrl}" target="_blank" style="color: #0071e3; text-decoration: underline;">${socialDinnerLocation || 'TBD'}</a>`
-                                                    : (socialDinnerLocation || 'TBD');
-                                                return templates.socialDinnerTickets
-                                                    .replace(/\${name}/g, 'John Doe')
-                                                    .replace(/\${social_dinner_date}/g, formattedDate || 'TBD')
-                                                    .replace(/\${social_dinner_location}/g, formattedLocation)
-                                                    .replace(/\${conference\.social_dinner_date}/g, formattedDate || 'TBD')
-                                                    .replace(/\${conference\.social_dinner_location}/g, formattedLocation);
-                                            })()
-                                        }}
-                                    />
-                                ) : (
-                                    <textarea 
-                                        value={templates.socialDinnerTickets}
-                                        onChange={(e) => setTemplates(t => ({ ...t, socialDinnerTickets: e.target.value }))}
-                                        placeholder="Use ${name} placeholder."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
-                                    />
-                                )}
-                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} placeholder. QRs are appended automatically.</p>
-                            </div>
-
-                            {/* Template Block: Participant Check-in */}
+                                                    {/* Template Block: Participant Check-in */}
                             <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
                                 <div className="flex justify-between items-center px-1 mb-1">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Check-in Email Body</label>
@@ -1180,6 +1050,137 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"}, {"${conference}"}, {"${registration_venue}"}, {"${registration_starts_at}"}, and {"${registration_notes}"} placeholders. QR is appended automatically.</p>
                             </div>
+                                             {/* Template Block: Social Dinner */}
+                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <div className="flex justify-between items-center px-1 mb-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Social Dinner Tickets</label>
+                                    <div className="flex items-center gap-1.5">
+                                        <button 
+                                            type="button"
+                                            onClick={() => resetToDefault('socialDinnerTickets')}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            Use Default Message
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setViewMode(v => ({ ...v, socialDinnerTickets: v.socialDinnerTickets === 'preview' ? 'html' : 'preview' }))}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            {viewMode.socialDinnerTickets === 'preview' ? 'Edit HTML' : 'View Preview'}
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <input type="hidden" name="email_social_dinner_tickets_body" value={templates.socialDinnerTickets} />
+                                {viewMode.socialDinnerTickets === 'preview' ? (
+                                    <div 
+                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: (() => {
+                                                const formattedDate = formatSocialDinnerDate(socialDinnerDate, '', socialDinnerTimezone);
+                                                const formattedLocation = socialDinnerMapsUrl 
+                                                    ? `<a href="${socialDinnerMapsUrl}" target="_blank" style="color: #0071e3; text-decoration: underline;">${socialDinnerLocation || 'TBD'}</a>`
+                                                    : (socialDinnerLocation || 'TBD');
+                                                return templates.socialDinnerTickets
+                                                    .replace(/\${name}/g, 'John Doe')
+                                                    .replace(/\${social_dinner_date}/g, formattedDate || 'TBD')
+                                                    .replace(/\${social_dinner_location}/g, formattedLocation)
+                                                    .replace(/\${conference\.social_dinner_date}/g, formattedDate || 'TBD')
+                                                    .replace(/\${conference\.social_dinner_location}/g, formattedLocation);
+                                            })()
+                                        }}
+                                    />
+                                ) : (
+                                    <textarea 
+                                        value={templates.socialDinnerTickets}
+                                        onChange={(e) => setTemplates(t => ({ ...t, socialDinnerTickets: e.target.value }))}
+                                        placeholder="Use ${name} placeholder."
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                    />
+                                )}
+                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} placeholder. QRs are appended automatically.</p>
+                            </div>
+                    
+
+                            {/* Template Block: Voting Invite */}
+                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <div className="flex justify-between items-center px-1 mb-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Poster Voting Invite</label>
+                                    <div className="flex items-center gap-1.5">
+                                        <button 
+                                            type="button"
+                                            onClick={() => resetToDefault('posterVotingInvite')}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            Use Default Message
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setViewMode(v => ({ ...v, posterVotingInvite: v.posterVotingInvite === 'preview' ? 'html' : 'preview' }))}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            {viewMode.posterVotingInvite === 'preview' ? 'Edit HTML' : 'View Preview'}
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <input type="hidden" name="email_poster_voting_invite_body" value={templates.posterVotingInvite} />
+                                {viewMode.posterVotingInvite === 'preview' ? (
+                                    <div 
+                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
+                                        dangerouslySetInnerHTML={{ __html: templates.posterVotingInvite.replace(/\${magicLink}/g, '#').replace(/\${name}/g, 'John Doe') }}
+                                    />
+                                ) : (
+                                    <textarea 
+                                        value={templates.posterVotingInvite}
+                                        onChange={(e) => setTemplates(t => ({ ...t, posterVotingInvite: e.target.value }))}
+                                        placeholder="Use ${name} and ${magicLink} placeholders."
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                    />
+                                )}
+                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} and {"${magicLink}"} placeholders.</p>
+                            </div>
+
+                                    {/* Template Block: Magic Link */}
+                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <div className="flex justify-between items-center px-1 mb-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Magic Link Body</label>
+                                    <div className="flex items-center gap-1.5">
+                                        <button 
+                                            type="button"
+                                            onClick={() => resetToDefault('magicLink')}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            Use Default Message
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setViewMode(v => ({ ...v, magicLink: v.magicLink === 'preview' ? 'html' : 'preview' }))}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            {viewMode.magicLink === 'preview' ? 'Edit HTML' : 'View Preview'}
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <input type="hidden" name="email_magic_link_body" value={templates.magicLink} />
+                                {viewMode.magicLink === 'preview' ? (
+                                    <div 
+                                        className="w-full h-44 p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container flex-1 shadow-sm"
+                                        dangerouslySetInnerHTML={{ __html: templates.magicLink.replace(/\${magicLink}/g, '#').replace(/\${name}/g, 'Voter') }}
+                                    />
+                                ) : (
+                                    <textarea 
+                                        value={templates.magicLink}
+                                        onChange={(e) => setTemplates(t => ({ ...t, magicLink: e.target.value }))}
+                                        placeholder="Use ${magicLink} for the login URL."
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                    />
+                                )}
+                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${magicLink}"} placeholder.</p>
+                            </div>
+
                         </div>
 
                         {/* TAB 4: Sponsors */}
