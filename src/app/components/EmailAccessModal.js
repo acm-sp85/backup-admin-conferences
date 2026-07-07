@@ -34,7 +34,7 @@ export default function EmailAccessModal({ conference = null }) {
   return (
     <div className={styles.backdrop}>
       <div className={styles.modal}>
-        <h2 className={styles.title}>Enter your email to view the stream</h2>
+        <h2 className={styles.title}>Introduce tu email de registro para acceder al streaming</h2>
         <form onSubmit={submit} className={styles.form}>
           <input
             type="email"
@@ -45,7 +45,7 @@ export default function EmailAccessModal({ conference = null }) {
             className={styles.input}
           />
           <button type="submit" disabled={loading} className={styles.button}>
-            {loading ? 'Checking…' : 'Enter'}
+            {loading ? 'Comprobando...' : 'Accede'}
           </button>
         </form>
         {error && <p className={styles.error} dangerouslySetInnerHTML={{ __html: error }} />}
