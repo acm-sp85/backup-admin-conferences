@@ -34,12 +34,13 @@ export default function EmailAccessModal({ conference = null }) {
   return (
     <div className={styles.backdrop}>
       <div className={styles.modal}>
-        <h2 className={styles.title}>Introduce tu email de registro para acceder al streaming</h2>
+        <h2 className={styles.title}>Introduce tu email de registro</h2>
+        <h2 className={styles.title}>para acceder al streaming</h2>
         <form onSubmit={submit} className={styles.form}>
           <input
             type="email"
             required
-            placeholder="you@example.com"
+            placeholder="tu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={styles.input}
