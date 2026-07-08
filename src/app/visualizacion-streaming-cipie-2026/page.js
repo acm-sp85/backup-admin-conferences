@@ -18,9 +18,9 @@ export default async function StreamingPage() {
       ></iframe>
       {/* Logout form */}
       <form action="/api/participants/logout" method="POST" style={{ marginTop: '1rem' }}>
-        <button type="submit" style={{ padding: '0.5rem 1rem', background: '#e53935', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+        {/* <button type="submit" style={{ padding: '0.5rem 1rem', background: '#e53935', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
           Logout
-        </button>
+        </button> */}
       </form>
     </div>
   ) : (
