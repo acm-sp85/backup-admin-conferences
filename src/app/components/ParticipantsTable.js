@@ -130,7 +130,7 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
     };
 
     const handleDownloadCSV = () => {
-        const headers = ["First Name", "Last Name", "Email", "Registration Type", "Check-in Status", "Check-in Time", "Payment Status", "Total Paid", "Total Debt"];
+        const headers = ["First Name", "Last Name", "Email", "Institution", "Registration Type", "Check-in Status", "Check-in Time", "Payment Status", "Total Paid", "Total Debt"];
         const rows = participants.map(p => {
             const checkinStatus = p.qr_scanned_at ? "Checked In" : "Not Checked In";
             const checkinTime = p.qr_scanned_at ? new Date(p.qr_scanned_at).toLocaleString() : "";
@@ -140,6 +140,7 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                 p.firstName || "",
                 p.lastName || "",
                 p.email,
+                p.entity || "",
                 p.registration_type || "Standard",
                 checkinStatus,
                 checkinTime,

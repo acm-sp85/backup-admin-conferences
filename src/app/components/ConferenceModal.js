@@ -205,6 +205,24 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         setSponsorsList(updated);
     };
 
+    const handleMoveSponsorUp = (index) => {
+        if (index === 0) return;
+        const updated = [...sponsorsList];
+        const temp = updated[index - 1];
+        updated[index - 1] = updated[index];
+        updated[index] = temp;
+        setSponsorsList(updated);
+    };
+
+    const handleMoveSponsorDown = (index) => {
+        if (index === sponsorsList.length - 1) return;
+        const updated = [...sponsorsList];
+        const temp = updated[index + 1];
+        updated[index + 1] = updated[index];
+        updated[index] = temp;
+        setSponsorsList(updated);
+    };
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e) => {
@@ -1242,16 +1260,37 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                                         No Logo
                                                     </div>
                                                 )}
-                                                <div className="flex-1 min-w-0 pr-6">
+                                                <div className="flex-1 min-w-0 pr-20">
                                                     <p className="text-xs font-bold text-slate-700 truncate">{sponsor.name}</p>
                                                 </div>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleRemoveSponsor(index)}
-                                                    className="absolute top-2 right-2 text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-all"
-                                                >
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                                                </button>
+                                                <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-white/80 backdrop-blur-sm rounded-full p-0.5 shadow-sm border border-slate-100">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleMoveSponsorUp(index)}
+                                                        disabled={index === 0}
+                                                        className={`p-1.5 rounded-full transition-all ${index === 0 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                        title="Move Up"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleMoveSponsorDown(index)}
+                                                        disabled={index === sponsorsList.length - 1}
+                                                        className={`p-1.5 rounded-full transition-all ${index === sponsorsList.length - 1 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                        title="Move Down"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleRemoveSponsor(index)}
+                                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-all"
+                                                        title="Remove"
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
