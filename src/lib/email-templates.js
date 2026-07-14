@@ -325,6 +325,21 @@ export const emailTemplates = {
             }
         }
 
+        if (conference?.email_certificate_body) {
+            let customHtml = conference.email_certificate_body
+                .replace(/\$\{name\}/g, name)
+                .replace(/\$\{conference\}/g, brand.name)
+                .replace(/\$\{today\}/g, today)
+                .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
+                .replace(/\$\{brand\.accentColor\}/g, brand.accentColor)
+                .replace(/\$\{brand\.email\}/g, brand.email);
+            
+            return {
+                subject: `Certificate of Participation - ${confName}`,
+                html: customHtml
+            };
+        }
+
         return {
             subject: `Certificate of Participation - ${confName}`,
             html: `

@@ -44,7 +44,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     const [registrationNotes, setRegistrationNotes] = useState(conference?.registration_notes || '');
     const [registrationMapsUrl, setRegistrationMapsUrl] = useState(conference?.registration_maps_url || '');
 
-    const [activeTab, setActiveTab] = useState('general'); // 'general' | 'badge_voting' | 'emails' | 'sponsors'
+    const [activeTab, setActiveTab] = useState('general'); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
     const isEdit = !!conference;
 
     // Track template contents and view modes
@@ -52,14 +52,16 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
         posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
         socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference),
-        emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference)
+        emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference),
+        certificate: conference?.email_certificate_body || getDefaultEmailBody('certificate', conference)
     });
 
     const [viewMode, setViewMode] = useState({
         magicLink: 'preview',
         posterVotingInvite: 'preview',
         socialDinnerTickets: 'preview',
-        emailCheckin: 'preview'
+        emailCheckin: 'preview',
+        certificate: 'preview'
     });
 
     const [badgeConfig, setBadgeConfig] = useState(conference?.badge_config ? (typeof conference.badge_config === 'string' ? JSON.parse(conference.badge_config) : conference.badge_config) : {
@@ -146,7 +148,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
                 posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
                 socialDinnerTickets: conference?.email_social_dinner_tickets_body || getDefaultEmailBody('socialDinnerTickets', conference),
-                emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference)
+                emailCheckin: conference?.email_checkin_body || getDefaultEmailBody('emailCheckin', conference),
+                certificate: conference?.email_certificate_body || getDefaultEmailBody('certificate', conference)
             });
             setBadgeConfig(conference?.badge_config ? (typeof conference.badge_config === 'string' ? JSON.parse(conference.badge_config) : conference.badge_config) : {
                 nameSize: '28px',
@@ -312,6 +315,18 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                     >
                         <Globe className="w-3.5 h-3.5" />
                         Sponsors
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('certificate')}
+                        className={`flex items-center gap-2 px-4 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all whitespace-nowrap outline-none ${
+                            activeTab === 'certificate'
+                                ? 'border-indigo-600 text-indigo-600'
+                                : 'border-transparent text-slate-400 hover:text-slate-600'
+                        }`}
+                    >
+                        <Award className="w-3.5 h-3.5" />
+                        Custom Certificate
                     </button>
                 </div>
 
@@ -1063,7 +1078,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         value={templates.emailCheckin}
                                         onChange={(e) => setTemplates(t => ({ ...t, emailCheckin: e.target.value }))}
                                         placeholder="Use ${name}, ${conference}, ${registration_venue}, ${registration_starts_at}, and ${registration_notes} placeholders."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"}, {"${conference}"}, {"${registration_venue}"}, {"${registration_starts_at}"}, and {"${registration_notes}"} placeholders. QR is appended automatically.</p>
@@ -1114,7 +1129,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         value={templates.socialDinnerTickets}
                                         onChange={(e) => setTemplates(t => ({ ...t, socialDinnerTickets: e.target.value }))}
                                         placeholder="Use ${name} placeholder."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} placeholder. QRs are appended automatically.</p>
@@ -1154,7 +1169,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         value={templates.posterVotingInvite}
                                         onChange={(e) => setTemplates(t => ({ ...t, posterVotingInvite: e.target.value }))}
                                         placeholder="Use ${name} and ${magicLink} placeholders."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"} and {"${magicLink}"} placeholders.</p>
@@ -1193,7 +1208,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         value={templates.magicLink}
                                         onChange={(e) => setTemplates(t => ({ ...t, magicLink: e.target.value }))}
                                         placeholder="Use ${magicLink} for the login URL."
-                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none flex-1 shadow-sm"
+                                        className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${magicLink}"} placeholder.</p>
@@ -1299,6 +1314,52 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         No sponsors added yet.
                                     </div>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* TAB 5: Custom Certificate */}
+                        <div className={activeTab === 'certificate' ? 'space-y-6' : 'hidden'}>
+                            <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
+                                <div className="flex justify-between items-center px-1 mb-1">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Certificate HTML</label>
+                                    <div className="flex items-center gap-1.5">
+                                        <button 
+                                            type="button"
+                                            onClick={() => resetToDefault('certificate')}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            Use Default Message
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setViewMode(v => ({ ...v, certificate: v.certificate === 'preview' ? 'html' : 'preview' }))}
+                                            className="text-[9px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md transition-colors"
+                                        >
+                                            {viewMode.certificate === 'preview' ? 'Edit HTML' : 'View Preview'}
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <input type="hidden" name="email_certificate_body" value={templates.certificate} />
+                                {viewMode.certificate === 'preview' ? (
+                                    <div 
+                                        className="w-full min-h-[500px] p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container shadow-sm"
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: templates.certificate
+                                                .replace(/\$\{name\}/g, 'John Doe')
+                                                .replace(/\$\{conference\}/g, conference?.name || 'Conference')
+                                                .replace(/\$\{today\}/g, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
+                                        }}
+                                    />
+                                ) : (
+                                    <textarea 
+                                        value={templates.certificate}
+                                        onChange={(e) => setTemplates(t => ({ ...t, certificate: e.target.value }))}
+                                        placeholder="Use ${name}, ${conference}, and ${today} placeholders."
+                                        className="w-full min-h-[500px] p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y shadow-sm"
+                                    />
+                                )}
+                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"}, {"${conference}"}, and {"${today}"} placeholders.</p>
                             </div>
                         </div>
                     </div>

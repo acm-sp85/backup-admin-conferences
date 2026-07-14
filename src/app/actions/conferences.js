@@ -40,7 +40,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, email_certificate_body, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -52,6 +52,7 @@ export async function createConference(formData) {
               formData.get('email_poster_voting_invite_body') || null,
               formData.get('email_social_dinner_tickets_body') || null,
               formData.get('email_checkin_body') || null,
+              formData.get('email_certificate_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
               formData.get('voting_instructions') || null,
               formData.get('emails_enabled') === 'on' ? 1 : 0,
@@ -176,7 +177,7 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, email_certificate_body = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -188,6 +189,7 @@ export async function updateConference(id, formData) {
               formData.get('email_poster_voting_invite_body') || null,
               formData.get('email_social_dinner_tickets_body') || null,
               formData.get('email_checkin_body') || null,
+              formData.get('email_certificate_body') || null,
               formData.get('voting_validation_enabled') === 'on' ? 1 : 0,
               formData.get('voting_instructions') || null,
               formData.get('emails_enabled') === 'on' ? 1 : 0,
