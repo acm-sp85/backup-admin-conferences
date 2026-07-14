@@ -165,6 +165,50 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
         document.body.removeChild(link);
     };
 
+    const exportCertificatesCsv = () => {
+        const checkedInParticipants = participants.filter(p => p.qr_scanned_at);
+        
+        const headers = [
+            "First Name", 
+            "Last Name", 
+            "Email", 
+            "Institution/Entity", 
+            "Address", 
+            "Zip Code", 
+            "City", 
+            "Country", 
+            "Registration Type",
+            "Presentations"
+        ];
+
+        const rows = checkedInParticipants.map(p => [
+            p.firstName || "",
+            p.lastName || "",
+            p.email || "",
+            p.entity || "",
+            p.entity_address || "",
+            p.entity_zip || "",
+            p.entity_city || "",
+            p.entity_country || "",
+            p.registration_type || "Standard",
+            p.presentations_summary || ""
+        ]);
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `certificate_data_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-h-[52px] flex-wrap gap-2">
@@ -260,6 +304,13 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                     >
                         <Download className="w-3.5 h-3.5" />
                         Download CSV
+                    </button>
+                    <button 
+                        onClick={exportCertificatesCsv}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold hover:bg-indigo-100 transition-all shadow-sm"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Certificates in CSV
                     </button>
                 </div>
             </div>

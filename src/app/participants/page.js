@@ -114,8 +114,37 @@ export default async function ParticipantsPage({ searchParams }) {
     SELECT * FROM payments WHERE registration_id IN (${rIds.join(',')})
   `) : [];
 
+  // Fetch Posters for the active conference
+  const posters = activeConfId ? await query('SELECT id, title, authors FROM posters WHERE conference_id = ?', [activeConfId]) : [];
+  
+  // Fetch Program Slots for the active conference
+  const slots = activeConfId ? await query('SELECT id, type, title, presenter_name FROM program_slots WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)', [activeConfId]) : [];
+
+  const compareNames = (presenter, firstName, lastName) => {
+    if (!presenter || !firstName || !lastName) return false;
+    
+    const presenterClean = presenter.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const firstClean = firstName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const lastClean = lastName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    if (presenterClean.includes(',')) {
+        const parts = presenterClean.split(',');
+        const presLast = parts[0].trim();
+        const presFirst = parts[1] ? parts[1].trim() : '';
+        if (presLast === lastClean && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) return true;
+        if (lastClean.includes(presLast) && presLast.length > 2 && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) return true;
+    }
+    
+    const option1 = `${firstClean} ${lastClean}`;
+    const option2 = `${lastClean} ${firstClean}`;
+    if (presenterClean === option1 || presenterClean === option2) return true;
+    if (presenterClean.includes(firstClean) && presenterClean.includes(lastClean)) return true;
+    
+    return false;
+  };
+
   // 4. Map data together
-    const participants = rawParticipants.map(p => {
+  const participants = rawParticipants.map(p => {
     const pRegs = registrations.filter(r => r.participant_id === p.id);
     const pRIds = pRegs.map(r => r.id);
     const pPayments = payments.filter(pay => pRIds.includes(pay.registration_id));
@@ -132,6 +161,29 @@ export default async function ParticipantsPage({ searchParams }) {
     const payment_statuses = [...new Set(pPayments.map(pay => pay.status))].join(', ');
     const conference_tokens = pRegs.map(r => `${r.acronym}:${r.qr_token || ''}:${r.id}:${r.conference_id}`).join('|');
     
+    // Find presentations
+    const presentations = [];
+    const fName = p.firstName || '';
+    const lName = p.lastName || '';
+    
+    for (const slot of slots) {
+        if (slot.presenter_name && compareNames(slot.presenter_name, fName, lName)) {
+            presentations.push(`${slot.type ? (slot.type.charAt(0).toUpperCase() + slot.type.slice(1)) : 'Oral'}: ${slot.title}`);
+        }
+    }
+    
+    for (const poster of posters) {
+        let authors = [];
+        try { authors = typeof poster.authors === 'string' ? JSON.parse(poster.authors) : poster.authors; } catch (e) {}
+        if (Array.isArray(authors) && authors.length > 0) {
+            const primaryAuthor = authors[0];
+            const aName = typeof primaryAuthor === 'string' ? primaryAuthor : (primaryAuthor.name || '');
+            if (aName && compareNames(aName, fName, lName)) {
+                presentations.push(`Poster: ${poster.title}`);
+            }
+        }
+    }
+
     return {
       ...p,
       total_paid,
@@ -146,7 +198,8 @@ export default async function ParticipantsPage({ searchParams }) {
       cert_sent_at: primaryReg?.cert_sent_at,
       cluster_for_review: primaryReg?.cluster_for_review,
       is_removed: primaryReg?.is_removed,
-      all_payments_json: JSON.stringify(pPayments) 
+      all_payments_json: JSON.stringify(pPayments),
+      presentations_summary: presentations.join(' | ')
     };
   });
 
