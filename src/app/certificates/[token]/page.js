@@ -187,30 +187,44 @@ export default async function PublicCertificateViewPage({ params }) {
 
     const emailObj = emailTemplates.certificate(templateData);
 
+    const isLandscape = conference.certificate_orientation === 'landscape';
+    const bgImage = conference.certificate_background_image;
+
+    const printWidth = isLandscape ? '297mm' : '210mm';
+    const printHeight = isLandscape ? '210mm' : '297mm';
+    const pageOrientation = isLandscape ? 'landscape' : 'portrait';
+
+    const styleHtml = `
+        @media print {
+            @page { margin: 0; size: A4 ${pageOrientation}; }
+            html, body { background: white !important; margin: 0; padding: 0; overflow: hidden !important; height: ${printHeight} !important; }
+            .no-print { display: none !important; }
+            .print-container { 
+                width: ${printWidth} !important; 
+                height: ${printHeight} !important; 
+                max-height: ${printHeight} !important;
+                box-shadow: none !important; 
+                margin: 0 !important; 
+                padding: 12mm !important; 
+                box-sizing: border-box !important; 
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                ${bgImage ? `background-image: url('${bgImage}') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;` : ''}
+            }
+            .print-container > div {
+                height: 100%;
+                overflow: hidden !important;
+            }
+        }
+    `;
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20">
-            <style dangerouslySetInnerHTML={{ __html: `
-                @media print {
-                    @page { margin: 0; size: A4; }
-                    body { background: white !important; margin: 0; padding: 0; }
-                    .no-print { display: none !important; }
-                    .print-container { 
-                        width: 210mm !important; 
-                        height: 297mm !important; 
-                        box-shadow: none !important; 
-                        margin: 0 !important; 
-                        padding: 12mm !important; 
-                        box-sizing: border-box !important; 
-                        display: flex !important;
-                        flex-direction: column !important;
-                        justify-content: center !important;
-                    }
-                    /* Adjust layout for print if custom html is present */
-                    .print-container > div {
-                        height: 100%;
-                    }
-                }
-            `}} />
+            <style dangerouslySetInnerHTML={{ __html: styleHtml }} />
 
             {/* Top Toolbar - Hidden on print */}
             <div className="bg-slate-900 text-white p-4 sticky top-0 z-10 shadow-md no-print">
@@ -233,8 +247,20 @@ export default async function PublicCertificateViewPage({ params }) {
             </div>
 
             {/* Certificate Container */}
-            <div className="max-w-4xl mx-auto mt-8 p-4 no-print">
-                <div className="bg-white rounded-xl shadow-xl overflow-hidden mx-auto print-container print:shadow-none print:rounded-none" style={{ maxWidth: '800px' }}>
+            <div className={`mx-auto mt-8 p-4 no-print ${isLandscape ? 'max-w-6xl' : 'max-w-4xl'}`}>
+                <div 
+                    className="bg-white rounded-xl shadow-xl overflow-hidden mx-auto print-container print:shadow-none print:rounded-none relative" 
+                    style={{ 
+                        maxWidth: isLandscape ? '1123px' : '794px',
+                        minHeight: isLandscape ? '794px' : '1123px',
+                        ...(bgImage ? {
+                            backgroundImage: `url(${bgImage})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat'
+                        } : {})
+                    }}
+                >
                     <div dangerouslySetInnerHTML={{ __html: emailObj.html }} />
                 </div>
             </div>

@@ -44,6 +44,9 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     const [registrationNotes, setRegistrationNotes] = useState(conference?.registration_notes || '');
     const [registrationMapsUrl, setRegistrationMapsUrl] = useState(conference?.registration_maps_url || '');
 
+    const [certificateOrientation, setCertificateOrientation] = useState(conference?.certificate_orientation || 'portrait');
+    const [certificateBackgroundImage, setCertificateBackgroundImage] = useState(conference?.certificate_background_image || '');
+
     const [activeTab, setActiveTab] = useState('general'); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
     const isEdit = !!conference;
 
@@ -144,6 +147,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
             setRegistrationStartsAt(conference?.registration_starts_at ? formatDatetimeLocal(conference.registration_starts_at) : '');
             setRegistrationNotes(conference?.registration_notes || '');
             setRegistrationMapsUrl(conference?.registration_maps_url || '');
+            setCertificateOrientation(conference?.certificate_orientation || 'portrait');
+            setCertificateBackgroundImage(conference?.certificate_background_image || '');
             setTemplates({
                 magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
                 posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
@@ -1319,6 +1324,35 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
 
                         {/* TAB 5: Custom Certificate */}
                         <div className={activeTab === 'certificate' ? 'space-y-6' : 'hidden'}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 block">Certificate Orientation</label>
+                                    <select 
+                                        name="certificate_orientation"
+                                        value={certificateOrientation}
+                                        onChange={(e) => setCertificateOrientation(e.target.value)}
+                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm appearance-none"
+                                    >
+                                        <option value="portrait">Portrait</option>
+                                        <option value="landscape">Panoramic (Landscape)</option>
+                                    </select>
+                                    <p className="text-[10px] text-slate-400 ml-1">Controls the PDF aspect ratio.</p>
+                                </div>
+                                
+                                <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 block">Background Image URL</label>
+                                    <input 
+                                        type="url"
+                                        name="certificate_background_image"
+                                        value={certificateBackgroundImage}
+                                        onChange={(e) => setCertificateBackgroundImage(e.target.value)}
+                                        placeholder="https://example.com/bg.png"
+                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                    <p className="text-[10px] text-slate-400 ml-1">Optional background image for the certificate.</p>
+                                </div>
+                            </div>
+
                             <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
                                 <div className="flex justify-between items-center px-1 mb-1">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Certificate HTML</label>
@@ -1342,24 +1376,51 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                 
                                 <input type="hidden" name="email_certificate_body" value={templates.certificate} />
                                 {viewMode.certificate === 'preview' ? (
-                                    <div 
-                                        className="w-full min-h-[500px] p-4 bg-white border border-slate-100 rounded-xl overflow-y-auto text-[13px] leading-normal email-preview-container shadow-sm"
-                                        dangerouslySetInnerHTML={{ 
-                                            __html: templates.certificate
-                                                .replace(/\$\{name\}/g, 'John Doe')
-                                                .replace(/\$\{conference\}/g, conference?.name || 'Conference')
-                                                .replace(/\$\{today\}/g, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
-                                        }}
-                                    />
+                                    <div className="flex justify-center bg-slate-100 p-8 rounded-xl border border-slate-200 overflow-x-auto shadow-inner">
+                                        <div 
+                                            className="bg-white border border-slate-300 shadow-lg overflow-hidden text-[13px] leading-normal email-preview-container relative"
+                                            style={{
+                                                width: certificateOrientation === 'landscape' ? '800px' : '566px',
+                                                height: certificateOrientation === 'landscape' ? '566px' : '800px',
+                                                minWidth: certificateOrientation === 'landscape' ? '800px' : '566px',
+                                                maxHeight: certificateOrientation === 'landscape' ? '566px' : '800px',
+                                                backgroundImage: certificateBackgroundImage ? `url(${certificateBackgroundImage})` : 'none',
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                                backgroundRepeat: 'no-repeat',
+                                                padding: '20px'
+                                            }}
+                                            dangerouslySetInnerHTML={{ 
+                                                __html: templates.certificate
+                                                    .replace(/\$\{name\}/g, 'John Doe')
+                                                    .replace(/\$\{conference\}/g, conference?.name || 'Conference')
+                                                    .replace(/\$\{today\}/g, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
+                                                    .replace(/\$\{institution\}/g, 'University of Tech')
+                                                    .replace(/\$\{entityAddress\}/g, '123 Tech Lane')
+                                                    .replace(/\$\{entityLocation\}/g, '00000 Tech City, TC')
+                                                    .replace(/\$\{registrationType\}/g, 'Regular Attendee')
+                                                    .replace(/\$\{conferenceFullName\}/g, 'The Great Tech Conference')
+                                                    .replace(/\$\{conferenceAddress\}/g, 'Tech Center<br>Silicon Valley')
+                                                    .replace(/\$\{conferenceAddressInline\}/g, 'Tech Center, Silicon Valley')
+                                                    .replace(/\$\{conferenceDates\}/g, '1st to 3rd October 2026')
+                                                    .replace(/\$\{signatureHtml\}/g, '<div style="margin:8px 0;height:40px;width:100px;background:#eee;text-align:center;line-height:40px;color:#aaa;">Signature</div>')
+                                                    .replace(/\$\{textUnderSignatureHtml\}/g, '<p style="font-size:13px;font-weight:600;margin:5px 0 0 0;">Conference Chair</p>')
+                                                    .replace(/\$\{sponsorsHtml\}/g, '<div style="text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #eee;"><p style="font-size:10px;color:#999;text-transform:uppercase;">Supported By</p><div style="height:30px;width:80px;background:#eee;margin:0 auto;"></div></div>')
+                                                    .replace(/\$\{presentationsHtml\}/g, '<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px;"><p style="margin:0 0 6px 0;font-size:14px;"><strong>John Doe</strong> has presented:</p><ul style="margin:0;padding-left:20px;font-size:13px;"><li>Oral contribution entitled <strong>"Advancements in AI"</strong>.</li></ul></div>')
+                                            }}
+                                        />
+                                    </div>
                                 ) : (
                                     <textarea 
                                         value={templates.certificate}
                                         onChange={(e) => setTemplates(t => ({ ...t, certificate: e.target.value }))}
-                                        placeholder="Use ${name}, ${conference}, and ${today} placeholders."
+                                        placeholder="Use ${name}, ${conference}, ${institution}, ${registrationType}, ${conferenceDates}, etc."
                                         className="w-full min-h-[500px] p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y shadow-sm"
                                     />
                                 )}
-                                <p className="text-[9px] text-slate-400 px-1 italic mt-1">Use {"${name}"}, {"${conference}"}, and {"${today}"} placeholders.</p>
+                                <p className="text-[9px] text-slate-400 px-1 italic mt-1 leading-relaxed">
+                                    Available placeholders: <strong>{"${name}"}</strong>, <strong>{"${conference}"}</strong>, <strong>{"${today}"}</strong>, <strong>{"${institution}"}</strong>, <strong>{"${entityAddress}"}</strong>, <strong>{"${entityLocation}"}</strong>, <strong>{"${registrationType}"}</strong>, <strong>{"${conferenceFullName}"}</strong>, <strong>{"${conferenceAddress}"}</strong>, <strong>{"${conferenceAddressInline}"}</strong>, <strong>{"${conferenceDates}"}</strong>, <strong>{"${signatureHtml}"}</strong>, <strong>{"${textUnderSignatureHtml}"}</strong>, <strong>{"${sponsorsHtml}"}</strong>, <strong>{"${presentationsHtml}"}</strong>.
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -326,13 +326,46 @@ export const emailTemplates = {
         }
 
         if (conference?.email_certificate_body) {
+            const presentationsHtml = presentations && presentations.length > 0 ? `
+                <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #334155; line-height: 1.7;">
+                        <strong>${name}</strong> has presented:
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+                        ${presentations.map(pres => `<li>${pres.type} contribution entitled <strong>"${pres.title}"</strong>.</li>`).join('')}
+                    </ul>
+                </div>
+            ` : '';
+
+            const signatureHtml = signatureImage ? `<img src="${signatureImage}" style="max-height: 65px; display: block; margin: 8px 0;" alt="Signature" />` : '';
+            const textUnderSignatureHtml = textUnderSignature 
+                ? `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 5px 0 0 0; line-height: 1.4;">${textUnderSignature.replace(/\n/g, '<br>')}</p>` 
+                : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} Organizing Committee</p>`;
+
+            const locationStr = [entityZip, entityCity].filter(Boolean).join(' ') + (entityCountry ? (entityZip || entityCity ? ', ' : '') + entityCountry : '');
+
             let customHtml = conference.email_certificate_body
-                .replace(/\$\{name\}/g, name)
-                .replace(/\$\{conference\}/g, brand.name)
-                .replace(/\$\{today\}/g, today)
-                .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
-                .replace(/\$\{brand\.accentColor\}/g, brand.accentColor)
-                .replace(/\$\{brand\.email\}/g, brand.email);
+                .replace(/\$\{name\}/g, name || '')
+                .replace(/\$\{conference\}/g, brand.name || '')
+                .replace(/\$\{today\}/g, today || '')
+                .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand) || '')
+                .replace(/\$\{brand\.accentColor\}/g, brand.accentColor || '')
+                .replace(/\$\{brand\.email\}/g, brand.email || '')
+                .replace(/\$\{institution\}/g, institution || '')
+                .replace(/\$\{entityAddress\}/g, entityAddress || '')
+                .replace(/\$\{entityLocation\}/g, locationStr || '')
+                .replace(/\$\{registrationType\}/g, registrationType || '')
+                .replace(/\$\{conferenceFullName\}/g, conferenceFullName || '')
+                .replace(/\$\{conferenceAddress\}/g, conferenceAddress ? conferenceAddress.replace(/\n/g, '<br>') : '')
+                .replace(/\$\{conferenceAddressInline\}/g, conferenceAddress ? conferenceAddress.replace(/\n/g, ', ') : '')
+                .replace(/\$\{conferenceDates\}/g, conferenceDates || '')
+                .replace(/\$\{signatureHtml\}/g, signatureHtml || '')
+                .replace(/\$\{textUnderSignatureHtml\}/g, textUnderSignatureHtml || '')
+                .replace(/\$\{sponsorsHtml\}/g, sponsorsHtml || '')
+                .replace(/\$\{presentationsHtml\}/g, presentationsHtml || '');
+            
+            // Clean up empty paragraphs/spans that might be left behind if a variable is empty
+            // This is optional but helpful if they put variables in their own tags.
             
             return {
                 subject: `Certificate of Participation - ${confName}`,
@@ -526,14 +559,44 @@ export const getDefaultEmailBody = (type, conference) => {
         <div style="text-align: center; border-bottom: 2px solid \${brand.accentColor}; padding-bottom: 20px; margin-bottom: 30px;">
             <p style="color: #64748b; font-size: 13px; margin: 0;">\${today}</p>
         </div>
-        <p style="font-size: 14px; color: #334155; line-height: 1.7;">
-            This letter certifies that <strong>\${name}</strong> participated at the <strong>\${conference}</strong>.
-        </p>
-        <p style="font-size: 13px; color: #475569;">Sincerely,</p>
-        <p style="font-size: 14px; color: #1e293b; font-weight: 600;">\${conference} Organizing Committee</p>
-        <p style="font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center;">
-            This is an automated certificate from \${conference}. For support, contact \${brand.email}.
-        </p>
+
+        <table style="width: 100%; margin-bottom: 30px;" cellpadding="0" cellspacing="0">
+            <tr>
+                <td style="width: 50%; vertical-align: top; padding-right: 20px;">
+                    <p style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">\${name}</p>
+                    <p style="font-size: 13px; color: #64748b; margin: 0 0 2px 0;">\${institution}</p>
+                    <p style="font-size: 12px; color: #64748b; margin: 0 0 2px 0;">\${entityAddress}</p>
+                    <p style="font-size: 12px; color: #64748b; margin: 0;">\${entityLocation}</p>
+                </td>
+                <td style="width: 50%; vertical-align: top; padding-left: 20px; border-left: 1px solid #e2e8f0;">
+                    <p style="font-size: 11px; font-weight: 700; color: \${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">This certifies participation at:</p>
+                    <p style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">\${conference} - \${conferenceFullName}</p>
+                    <p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.4;">\${conferenceAddress}</p>
+                </td>
+            </tr>
+        </table>
+
+        <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
+            <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
+                This letter certifies that <strong>\${name}</strong> participated as <strong>\${registrationType}</strong> 
+                at the <strong>\${conferenceFullName} - \${conference}</strong>, celebrated at <strong>\${conferenceAddressInline}</strong> from <strong>\${conferenceDates}</strong>.
+            </p>
+            \${presentationsHtml}
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <p style="font-size: 13px; color: #475569; margin: 0;">Sincerely,</p>
+            \${signatureHtml}
+            \${textUnderSignatureHtml}
+        </div>
+
+        \${sponsorsHtml}
+
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 20px;">
+            <p style="font-size: 11px; color: #94a3b8; margin: 0;">
+                This is an automated certificate from \${conference}. For support, contact \${brand.email}.
+            </p>
+        </div>
     </div>
 </div>`.replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
   .replace(/\$\{brand\.accentColor\}/g, brand.accentColor)

@@ -65,13 +65,13 @@ export default function PublicCertificatesPage() {
                 
                 {/* Header */}
                 <div className="bg-slate-900 p-8 text-center text-white relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-600/20" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-500/20 to-slate-600/20" />
                     <div className="relative z-10 flex flex-col items-center">
                         <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-4 border border-white/20">
                             <Award className="w-8 h-8 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight">Get Your Certificate</h1>
-                        <p className="text-sm text-slate-300 mt-2">Enter your email to receive your Certificate of Participation</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-white">Get Your Certificate</h1>
+                        <p className="text-sm text-slate-300 mt-2 text-white">Enter your email to receive your Certificate of Participation</p>
                     </div>
                 </div>
 
