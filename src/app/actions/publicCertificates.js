@@ -36,11 +36,13 @@ export async function checkEmailForCertificates(email) {
  * Sends an email with a secure token link to view the certificate.
  */
 export async function sendPublicCertificateEmail(email, conferenceId, registrationId) {
+    console.log('Sending certificate email...', { email, conferenceId, registrationId });
     // Generate JWT
     const token = await encrypt({ conferenceId, registrationId }, '30d');
     
     // Get conference details
     const [conf] = await query('SELECT * FROM conferences WHERE id = ?', [conferenceId]);
+    console.log('Found conference:', conf?.name);
     if (!conf) return { error: 'Conference not found' };
 
     const brand = getBranding(conf);

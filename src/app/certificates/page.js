@@ -10,6 +10,7 @@ export default function PublicCertificatesPage() {
     const [errorMsg, setErrorMsg] = useState('');
     const [conferences, setConferences] = useState([]);
     const [selectedEmail, setSelectedEmail] = useState('');
+    const [sentConfName, setSentConfName] = useState('');
 
     const handleCheckEmail = async (e) => {
         e.preventDefault();
@@ -31,7 +32,7 @@ export default function PublicCertificatesPage() {
             
             if (result.conferences.length === 1) {
                 // Only one conference, send email immediately
-                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id);
+                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id, result.conferences[0].name);
             } else {
                 // Multiple conferences, ask user to select
                 setConferences(result.conferences);
@@ -43,19 +44,21 @@ export default function PublicCertificatesPage() {
         }
     };
 
-    const sendCertificate = async (conferenceId, registrationId) => {
+    const sendCertificate = async (conferenceId, registrationId, confName) => {
         setStatus('sending');
         try {
             const result = await sendPublicCertificateEmail(selectedEmail, conferenceId, registrationId);
+            
             if (result.error) {
-                setStatus('error');
                 setErrorMsg(result.error);
+                setStatus('error');
             } else {
+                setSentConfName(confName);
                 setStatus('success');
             }
-        } catch (err) {
+        } catch (error) {
+            setErrorMsg('An unexpected error occurred. Please try again later.');
             setStatus('error');
-            setErrorMsg('Failed to send the certificate email. Please try again.');
         }
     };
 
@@ -133,7 +136,7 @@ export default function PublicCertificatesPage() {
                                 {conferences.map((conf) => (
                                     <button
                                         key={conf.id}
-                                        onClick={() => sendCertificate(conf.id, conf.registration_id)}
+                                        onClick={() => sendCertificate(conf.id, conf.registration_id, conf.name)}
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all flex items-center justify-between group text-left"
                                     >
                                         <div className="flex-1 min-w-0 pr-4">
@@ -163,20 +166,28 @@ export default function PublicCertificatesPage() {
                             <p className="text-sm text-slate-500">Generating your secure link</p>
                         </div>
                     ) : status === 'success' ? (
-                        <div className="py-8 flex flex-col items-center justify-center text-center space-y-4 animate-in zoom-in-95 duration-500">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                                <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900">Email Sent!</h3>
-                            <p className="text-sm text-slate-600">
-                                We've sent a secure link to <strong>{selectedEmail}</strong>. 
-                                Please check your inbox (and spam folder) to view and download your certificate.
+                            <h2 className="text-2xl font-bold text-slate-900 text-center">Email Sent!</h2>
+                            <p className="text-slate-600 text-center">
+                                We've sent an email to <strong className="text-slate-900">{selectedEmail}</strong> with a secure link to download your certificate {sentConfName ? `for ${sentConfName}` : ''}.
                             </p>
-                            <button 
-                                onClick={() => { setStatus('idle'); setEmail(''); }}
-                                className="mt-4 h-11 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                            <p className="text-sm text-slate-500 mt-4 text-center">
+                                Please check your inbox (and spam folder) for the email.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setStatus('idle');
+                                    setEmail('');
+                                    setSentConfName('');
+                                }}
+                                className="w-full mt-8 text-sm text-indigo-600 font-medium hover:text-indigo-700"
                             >
-                                Get another certificate
+                                Check another email
                             </button>
                         </div>
                     ) : null}
