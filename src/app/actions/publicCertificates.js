@@ -50,21 +50,36 @@ export async function sendPublicCertificateEmail(email, conferenceId, registrati
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const certificateUrl = `${baseUrl}/certificates/${token}`;
 
+    const isSpanish = conf.name.toUpperCase().includes('CIPIE');
+    
+    const textConfig = {
+        title: isSpanish ? 'Tu Certificado de Participación' : 'Your Certificate of Participation',
+        p1: isSpanish 
+            ? `Gracias por participar en <strong>${conf.name}</strong>. Puedes ver y descargar tu Certificado de Participación haciendo clic en el botón de abajo.`
+            : `Thank you for participating in <strong>${conf.name}</strong>. You can view and download your Certificate of Participation by clicking the button below.`,
+        btn: isSpanish ? 'Ver Certificado' : 'View Certificate',
+        footer: isSpanish 
+            ? 'Este enlace caducará en 30 días. Si lo necesitas después, puedes solicitar un nuevo enlace.' 
+            : 'This link will expire in 30 days. If you need it after that, you can request a new link.',
+        subject: isSpanish
+            ? `${conf.name} - Certificado de Participación`
+            : `${conf.name} - Certificate of Participation`
+    };
+
     const html = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
             ${renderHeader(brand)}
-            <h2 style="color: #1e293b; margin-bottom: 20px;">Your Certificate of Participation</h2>
+            <h2 style="color: #1e293b; margin-bottom: 20px;">${textConfig.title}</h2>
             <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
-                Thank you for participating in <strong>${conf.name}</strong>. 
-                You can view and download your Certificate of Participation by clicking the button below.
+                ${textConfig.p1}
             </p>
             <div style="margin: 30px 0;">
                 <a href="${certificateUrl}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
-                    View Certificate
+                    ${textConfig.btn}
                 </a>
             </div>
             <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
-                This link will expire in 30 days. If you need it after that, you can request a new link.
+                ${textConfig.footer}
             </p>
         </div>
     `;
@@ -72,7 +87,7 @@ export async function sendPublicCertificateEmail(email, conferenceId, registrati
     const { error } = await resend.emails.send({
         from: EMAIL_CONFIG.fromConferences,
         to: [email.trim().toLowerCase()],
-        subject: `${conf.name} - Certificate of Participation`,
+        subject: textConfig.subject,
         html
     });
 
