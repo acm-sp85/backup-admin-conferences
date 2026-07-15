@@ -32,7 +32,7 @@ export default function PublicCertificatesPage() {
             
             if (result.conferences.length === 1) {
                 // Only one conference, send email immediately
-                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id, result.conferences[0].name);
+                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id, result.conferences[0].name, email.trim().toLowerCase());
             } else {
                 // Multiple conferences, ask user to select
                 setConferences(result.conferences);
@@ -44,10 +44,10 @@ export default function PublicCertificatesPage() {
         }
     };
 
-    const sendCertificate = async (conferenceId, registrationId, confName) => {
+    const sendCertificate = async (conferenceId, registrationId, confName, targetEmail) => {
         setStatus('sending');
         try {
-            const result = await sendPublicCertificateEmail(selectedEmail, conferenceId, registrationId);
+            const result = await sendPublicCertificateEmail(targetEmail, conferenceId, registrationId);
             
             if (result.error) {
                 setErrorMsg(result.error);
@@ -136,7 +136,7 @@ export default function PublicCertificatesPage() {
                                 {conferences.map((conf) => (
                                     <button
                                         key={conf.id}
-                                        onClick={() => sendCertificate(conf.id, conf.registration_id, conf.name)}
+                                        onClick={() => sendCertificate(conf.id, conf.registration_id, conf.name, selectedEmail)}
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all flex items-center justify-between group text-left"
                                     >
                                         <div className="flex-1 min-w-0 pr-4">
