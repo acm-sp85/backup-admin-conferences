@@ -77,8 +77,8 @@ export default function PublicCertificatesPage() {
                         <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-4 border border-white/20">
                             <Award className="w-8 h-8 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white">Get Your Certificate</h1>
-                        <p className="text-sm text-slate-300 mt-2 text-white">Enter your email to receive your Certificate of Participation</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-white">Obtén tu Certificado</h1>
+                        <p className="text-sm text-slate-300 mt-2 text-white">Introduce tu email para recibir tu Certificado de Participación</p>
                     </div>
                 </div>
 
@@ -94,7 +94,7 @@ export default function PublicCertificatesPage() {
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
-                                    Email Address
+                                    Correo Electrónico
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -105,7 +105,7 @@ export default function PublicCertificatesPage() {
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="Enter the email you registered with"
+                                        placeholder="Introduce el email con el que te registraste"
                                         className="w-full h-12 pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all focus:bg-white"
                                         disabled={status === 'loading'}
                                     />
@@ -120,11 +120,11 @@ export default function PublicCertificatesPage() {
                                 {status === 'loading' ? (
                                     <>
                                         <RefreshCw className="w-4 h-4 animate-spin" />
-                                        Checking...
+                                        Comprobando...
                                     </>
                                 ) : (
                                     <>
-                                        Get Certificate
+                                        Obtener Certificado
                                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -133,7 +133,7 @@ export default function PublicCertificatesPage() {
                     ) : status === 'conferences' ? (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
                             <p className="text-sm text-slate-600 text-center">
-                                We found multiple certificates for <strong>{selectedEmail}</strong>. Which one would you like to receive?
+                                Hemos encontrado múltiples certificados para <strong>{selectedEmail}</strong>. ¿Cuál te gustaría recibir?
                             </p>
                             
                             <div className="space-y-3">
@@ -145,10 +145,10 @@ export default function PublicCertificatesPage() {
                                     >
                                         <div className="flex-1 min-w-0 pr-4">
                                             <h3 className="font-bold text-slate-900 truncate">
-                                                {isAdmin ? `All Certificates: ${conf.name}` : conf.name}
+                                                {isAdmin ? `Todos los Certificados: ${conf.name}` : conf.name}
                                             </h3>
                                             <p className="text-xs text-slate-500 truncate mt-1">
-                                                {conf.conference_full_name || 'Conference'}
+                                                {conf.conference_full_name || 'Conferencia'}
                                             </p>
                                         </div>
                                         <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
@@ -162,14 +162,14 @@ export default function PublicCertificatesPage() {
                                 onClick={() => { setStatus('idle'); setEmail(''); setConferences([]); setIsAdmin(false); }}
                                 className="w-full h-10 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-wider"
                             >
-                                Use a different email
+                                Usar un email distinto
                             </button>
                         </div>
                     ) : status === 'sending' ? (
                         <div className="py-8 flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in duration-300">
                             <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-                            <h3 className="text-lg font-bold text-slate-900">Preparing Email...</h3>
-                            <p className="text-sm text-slate-500">Generating your secure link</p>
+                            <h3 className="text-lg font-bold text-slate-900">Preparando Email...</h3>
+                            <p className="text-sm text-slate-500">Generando tu enlace seguro</p>
                         </div>
                     ) : status === 'success' ? (
                         <div className="space-y-4 animate-in fade-in zoom-in duration-300">
@@ -178,12 +178,12 @@ export default function PublicCertificatesPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-900 text-center">Email Sent!</h2>
+                            <h2 className="text-2xl font-bold text-slate-900 text-center">¡Email Enviado!</h2>
                             <p className="text-slate-600 text-center">
-                                We've sent an email to <strong className="text-slate-900">{selectedEmail}</strong> with a secure link to download your certificate {sentConfName ? `for ${sentConfName}` : ''}.
+                                Hemos enviado un email a <strong className="text-slate-900">{selectedEmail}</strong> con un enlace seguro para descargar tu certificado {sentConfName ? `para ${sentConfName}` : ''}.
                             </p>
                             <p className="text-sm text-slate-500 mt-4 text-center">
-                                Please check your inbox (and spam folder) for the email.
+                                Por favor revisa tu bandeja de entrada (y la carpeta de spam) para ver el email.
                             </p>
                             <button
                                 onClick={() => {
@@ -193,7 +193,7 @@ export default function PublicCertificatesPage() {
                                 }}
                                 className="w-full mt-8 text-sm text-indigo-600 font-medium hover:text-indigo-700"
                             >
-                                Check another email
+                                Comprobar otro email
                             </button>
                         </div>
                     ) : null}
