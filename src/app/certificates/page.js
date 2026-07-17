@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { checkEmailForCertificates, sendPublicCertificateEmail } from '../actions/publicCertificates';
+import { checkEmailForCertificates, sendPublicCertificateEmail, sendAdminCertificatesEmail } from '../actions/publicCertificates';
 import { Mail, ArrowRight, Award, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export default function PublicCertificatesPage() {
@@ -11,6 +11,7 @@ export default function PublicCertificatesPage() {
     const [conferences, setConferences] = useState([]);
     const [selectedEmail, setSelectedEmail] = useState('');
     const [sentConfName, setSentConfName] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const handleCheckEmail = async (e) => {
         e.preventDefault();
@@ -29,12 +30,13 @@ export default function PublicCertificatesPage() {
             }
             
             setSelectedEmail(email.trim().toLowerCase());
+            setIsAdmin(result.isAdmin || false);
             
-            if (result.conferences.length === 1) {
+            if (result.conferences.length === 1 && !result.isAdmin) {
                 // Only one conference, send email immediately
-                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id, result.conferences[0].name, email.trim().toLowerCase());
+                await sendCertificate(result.conferences[0].id, result.conferences[0].registration_id, result.conferences[0].name, email.trim().toLowerCase(), false);
             } else {
-                // Multiple conferences, ask user to select
+                // Multiple conferences or is Admin, ask user to select
                 setConferences(result.conferences);
                 setStatus('conferences');
             }
@@ -44,10 +46,12 @@ export default function PublicCertificatesPage() {
         }
     };
 
-    const sendCertificate = async (conferenceId, registrationId, confName, targetEmail) => {
+    const sendCertificate = async (conferenceId, registrationId, confName, targetEmail, isUserAdmin) => {
         setStatus('sending');
         try {
-            const result = await sendPublicCertificateEmail(targetEmail, conferenceId, registrationId);
+            const result = isUserAdmin
+                ? await sendAdminCertificatesEmail(targetEmail, conferenceId)
+                : await sendPublicCertificateEmail(targetEmail, conferenceId, registrationId);
             
             if (result.error) {
                 setErrorMsg(result.error);
@@ -136,11 +140,13 @@ export default function PublicCertificatesPage() {
                                 {conferences.map((conf) => (
                                     <button
                                         key={conf.id}
-                                        onClick={() => sendCertificate(conf.id, conf.registration_id, conf.name, selectedEmail)}
+                                        onClick={() => sendCertificate(conf.id, conf.registration_id, conf.name, selectedEmail, isAdmin)}
                                         className="w-full p-4 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 hover:ring-1 hover:ring-indigo-500 transition-all flex items-center justify-between group text-left"
                                     >
                                         <div className="flex-1 min-w-0 pr-4">
-                                            <h3 className="font-bold text-slate-900 truncate">{conf.name}</h3>
+                                            <h3 className="font-bold text-slate-900 truncate">
+                                                {isAdmin ? `All Certificates: ${conf.name}` : conf.name}
+                                            </h3>
                                             <p className="text-xs text-slate-500 truncate mt-1">
                                                 {conf.conference_full_name || 'Conference'}
                                             </p>
@@ -153,7 +159,7 @@ export default function PublicCertificatesPage() {
                             </div>
                             
                             <button 
-                                onClick={() => { setStatus('idle'); setEmail(''); setConferences([]); }}
+                                onClick={() => { setStatus('idle'); setEmail(''); setConferences([]); setIsAdmin(false); }}
                                 className="w-full h-10 text-xs font-bold text-slate-500 hover:text-slate-700 uppercase tracking-wider"
                             >
                                 Use a different email

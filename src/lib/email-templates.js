@@ -295,6 +295,7 @@ export const emailTemplates = {
         const brand = getBranding(conference);
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         const confName = brand.name;
+        const isSpanish = confName && confName.toUpperCase().includes('CIPIE');
 
         // Parse and build sponsors block
         let sponsorsHtml = '';
@@ -329,10 +330,10 @@ export const emailTemplates = {
             const presentationsHtml = presentations && presentations.length > 0 ? `
                 <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #334155; line-height: 1.7;">
-                        <strong>${name}</strong> has presented:
+                        <strong>${name}</strong> ${isSpanish ? 'ha presentado:' : 'has presented:'}
                     </p>
                     <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
-                        ${presentations.map(pres => `<li>${pres.type} contribution entitled <strong>"${pres.title}"</strong>.</li>`).join('')}
+                        ${presentations.map(pres => `<li>${pres.type} ${isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"${pres.title}"</strong>.</li>`).join('')}
                     </ul>
                 </div>
             ` : '';
@@ -340,7 +341,7 @@ export const emailTemplates = {
             const signatureHtml = signatureImage ? `<img src="${signatureImage}" style="max-height: 65px; display: block; margin: 8px 0;" alt="Signature" />` : '';
             const textUnderSignatureHtml = textUnderSignature 
                 ? `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 5px 0 0 0; line-height: 1.4;">${textUnderSignature.replace(/\n/g, '<br>')}</p>` 
-                : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} Organizing Committee</p>`;
+                : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} ${isSpanish ? 'Comité Organizador' : 'Organizing Committee'}</p>`;
 
             const locationStr = [entityZip, entityCity].filter(Boolean).join(' ') + (entityCountry ? (entityZip || entityCity ? ', ' : '') + entityCountry : '');
 
@@ -379,7 +380,7 @@ export const emailTemplates = {
                 <div style="font-family: 'Georgia', 'Times New Roman', serif; max-width: 700px; margin: 0 auto; padding: 0; border: 2px solid ${brand.accentColor}; border-radius: 4px;">
                     ${renderHeader(brand)}
                     <div style="padding: 40px 40px 30px 40px;">
-                        <h1 style="text-align: center; color: ${brand.accentColor}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 1px;">CERTIFICATE OF PARTICIPATION</h1>
+                        <h1 style="text-align: center; color: ${brand.accentColor}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 1px;">${isSpanish ? 'CERTIFICADO DE PARTICIPACIÓN' : 'CERTIFICATE OF PARTICIPATION'}</h1>
                         <div style="text-align: center; border-bottom: 2px solid ${brand.accentColor}; padding-bottom: 20px; margin-bottom: 30px;">
                             <p style="color: #64748b; font-size: 13px; margin: 0;">${today}</p>
                         </div>
@@ -393,7 +394,7 @@ export const emailTemplates = {
                                     ${(entityZip || entityCity || entityCountry) ? `<p style="font-size: 12px; color: #64748b; margin: 0;">${[[entityZip, entityCity].filter(Boolean).join(' '), entityCountry].filter(Boolean).join(', ')}</p>` : ''}
                                 </td>
                                 <td style="width: 50%; vertical-align: top; padding-left: 20px; border-left: 1px solid #e2e8f0;">
-                                    <p style="font-size: 11px; font-weight: 700; color: ${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">This certifies participation at:</p>
+                                    <p style="font-size: 11px; font-weight: 700; color: ${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">${isSpanish ? 'Este certificado acredita la participación en:' : 'This certifies participation at:'}</p>
                                     <p style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">${confName}${conferenceFullName ? ` - ${conferenceFullName}` : ''}</p>
                                     ${conferenceAddress ? `<p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.4;">${conferenceAddress.replace(/\n/g, '<br>')}</p>` : ''}
                                 </td>
@@ -402,28 +403,28 @@ export const emailTemplates = {
 
                         <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
-                                This letter certifies that <strong>${name}</strong>
-                                ${registrationType ? ` participated as <strong>${registrationType}</strong> ` : ' participated '}
-                                &nbsp;at the <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `, celebrated at <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` from <strong>${conferenceDates}</strong>` : ''}.
+                                ${isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>${name}</strong>
+                                ${registrationType ? ` ${isSpanish ? 'participó como' : 'participated as'} <strong>${registrationType}</strong> ` : ` ${isSpanish ? 'participó' : 'participated'} `}
+                                &nbsp;${isSpanish ? 'en' : 'at the'} <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `${isSpanish ? ', celebrado en' : ', celebrated at'} <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` ${isSpanish ? 'del' : 'from'} <strong>${conferenceDates}</strong>` : ''}.
                             </p>
                             ${presentations && presentations.length > 0 ? `
                                 <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
                                     <p style="margin: 0 0 6px 0; font-size: 14px; color: #334155; line-height: 1.7;">
-                                        <strong>${name}</strong> has presented:
+                                        <strong>${name}</strong> ${isSpanish ? 'ha presentado:' : 'has presented:'}
                                     </p>
                                     <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
-                                        ${presentations.map(pres => `<li>${pres.type} contribution entitled <strong>"${pres.title}"</strong>.</li>`).join('')}
+                                        ${presentations.map(pres => `<li>${pres.type} ${isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"${pres.title}"</strong>.</li>`).join('')}
                                     </ul>
                                 </div>
                             ` : ''}
                         </div>
 
                         <div style="margin-bottom: 30px;">
-                            <p style="font-size: 13px; color: #475569; margin: 0;">Sincerely,</p>
+                            <p style="font-size: 13px; color: #475569; margin: 0;">${isSpanish ? 'Atentamente,' : 'Sincerely,'}</p>
                             ${signatureImage ? `<img src="${signatureImage}" style="max-height: 65px; display: block; margin: 8px 0;" alt="Signature" />` : ''}
                             ${textUnderSignature 
                                 ? `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 5px 0 0 0; line-height: 1.4;">${textUnderSignature.replace(/\n/g, '<br>')}</p>` 
-                                : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} Organizing Committee</p>`
+                                : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} ${isSpanish ? 'Comité Organizador' : 'Organizing Committee'}</p>`
                             }
                         </div>
 
@@ -431,7 +432,7 @@ export const emailTemplates = {
 
                         <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 20px;">
                             <p style="font-size: 11px; color: #94a3b8; margin: 0;">
-                                This is an automated certificate from ${confName}. For support, contact ${brand.email}.
+                                ${isSpanish ? 'Este es un certificado automático de' : 'This is an automated certificate from'} ${confName}. ${isSpanish ? 'Para soporte, contacta a' : 'For support, contact'} ${brand.email}.
                             </p>
                         </div>
                     </div>

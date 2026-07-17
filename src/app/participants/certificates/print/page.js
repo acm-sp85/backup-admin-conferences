@@ -181,6 +181,8 @@ export default async function CertificatePrintPage({ searchParams }) {
         return presentations;
     };
 
+    const isSpanish = conference.name && conference.name.toUpperCase().includes('CIPIE');
+
     return (
         <div className="print-container">
             <style dangerouslySetInnerHTML={{ __html: `
@@ -251,7 +253,7 @@ export default async function CertificatePrintPage({ searchParams }) {
                         )}
                         
                         <div style={{ flex: 1 }}>
-                            <h1 style={{ textAlign: 'center', color: conference.accent_color || '#007aff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '1px' }}>CERTIFICATE OF PARTICIPATION</h1>
+                            <h1 style={{ textAlign: 'center', color: conference.accent_color || '#007aff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '1px' }}>{isSpanish ? 'CERTIFICADO DE PARTICIPACIÓN' : 'CERTIFICATE OF PARTICIPATION'}</h1>
                             <div style={{ textAlign: 'center', borderBottom: `2px solid ${conference.accent_color || '#007aff'}`, paddingBottom: '16px', marginBottom: '24px' }}>
                                 <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>{today}</p>
                             </div>
@@ -266,7 +268,7 @@ export default async function CertificatePrintPage({ searchParams }) {
                                             {locParts && <p style={{ fontSize: '12px', color: '#64748b', margin: '0' }}>{locParts}</p>}
                                         </td>
                                         <td style={{ width: '50%', verticalAlign: 'top', paddingLeft: '20px', borderLeft: '1px solid #e2e8f0' }}>
-                                            <p style={{ fontSize: '11px', fontWeight: '700', color: conference.accent_color || '#007aff', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px 0' }}>This certifies participation at:</p>
+                                            <p style={{ fontSize: '11px', fontWeight: '700', color: conference.accent_color || '#007aff', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px 0' }}>{isSpanish ? 'Este certificado acredita la participación en:' : 'This certifies participation at:'}</p>
                                             <p style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', margin: '0 0 4px 0' }}>{conference.name}{conference.conference_full_name ? ` - ${conference.conference_full_name}` : ''}</p>
                                             {conference.conference_address && <p style={{ fontSize: '12px', color: '#64748b', margin: '0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{__html: conference.conference_address.replace(/\n/g, '<br>')}}></p>}
                                         </td>
@@ -276,22 +278,22 @@ export default async function CertificatePrintPage({ searchParams }) {
 
                             <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
                                 <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.7', margin: '0' }}>
-                                    This letter certifies that <strong>{p.name}</strong>
-                                    {regType ? <span> participated as <strong>{regType}</strong></span> : ' participated'}
-                                     &nbsp;at the <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
-                                    {conference.conference_address ? <span>, celebrated at <strong>{conference.conference_address.replace(/\n/g, ', ')}</strong></span> : ''}
-                                    {conferenceDates ? <span> from <strong>{conferenceDates}</strong></span> : ''}.
+                                    {isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>{p.name}</strong>
+                                    {regType ? <span> {isSpanish ? 'participó como' : 'participated as'} <strong>{regType}</strong></span> : (isSpanish ? ' participó' : ' participated')}
+                                     &nbsp;{isSpanish ? 'en' : 'at the'} <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
+                                    {conference.conference_address ? <span>{isSpanish ? ', celebrado en ' : ', celebrated at '}<strong>{conference.conference_address.replace(/\n/g, ', ')}</strong></span> : ''}
+                                    {conferenceDates ? <span> {isSpanish ? 'del' : 'from'} <strong>{conferenceDates}</strong></span> : ''}.
                                 </p>
                                 
                                 {presentations.length > 0 && (
                                     <div style={{ marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
                                         <p style={{ margin: '0 0 6px 0', fontSize: '14px', color: '#334155', lineHeight: '1.7' }}>
-                                            <strong>{p.name}</strong> has presented:
+                                            <strong>{p.name}</strong> {isSpanish ? 'ha presentado:' : 'has presented:'}
                                         </p>
                                         <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
                                             {presentations.map((pres, idx) => (
                                                 <li key={idx}>
-                                                    {pres.type} contribution entitled <strong>"{pres.title}"</strong>.
+                                                    {pres.type} {isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"{pres.title}"</strong>.
                                                 </li>
                                             ))}
                                         </ul>
@@ -302,11 +304,11 @@ export default async function CertificatePrintPage({ searchParams }) {
                         </div>
 
                         <div style={{ marginTop: 'auto', marginBottom: '12px' }}>
-                            <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>Sincerely,</p>
+                            <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{isSpanish ? 'Atentamente,' : 'Sincerely,'}</p>
                             {conference.signature_image && <img src={conference.signature_image} style={{ maxHeight: '65px', display: 'block', margin: '8px 0' }} alt="Signature" />}
                             {conference.text_under_signature 
                                 ? <p style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600', margin: '5px 0 0 0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{__html: conference.text_under_signature.replace(/\n/g, '<br>')}}></p>
-                                : <p style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600', margin: '8px 0 0 0' }}>{conference.name} Organizing Committee</p>
+                                : <p style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600', margin: '8px 0 0 0' }}>{conference.name} {isSpanish ? 'Comité Organizador' : 'Organizing Committee'}</p>
                             }
                         </div>
                         

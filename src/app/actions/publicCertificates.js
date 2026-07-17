@@ -15,6 +15,27 @@ export async function checkEmailForCertificates(email) {
         return { error: 'Invalid email address.' };
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if the user is an admin or superadmin
+    const userRows = await query(`SELECT role FROM users WHERE email = ?`, [cleanEmail]);
+    const isAdmin = userRows.length > 0 && (userRows[0].role === 'admin' || userRows[0].role === 'superadmin');
+
+    if (isAdmin) {
+        const rows = await query(`
+            SELECT id, name, conference_full_name, logo_url, end_date
+            FROM conferences
+            WHERE end_date <= NOW()
+            ORDER BY end_date DESC
+        `);
+        
+        if (rows.length === 0) {
+            return { error: 'No completed conferences found.' };
+        }
+        
+        return { conferences: rows, isAdmin: true };
+    }
+
     // Find participant in any completed conference with scanned_at
     const rows = await query(`
         SELECT DISTINCT c.id, c.name, c.conference_full_name, c.logo_url, c.end_date, r.id as registration_id, p.id as participant_id
@@ -23,13 +44,13 @@ export async function checkEmailForCertificates(email) {
         JOIN conferences c ON r.conference_id = c.id
         JOIN participant_qr_tokens t ON r.id = t.registration_id
         WHERE p.email = ? AND t.scanned_at IS NOT NULL AND c.end_date <= NOW()
-    `, [email.trim().toLowerCase()]);
+    `, [cleanEmail]);
 
     if (rows.length === 0) {
         return { error: 'No certificates found for this email. Ensure you have checked in at a completed conference.' };
     }
 
-    return { conferences: rows };
+    return { conferences: rows, isAdmin: false };
 }
 
 /**
@@ -93,6 +114,72 @@ export async function sendPublicCertificateEmail(email, conferenceId, registrati
 
     if (error) {
         console.error('Resend Error (Public Certificate):', error);
+        return { error: 'Failed to send the email. Please try again later.' };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Sends an email with a secure token link to download all certificates for an admin.
+ */
+export async function sendAdminCertificatesEmail(email, conferenceId) {
+    console.log('Sending admin certificates email...', { email, conferenceId });
+    // Generate JWT
+    const token = await encrypt({ conferenceId, isAdmin: true }, '30d');
+    
+    // Get conference details
+    const [conf] = await query('SELECT * FROM conferences WHERE id = ?', [conferenceId]);
+    if (!conf) return { error: 'Conference not found' };
+
+    const brand = getBranding(conf);
+    
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const certificateUrl = `${baseUrl}/certificates/admin/${token}`;
+
+    const isSpanish = conf.name.toUpperCase().includes('CIPIE');
+    
+    const textConfig = {
+        title: isSpanish ? 'Certificados de la Conferencia' : 'Conference Certificates',
+        p1: isSpanish 
+            ? `Como administrador, puedes ver y descargar <strong>todos</strong> los certificados de participación para <strong>${conf.name}</strong> haciendo clic en el botón de abajo.`
+            : `As an admin, you can view and download <strong>all</strong> certificates of participation for <strong>${conf.name}</strong> by clicking the button below.`,
+        btn: isSpanish ? 'Ver Todos los Certificados' : 'View All Certificates',
+        footer: isSpanish 
+            ? 'Este enlace caducará en 30 días.' 
+            : 'This link will expire in 30 days.',
+        subject: isSpanish
+            ? `${conf.name} - Todos los Certificados`
+            : `${conf.name} - All Certificates`
+    };
+
+    const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            ${renderHeader(brand)}
+            <h2 style="color: #1e293b; margin-bottom: 20px;">${textConfig.title}</h2>
+            <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
+                ${textConfig.p1}
+            </p>
+            <div style="margin: 30px 0;">
+                <a href="${certificateUrl}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+                    ${textConfig.btn}
+                </a>
+            </div>
+            <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+                ${textConfig.footer}
+            </p>
+        </div>
+    `;
+
+    const { error } = await resend.emails.send({
+        from: EMAIL_CONFIG.fromConferences,
+        to: [email.trim().toLowerCase()],
+        subject: textConfig.subject,
+        html
+    });
+
+    if (error) {
+        console.error('Resend Error (Admin Certificate):', error);
         return { error: 'Failed to send the email. Please try again later.' };
     }
 
