@@ -302,7 +302,7 @@ export default async function CertificatePrintPage({ searchParams }) {
                                         <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
                                             {presentations.map((pres, idx) => (
                                                 <li key={idx}>
-                                                    {(isSpanish && pres.type.toLowerCase() === 'poster') ? 'Póster' : pres.type} {isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"{pres.title}"</strong>.
+                                                    {(isSpanish && pres.type.toLowerCase() === 'poster') ? 'Póster' : pres.type} {isSpanish ? ' con título' : 'contribution entitled'} <strong>"{pres.title}"</strong>.
                                                 </li>
                                             ))}
                                         </ul>
