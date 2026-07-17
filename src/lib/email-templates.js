@@ -300,8 +300,9 @@ export const emailTemplates = {
         let displayRegistrationType = registrationType;
         if (isSpanish) {
             const typeMapping = {
-                'Industrial': 'sponsor',
-                'Participantes': 'asistente',
+                'Industrial': 'como sponsor',
+                'Participantes': 'como asistente',
+                'Estudiantes / Jubilados / Desempleados': 'como asistente',
             };
             displayRegistrationType = typeMapping[registrationType] || registrationType;
         }
