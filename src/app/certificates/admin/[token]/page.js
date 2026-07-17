@@ -248,15 +248,14 @@ export default async function AdminCertificatesViewPage({ params }) {
                         <p className="text-xs text-slate-400 mt-1">{processedParticipants.length} total certificates</p>
                     </div>
                     
-                    {/* Add client-side button to trigger window.print() */}
+                    {/* Top Toolbar - Hidden on print */}
                     <button 
-                        onClick="window.print()"
                         style={{ display: 'none' }} 
                         id="print-btn-hidden"
                     />
                     
                     <button 
-                        onClick="window.print()"
+                        id="print-btn"
                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors shadow-lg"
                     >
                         <Download className="w-4 h-4" />
@@ -264,8 +263,7 @@ export default async function AdminCertificatesViewPage({ params }) {
                     </button>
                     
                     <script dangerouslySetInnerHTML={{ __html: `
-                        // Attach to actual button
-                        document.querySelector('button.bg-indigo-600').onclick = () => window.print();
+                        document.getElementById('print-btn').onclick = () => window.print();
                     `}} />
                 </div>
             </div>
