@@ -302,6 +302,11 @@ export const emailTemplates = {
             const typeMapping = {
                 'Industrial': 'como sponsor',
                 'Participantes': 'como asistente',
+                'Coordinador de simposio Waved': 'como coordinador/a de simposio',
+                'Streaming': 'de forma remota',
+                'Simposio/Taller Plenario': 'como participante en simposio o taller plenario',
+                'Coordinadores/as Área de trabajo': 'como coordinador/a de área',
+                'Comité Organizador y presidencias ejecutivas': 'como parte del comité organizador y presidencias ejecutivas',
                 'Estudiantes / Jubilados / Desempleados': 'como asistente',
             };
             displayRegistrationType = typeMapping[registrationType] || registrationType;
@@ -343,7 +348,7 @@ export const emailTemplates = {
                         <strong>${name}</strong> ${isSpanish ? 'ha presentado:' : 'has presented:'}
                     </p>
                     <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
-                        ${presentations.map(pres => `<li>${pres.type} ${isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"${pres.title}"</strong>.</li>`).join('')}
+                        ${presentations.map(pres => `<li>${(isSpanish && pres.type.toLowerCase() === 'poster') ? 'Póster' : pres.type} ${isSpanish ? 'contribución titulada' : 'contribution entitled'} <strong>"${pres.title}"</strong>.</li>`).join('')}
                     </ul>
                 </div>
             ` : '';
