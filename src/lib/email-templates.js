@@ -297,6 +297,15 @@ export const emailTemplates = {
         const confName = brand.name;
         const isSpanish = confName && confName.toUpperCase().includes('CIPIE');
 
+        let displayRegistrationType = registrationType;
+        if (isSpanish) {
+            const typeMapping = {
+                'Industrial': 'sponsor',
+                'Participantes': 'asistente',
+            };
+            displayRegistrationType = typeMapping[registrationType] || registrationType;
+        }
+
         // Parse and build sponsors block
         let sponsorsHtml = '';
         if (sponsorList) {
@@ -355,7 +364,7 @@ export const emailTemplates = {
                 .replace(/\$\{institution\}/g, institution || '')
                 .replace(/\$\{entityAddress\}/g, entityAddress || '')
                 .replace(/\$\{entityLocation\}/g, locationStr || '')
-                .replace(/\$\{registrationType\}/g, registrationType || '')
+                .replace(/\$\{registrationType\}/g, displayRegistrationType || '')
                 .replace(/\$\{conferenceFullName\}/g, conferenceFullName || '')
                 .replace(/\$\{conferenceAddress\}/g, conferenceAddress ? conferenceAddress.replace(/\n/g, '<br>') : '')
                 .replace(/\$\{conferenceAddressInline\}/g, conferenceAddress ? conferenceAddress.replace(/\n/g, ', ') : '')
@@ -404,7 +413,7 @@ export const emailTemplates = {
                         <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
                             <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
                                 ${isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>${name}</strong>
-                                ${registrationType ? ` ${isSpanish ? 'participó como' : 'participated as'} <strong>${registrationType}</strong> ` : ` ${isSpanish ? 'participó' : 'participated'} `}
+                                ${displayRegistrationType ? ` ${isSpanish ? 'participó como' : 'participated as'} <strong>${displayRegistrationType}</strong> ` : ` ${isSpanish ? 'participó' : 'participated'} `}
                                 &nbsp;${isSpanish ? 'en' : 'at the'} <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `${isSpanish ? ', celebrado en' : ', celebrated at'} <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` ${isSpanish ? 'del' : 'from'} <strong>${conferenceDates}</strong>` : ''}.
                             </p>
                             ${presentations && presentations.length > 0 ? `

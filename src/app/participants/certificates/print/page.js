@@ -241,6 +241,15 @@ export default async function CertificatePrintPage({ searchParams }) {
                 const presentations = getPresentationsForParticipant(p);
                 const institution = p.entity || p.payment_group || '';
                 const regType = p.payment_group || p.registration_type || '';
+                
+                let displayRegType = regType;
+                if (isSpanish) {
+                    const typeMapping = {
+                        'Industrial': 'Sponsor',
+                        // Add more mappings here if needed
+                    };
+                    displayRegType = typeMapping[regType] || regType;
+                }
                 const locParts = [[p.entity_zip, p.entity_city].filter(Boolean).join(' '), p.entity_country].filter(Boolean).join(', ');
 
                 return (
@@ -279,7 +288,7 @@ export default async function CertificatePrintPage({ searchParams }) {
                             <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
                                 <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.7', margin: '0' }}>
                                     {isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>{p.name}</strong>
-                                    {regType ? <span> {isSpanish ? 'participó como' : 'participated as'} <strong>{regType}</strong></span> : (isSpanish ? ' participó' : ' participated')}
+                                    {displayRegType ? <span> {isSpanish ? 'participó como' : 'participated as'} <strong>{displayRegType}</strong></span> : (isSpanish ? ' participó' : ' participated')}
                                      &nbsp;{isSpanish ? 'en' : 'at the'} <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
                                     {conference.conference_address ? <span>{isSpanish ? ', celebrado en ' : ', celebrated at '}<strong>{conference.conference_address.replace(/\n/g, ', ')}</strong></span> : ''}
                                     {conferenceDates ? <span> {isSpanish ? 'del' : 'from'} <strong>{conferenceDates}</strong></span> : ''}.
