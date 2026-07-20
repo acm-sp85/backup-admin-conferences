@@ -308,6 +308,8 @@ export const emailTemplates = {
                 'Coordinadores/as Área de trabajo': 'como coordinador/a de área',
                 'Comité Organizador y presidencias ejecutivas': 'como parte del comité organizador y presidencias ejecutivas',
                 'Estudiantes / Jubilados / Desempleados': 'como asistente',
+                'Ponente Plenario': 'como ponente plenario',
+                'Simposio Plenario': 'como ponente plenario',
             };
             displayRegistrationType = typeMapping[registrationType] || registrationType;
         }
