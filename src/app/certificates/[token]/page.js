@@ -234,13 +234,6 @@ export default async function PublicCertificateViewPage({ params }) {
                         <h2 className="font-bold text-sm">Certificate of Participation</h2>
                     </div>
                     
-                    {/* Add client-side button to trigger window.print() */}
-                    <button 
-                        onClick="window.print()"
-                        style={{ display: 'none' }} 
-                        id="print-btn-hidden"
-                    />
-                    
                     {/* Client Component Button Wrapper */}
                     <PrintButton />
                 </div>
