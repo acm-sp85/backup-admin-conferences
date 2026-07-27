@@ -95,7 +95,7 @@ export async function sendPublicCertificateEmail(email, conferenceId, registrati
                 ${textConfig.p1}
             </p>
             <div style="margin: 30px 0;">
-                <a href="${certificateUrl}" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+                <a href="${certificateUrl}" target="_blank" rel="noopener noreferrer" style="background-color: ${brand.accentColor}; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
                     ${textConfig.btn}
                 </a>
             </div>
