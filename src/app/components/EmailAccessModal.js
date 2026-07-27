@@ -1,55 +1,17 @@
 "use client";
-import { useState } from 'react';
 import styles from './EmailAccessModal.module.css';
 
 export default function EmailAccessModal({ conference = null }) {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/participants/check-access', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, conference }),
-        credentials: 'same-origin',
-      });
-      const data = await res.json();
-      if (data.granted) {
-        // Reload to apply the set cookie and show protected content
-        window.location.reload();
-      } else {
-        setError(data.message || 'Access denied');
-      }
-    } catch (err) {
-      setError('Network error');
-    }
-    setLoading(false);
-  };
-
   return (
     <div className={styles.backdrop}>
       <div className={styles.modal}>
-        <h2 className={styles.title}>Introduce tu email de registro</h2>
-        <h2 className={styles.title}>para acceder al streaming</h2>
-        <form onSubmit={submit} className={styles.form}>
-          <input
-            type="email"
-            required
-            placeholder="tu@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={styles.input}
-          />
-          <button type="submit" disabled={loading} className={styles.button}>
-            {loading ? 'Comprobando...' : 'Accede'}
-          </button>
-        </form>
-        {error && <p className={styles.error} dangerouslySetInnerHTML={{ __html: error }} />}
+        <h2 className={styles.title}>Grabaciones no disponibles</h2>
+        <p className={styles.message}>
+          Las grabaciones y vídeos de la conferencia ya no se encuentran disponibles.
+        </p>
+        <p className={styles.submessage}>
+          Muchas gracias por su interés y por haber participado.
+        </p>
       </div>
     </div>
   );
