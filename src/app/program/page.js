@@ -6,7 +6,7 @@ import ProgramManager from '../components/ProgramManager';
 
 export default async function ProgramPage() {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
     redirect('/login');
   }
 

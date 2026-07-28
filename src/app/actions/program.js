@@ -29,7 +29,7 @@ export async function getProgram(conferenceId) {
 
 export async function updateDoorSignConfig(conferenceId, config, bgUrl) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -67,7 +67,7 @@ export async function getConferenceConfig(conferenceId) {
 
 export async function toggleSessionVisibility(sessionId, isHidden) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -82,7 +82,7 @@ export async function toggleSessionVisibility(sessionId, isHidden) {
 
 export async function updateSessionData(sessionId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -98,7 +98,7 @@ export async function updateSessionData(sessionId, data) {
 
 export async function updateSlotData(slotId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 

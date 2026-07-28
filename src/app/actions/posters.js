@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function getPostersForConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -22,7 +22,7 @@ export async function getPostersForConference(conferenceId) {
 
 export async function updatePosterCluster(posterId, clusterId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -38,7 +38,7 @@ export async function updatePosterCluster(posterId, clusterId) {
 
 export async function bulkUpdatePosterClusters(posterIds, clusterId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -59,7 +59,7 @@ export async function bulkUpdatePosterClusters(posterIds, clusterId) {
 
 export async function getClustersForConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -68,7 +68,7 @@ export async function getClustersForConference(conferenceId) {
 
 export async function createCluster(conferenceId, name, color = '#0071e3') {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -83,7 +83,7 @@ export async function createCluster(conferenceId, name, color = '#0071e3') {
 
 export async function updateCluster(clusterId, name, color) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -98,7 +98,7 @@ export async function updateCluster(clusterId, name, color) {
 
 export async function deleteCluster(clusterId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 

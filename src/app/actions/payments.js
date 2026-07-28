@@ -7,7 +7,7 @@ import { logAction } from '@/lib/logger';
 
 export async function addManualPayment(registrationId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -28,7 +28,7 @@ export async function addManualPayment(registrationId, data) {
 
 export async function updatePayment(paymentId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -51,7 +51,7 @@ export async function updatePayment(paymentId, data) {
 
 export async function deletePayment(paymentId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 

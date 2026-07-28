@@ -73,7 +73,7 @@ export async function requestMagicLink(prevState, formData) {
     }
 
     if (user) {
-      if (password && (user.role === 'admin' || user.role === 'superadmin')) {
+      if (password && (user.role === 'admin' || user.role === 'superadmin' || user.role === 'admin_sponsors')) {
         const bcrypt = require('bcryptjs');
         if (!user.password) {
           return { message: 'No password set. Please use the magic link first to setup.' };
@@ -177,7 +177,7 @@ export async function setupAdminPassword(token, formData) {
 
 export async function updatePassword(prevState, formData) {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
     return { error: 'Unauthorized' };
   }
 

@@ -18,7 +18,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function createActivity(conferenceId, name, date, description) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query(
         'INSERT INTO extra_activities (conference_id, name, date, description, custom_email_text) VALUES (?, ?, ?, ?, ?)',
@@ -33,7 +33,7 @@ export async function createActivity(conferenceId, name, date, description) {
 
 export async function updateActivity(activityId, name, date, description) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query(
         'UPDATE extra_activities SET name = ?, date = ?, description = ? WHERE id = ?',
@@ -49,7 +49,7 @@ export async function updateActivity(activityId, name, date, description) {
 
 export async function updateActivityEmailTemplate(activityId, subject, bodyTemplate, includeQr) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query(
         'UPDATE extra_activities SET email_subject = ?, email_body_template = ?, include_qr = ? WHERE id = ?',
@@ -64,7 +64,7 @@ export async function updateActivityEmailTemplate(activityId, subject, bodyTempl
 
 export async function deleteActivity(activityId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query('DELETE FROM extra_activities WHERE id = ?', [activityId]);
 
@@ -80,7 +80,7 @@ export async function deleteActivity(activityId) {
 
 export async function addAttendeeManual(activityId, participantId, name, email) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     // Check if already in this activity
     const [existing] = await query('SELECT id FROM extra_activity_attendees WHERE activity_id = ? AND email = ?', [activityId, email]);
@@ -100,7 +100,7 @@ export async function addAttendeeManual(activityId, participantId, name, email) 
 
 export async function importCSVAttendees(activityId, conferenceId, emailsList) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     if (!emailsList || emailsList.length === 0) return { success: true, count: 0 };
 
@@ -146,7 +146,7 @@ export async function importCSVAttendees(activityId, conferenceId, emailsList) {
 
 export async function removeAttendee(attendeeId, activityId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query('DELETE FROM extra_activity_attendees WHERE id = ?', [attendeeId]);
     await logAction('DELETE', 'ACTIVITY_ATTENDEE', attendeeId, { activityId });
@@ -160,7 +160,7 @@ export async function removeAttendee(attendeeId, activityId) {
 
 export async function manualCheckinActivity(attendeeId, activityId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     await query(
         'UPDATE extra_activity_attendees SET scanned_at = NOW(), is_manual = 1 WHERE id = ? AND scanned_at IS NULL',
@@ -217,7 +217,7 @@ export async function validateActivityTicket(activityId, token) {
 
 export async function sendActivityQREmail(attendeeId, activityId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     const [attendee] = await query(`
         SELECT a.name, a.email, a.qr_token, a.tickets_count, act.name as activity_name, act.custom_email_text, 
@@ -355,7 +355,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
 
 export async function searchConferenceParticipantsLocal(conferenceId, searchTerm) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     const participants = await query(`
         SELECT p.id as participant_id, 
@@ -372,7 +372,7 @@ export async function searchConferenceParticipantsLocal(conferenceId, searchTerm
 
 export async function updateAttendeeTicketsCount(attendeeId, newCount) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) throw new Error('Unauthorized');
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) throw new Error('Unauthorized');
 
     if (newCount < 1) throw new Error('Ticket count must be at least 1');
 

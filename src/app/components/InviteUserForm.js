@@ -34,6 +34,7 @@ export default function InviteUserForm() {
                 >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
+                    <option value="admin_sponsors">Admin Sponsors</option>
                     <option value="superadmin">Superadmin</option>
                 </select>
                 <button 

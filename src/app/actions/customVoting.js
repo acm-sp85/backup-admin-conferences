@@ -17,7 +17,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function getCustomVotingGroups(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -29,7 +29,7 @@ export async function getCustomVotingGroups(conferenceId) {
 
 export async function createCustomVotingGroup(conferenceId, name, color = '#7c3aed') {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -48,7 +48,7 @@ export async function createCustomVotingGroup(conferenceId, name, color = '#7c3a
 
 export async function updateCustomVotingGroup(groupId, name, color) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -67,7 +67,7 @@ export async function updateCustomVotingGroup(groupId, name, color) {
 
 export async function deleteCustomVotingGroup(groupId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -87,7 +87,7 @@ export async function deleteCustomVotingGroup(groupId) {
 
 export async function getCustomVotingItems(groupId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -104,7 +104,7 @@ export async function getCustomVotingItems(groupId) {
 
 export async function getCustomVotingItemsByConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -124,7 +124,7 @@ export async function getCustomVotingItemsByConference(conferenceId) {
 
 export async function addCustomVotingItem(groupId, slotId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -146,7 +146,7 @@ export async function addCustomVotingItem(groupId, slotId) {
 
 export async function removeCustomVotingItem(itemId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -166,7 +166,7 @@ export async function removeCustomVotingItem(itemId) {
 
 export async function getProgramSlotsForConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -186,7 +186,7 @@ export async function getProgramSlotsForConference(conferenceId) {
 
 export async function getCustomVotersForConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -207,7 +207,7 @@ export async function getCustomVotersForConference(conferenceId) {
 
 export async function searchConferenceParticipantsForCustomVoting(conferenceId, search) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -224,7 +224,7 @@ export async function searchConferenceParticipantsForCustomVoting(conferenceId, 
 
 export async function updateCustomVoterGroups(participantId, groupsArray, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -248,7 +248,7 @@ export async function updateCustomVoterGroups(participantId, groupsArray, confer
 
 export async function removeCustomVoter(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -267,7 +267,7 @@ export async function removeCustomVoter(participantId, conferenceId) {
 
 export async function addAllCheckedInAttendeesToCustomVoting(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 
@@ -373,7 +373,7 @@ export async function submitCustomVotes(userId, votes, conferenceId) {
 
 export async function getCustomVotingResults(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -454,7 +454,7 @@ export async function resetCustomVotingResults(conferenceId) {
 
 export async function sendCustomVoterInvite(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 

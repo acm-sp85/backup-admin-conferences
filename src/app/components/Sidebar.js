@@ -28,7 +28,7 @@ export default function Sidebar({ userRole, userName, isOpen, onClose }) {
   if (userRole === 'superadmin') {
     items = [...items, ...ADMIN_NAV];
   }
-  if (userRole === 'admin' || userRole === 'superadmin') {
+  if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'admin_sponsors') {
     items.push(SETTINGS_NAV);
   }
 

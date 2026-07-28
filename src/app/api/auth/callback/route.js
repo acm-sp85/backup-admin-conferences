@@ -21,7 +21,7 @@ export async function GET(request) {
     redirect('/login?error=invalid_token');
   }
 
-  if (payload.role === 'admin' || payload.role === 'superadmin') {
+  if (payload.role === 'admin' || payload.role === 'superadmin' || payload.role === 'admin_sponsors') {
     const [user] = await query('SELECT password FROM users WHERE id = ?', [payload.userId]);
     if (user && !user.password) {
       console.log("🔍 AuthCallback: Redirecting to setup-password");

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 export default async function ParticipantScannerPage() {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         redirect('/login');
     }
 

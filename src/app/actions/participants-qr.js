@@ -14,7 +14,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendParticipantCheckinQR(registrationId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -68,7 +68,7 @@ export async function sendParticipantCheckinQR(registrationId) {
 
 export async function manualCheckinParticipant(registrationId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -183,7 +183,7 @@ export async function getBadgeConfig(conferenceId) {
 
 export async function updateBadgeConfig(conferenceId, config, bgUrl) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -200,7 +200,7 @@ export async function updateBadgeConfig(conferenceId, config, bgUrl) {
 
 export async function updateParticipantEmailAlias(participantId, emailAlias) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return { error: 'Unauthorized' };
     }
 

@@ -7,7 +7,7 @@ import crypto from 'crypto';
 
 export async function searchGlobalParticipants(searchTerm) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -24,7 +24,7 @@ export async function searchGlobalParticipants(searchTerm) {
 
 export async function registerExistingParticipant(participantId, conferenceId, registrationType) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -68,7 +68,7 @@ export async function registerExistingParticipant(participantId, conferenceId, r
 
 export async function addManualParticipant({ firstName, lastName, email, registration_type, entity, country, conferenceId }) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -134,7 +134,7 @@ export async function addManualParticipant({ firstName, lastName, email, registr
 
 export async function bulkAddManualParticipants(participantsArray, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -220,7 +220,7 @@ export async function bulkAddManualParticipants(participantsArray, conferenceId)
 
 export async function updateParticipantType(participantId, registrationType) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 
@@ -239,7 +239,7 @@ export async function updateParticipantType(participantId, registrationType) {
 
 export async function toggleParticipantRemoved(participantId, conferenceId, isRemoved) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         throw new Error('Unauthorized');
     }
 

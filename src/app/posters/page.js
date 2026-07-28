@@ -7,7 +7,7 @@ import UnifiedPostersView from '../components/UnifiedPostersView';
 
 export default async function PostersPage() {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
     redirect('/login');
   }
 

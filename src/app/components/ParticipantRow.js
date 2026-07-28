@@ -504,7 +504,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                             </div>
                                         </div>
 
-                                        {(userRole === 'superadmin' || userRole === 'admin') && (
+                                        {(userRole === 'superadmin' || userRole === 'admin' || userRole === 'admin_sponsors') && (
                                             <div className="pt-4 space-y-3 border-t border-slate-100 mt-4">
                                                 <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--muted)] font-bold mb-2 flex items-center gap-1.5">
                                                     <Trash2 className="w-3 h-3" />
@@ -539,7 +539,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                                             Payment History & Tickets
                                         </h4>
-                                        {(userRole === 'admin' || userRole === 'superadmin') && !isAddingPayment && !editingPayment && (
+                                        {(userRole === 'admin' || userRole === 'superadmin' || userRole === 'admin_sponsors') && !isAddingPayment && !editingPayment && (
                                             <button 
                                                 onClick={() => { setIsAddingPayment(true); setEditingPayment({ amount: 0, balance: 0, status: 'Pending', method: 'Manual' }); }}
                                                 className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold hover:bg-indigo-100 flex items-center gap-1 transition-colors"
@@ -664,7 +664,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                                             {pay.is_manual ? <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="Protected from SCITO sync"><Hand className="w-2.5 h-2.5"/> MANUAL</span> : null}
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            {(userRole === 'admin' || userRole === 'superadmin') && !editingPayment && !isAddingPayment && (
+                                                            {(userRole === 'admin' || userRole === 'superadmin' || userRole === 'admin_sponsors') && !editingPayment && !isAddingPayment && (
                                                                 <button 
                                                                     onClick={() => { setIsAddingPayment(false); setEditingPayment({...pay, method: pay.payment_method || pay.method, is_manual: 1}); }} 
                                                                     className="text-slate-400 hover:text-indigo-600 p-0.5 transition-colors" 

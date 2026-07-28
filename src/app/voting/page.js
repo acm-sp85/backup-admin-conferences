@@ -21,7 +21,7 @@ export default async function VotingPage() {
     : (user.cluster_for_review || []);
   
   const hasAssignedClusters = clustersIds && clustersIds.length > 0;
-  const isStaff = user.role === 'admin' || user.role === 'superadmin';
+  const isStaff = user.role === 'admin' || user.role === 'superadmin' || user.role === 'admin_sponsors';
 
   // 2. Fetch clusters that are active (if any)
   let activeClusters = [];

@@ -346,7 +346,7 @@ export default function ProgramManager({ conferences, userRole }) {
                                                 </div>
                                                 <h4 className="font-bold text-slate-800 text-[15px] leading-snug flex items-center gap-2">
                                                     {session.full_session_name.replace(/\(Chair:.*?\)/, '').trim()}
-                                                    {(userRole === 'superadmin' || userRole === 'admin') && (
+                                                    {(userRole === 'superadmin' || userRole === 'admin' || userRole === 'admin_sponsors') && (
                                                         <button onClick={() => setEditingSession(session)} className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Session">
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                                                         </button>
@@ -422,7 +422,7 @@ export default function ProgramManager({ conferences, userRole }) {
                                                                     {!!slot.is_manual && (
                                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded" title="This slot was manually edited and won't be overwritten by sync">Manual</span>
                                                                     )}
-                                                                    {(userRole === 'superadmin' || userRole === 'admin') && (
+                                                                    {(userRole === 'superadmin' || userRole === 'admin' || userRole === 'admin_sponsors') && (
                                                                         <button onClick={() => setEditingSlot(slot)} className="opacity-0 group-hover/slot:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Slot">
                                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                                                                         </button>

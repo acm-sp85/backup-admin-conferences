@@ -11,7 +11,7 @@ export default async function CertificatePrintPage({ searchParams }) {
     const ids = registrationIds.split(',');
     
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         return <div className="p-10 text-center">Unauthorized</div>;
     }
 

@@ -5,7 +5,7 @@ import ChangePasswordForm from './ChangePasswordForm';
 
 export default async function SettingsPage() {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
     redirect('/');
   }
 

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ActivityScannerPage({ params }) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin')) {
+    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
         redirect('/login');
     }
 
