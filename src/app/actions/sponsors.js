@@ -166,6 +166,7 @@ export async function sendCampaign(id) {
                 await resend.emails.send({
                     from: sender,
                     to: recipient.email,
+                    bcc: 'sponsors-enviados@nanoge.org',
                     subject: personalizedSubject,
                     html: personalizedBody
                 });
