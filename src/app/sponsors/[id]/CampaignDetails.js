@@ -213,7 +213,7 @@ export default function CampaignDetails({ campaign }) {
                             <div>
                                 <label className="block text-xs font-semibold text-[#8e8e93] mb-1 flex justify-between">
                                     <span>HTML Body</span>
-                                    <span className="font-normal text-[10px]">Use placeholders like {`{name|there}`} or {`{company|your company}`}</span>
+                                    <span className="font-normal text-[10px]">Supports nested fallbacks: {`{name|{company|there}}`}</span>
                                 </label>
                                 <textarea 
                                     value={body} 
@@ -221,7 +221,7 @@ export default function CampaignDetails({ campaign }) {
                                     disabled={isReadonly}
                                     rows={12}
                                     className="input-base w-full font-mono text-xs leading-relaxed" 
-                                    placeholder="<p>Hello {name|there} from {company|your organization},</p>..."
+                                    placeholder="<p>Hello {name|{company|there}},</p>..."
                                 />
                             </div>
                             {!isReadonly && (

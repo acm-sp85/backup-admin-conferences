@@ -130,25 +130,33 @@ export async function sendCampaign(id) {
         for (const recipient of recipients) {
             if (!recipient.email) continue;
             
-            // Interpolation function supporting fallbacks e.g. {name|there}
+            // Interpolation function supporting nested fallbacks e.g. {name|{company|there}}
             const replaceVars = (text) => {
                 if (!text) return '';
-                return text.replace(/{([^}]+)}/g, (match, expression) => {
-                    const parts = expression.split('|');
-                    const key = parts[0].trim().toLowerCase();
-                    const fallback = parts.slice(1).join('|').trim() || '';
-                    
-                    if (key === 'name') {
-                        return recipient.name || fallback;
-                    }
-                    if (key === 'company') {
-                        return recipient.company || fallback;
-                    }
-                    if (key === 'email') {
-                        return recipient.email; // email is required anyway
-                    }
-                    return match; // return original if unknown var
-                });
+                let previous = '';
+                let current = text;
+                
+                // Evaluate innermost {vars} recursively until no more changes
+                while (current !== previous && /{([^{}]+)}/.test(current)) {
+                    previous = current;
+                    current = current.replace(/{([^{}]+)}/g, (match, expression) => {
+                        const parts = expression.split('|');
+                        const key = parts[0].trim().toLowerCase();
+                        const fallback = parts.slice(1).join('|').trim() || '';
+                        
+                        if (key === 'name') {
+                            return recipient.name || fallback;
+                        }
+                        if (key === 'company') {
+                            return recipient.company || fallback;
+                        }
+                        if (key === 'email') {
+                            return recipient.email || fallback; 
+                        }
+                        return match; // return original if unknown var
+                    });
+                }
+                return current;
             };
             
             const personalizedBody = replaceVars(campaign.body);
