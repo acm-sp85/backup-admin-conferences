@@ -80,7 +80,9 @@ export default function CampaignDetails({ campaign }) {
                 return;
             }
             
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const delimiter = lines[0].includes(';') && !lines[0].includes(',') ? ';' : lines[0].includes(';') && lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+            
+            const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
             const emailIdx = headers.indexOf('email');
             const nameIdx = headers.indexOf('name');
             const companyIdx = headers.indexOf('company');
@@ -92,7 +94,7 @@ export default function CampaignDetails({ campaign }) {
             
             const parsedRecipients = [];
             for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(',').map(c => c.trim());
+                const cols = lines[i].split(delimiter).map(c => c.trim());
                 if (cols[emailIdx]) {
                     parsedRecipients.push({
                         email: cols[emailIdx],
@@ -211,7 +213,7 @@ export default function CampaignDetails({ campaign }) {
                             <div>
                                 <label className="block text-xs font-semibold text-[#8e8e93] mb-1 flex justify-between">
                                     <span>HTML Body</span>
-                                    <span className="font-normal text-[10px]">Use {`{name}`}, {`{email}`}, and {`{company}`} as placeholders</span>
+                                    <span className="font-normal text-[10px]">Use placeholders like {`{name|there}`} or {`{company|your company}`}</span>
                                 </label>
                                 <textarea 
                                     value={body} 
@@ -219,7 +221,7 @@ export default function CampaignDetails({ campaign }) {
                                     disabled={isReadonly}
                                     rows={12}
                                     className="input-base w-full font-mono text-xs leading-relaxed" 
-                                    placeholder="<p>Hello {name} from {company},</p>..."
+                                    placeholder="<p>Hello {name|there} from {company|your organization},</p>..."
                                 />
                             </div>
                             {!isReadonly && (

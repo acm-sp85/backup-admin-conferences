@@ -12,10 +12,15 @@ export default function CampaignsList({ initialCampaigns }) {
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
+        const defaultBody = `<p>Dear {name|Sponsor},</p>
+<p>We are reaching out to {company|your organization} regarding...</p>
+<br>
+<p>Best regards,<br>Sponsors Nanoge</p>`;
+
         const res = await createCampaign({
             name: formData.get('name'),
             subject: formData.get('subject'),
-            body: '' // initial body is empty
+            body: defaultBody
         });
         
         if (res.error) {

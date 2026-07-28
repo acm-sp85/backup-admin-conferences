@@ -130,15 +130,29 @@ export async function sendCampaign(id) {
         for (const recipient of recipients) {
             if (!recipient.email) continue;
             
-            // simple interpolation if needed
-            const personalizedBody = (campaign.body || '')
-                .replace(/{name}/gi, recipient.name || 'Sponsor')
-                .replace(/{email}/gi, recipient.email)
-                .replace(/{company}/gi, recipient.company || 'your company');
+            // Interpolation function supporting fallbacks e.g. {name|there}
+            const replaceVars = (text) => {
+                if (!text) return '';
+                return text.replace(/{([^}]+)}/g, (match, expression) => {
+                    const parts = expression.split('|');
+                    const key = parts[0].trim().toLowerCase();
+                    const fallback = parts.slice(1).join('|').trim() || '';
+                    
+                    if (key === 'name') {
+                        return recipient.name || fallback;
+                    }
+                    if (key === 'company') {
+                        return recipient.company || fallback;
+                    }
+                    if (key === 'email') {
+                        return recipient.email; // email is required anyway
+                    }
+                    return match; // return original if unknown var
+                });
+            };
             
-            const personalizedSubject = (campaign.subject || '')
-                .replace(/{name}/gi, recipient.name || 'Sponsor')
-                .replace(/{company}/gi, recipient.company || 'your company');
+            const personalizedBody = replaceVars(campaign.body);
+            const personalizedSubject = replaceVars(campaign.subject);
 
             try {
                 await resend.emails.send({
