@@ -1,4 +1,5 @@
 'use server';
+import { hasAdminAccess } from '@/lib/roles';
 
 import { query } from '../../lib/db';
 import { revalidatePath } from 'next/cache';
@@ -7,7 +8,7 @@ import { logAction } from '@/lib/logger';
 
 export async function addManualPayment(registrationId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -28,7 +29,7 @@ export async function addManualPayment(registrationId, data) {
 
 export async function updatePayment(paymentId, data) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -51,7 +52,7 @@ export async function updatePayment(paymentId, data) {
 
 export async function deletePayment(paymentId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 

@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
 import { query } from '@/lib/db';
 import DashboardLayout from '../components/DashboardLayout';
 import { verifySession } from '@/lib/auth';
@@ -7,7 +8,7 @@ import UnifiedPostersView from '../components/UnifiedPostersView';
 
 export default async function PostersPage() {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+  if (!session || (!hasAdminAccess(session.role))) {
     redirect('/login');
   }
 

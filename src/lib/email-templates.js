@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
 /**
  * MASTER EMAIL TEMPLATES FILE
  * 
@@ -89,7 +90,7 @@ export const emailTemplates = {
      */
     userInvitation: ({ role, magicLink, conference }) => {
         const brand = getBranding(conference);
-        const isAdmin = role === 'admin' || role === 'superadmin' || role === 'admin_sponsors';
+        const isAdmin = hasAdminAccess(role);
         return {
             subject: isAdmin
                 ? `Set up your Admin account – ${brand.name}`

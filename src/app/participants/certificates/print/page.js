@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
     import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 
@@ -11,7 +12,7 @@ export default async function CertificatePrintPage({ searchParams }) {
     const ids = registrationIds.split(',');
     
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         return <div className="p-10 text-center">Unauthorized</div>;
     }
 

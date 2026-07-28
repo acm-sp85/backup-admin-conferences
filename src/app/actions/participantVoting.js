@@ -1,4 +1,5 @@
 'use server';
+import { hasAdminAccess } from '@/lib/roles';
 
 import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
@@ -15,7 +16,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function searchConferenceParticipants(conferenceId, search) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -32,7 +33,7 @@ export async function searchConferenceParticipants(conferenceId, search) {
 
 export async function getVotersForConference(conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -60,7 +61,7 @@ export async function getVotersForConference(conferenceId) {
 
 export async function updateParticipantClusters(participantId, clustersArray, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         return { error: 'Unauthorized' };
     }
 
@@ -99,7 +100,7 @@ export async function updateParticipantClusters(participantId, clustersArray, co
 
 export async function removeVoter(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         return { error: 'Unauthorized' };
     }
 
@@ -159,7 +160,7 @@ export async function getParticipantByToken(token) {
 
 export async function sendVoterInvite(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         return { error: 'Unauthorized' };
     }
 
@@ -254,7 +255,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
 
 export async function toggleVoterStatus(participantId, conferenceId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         return { error: 'Unauthorized' };
     }
 

@@ -40,9 +40,9 @@ export default function UserActions({ user }) {
                     disabled={isPending}
                     className="input-base w-full pr-8 appearance-none text-[11px] font-semibold bg-white cursor-pointer"
                     style={{
-                        color: user.role === 'superadmin' ? '#af52de' : user.role === 'admin' || user.role === 'admin_sponsors' ? '#0071e3' : '#8e8e93',
-                        borderColor: user.role === 'superadmin' ? '#e9d5ff' : user.role === 'admin' || user.role === 'admin_sponsors' ? '#d0e7ff' : '#e5e5ea',
-                        background: user.role === 'superadmin' ? '#f5e6ff' : user.role === 'admin' || user.role === 'admin_sponsors' ? '#f0f7ff' : '#f2f2f7'
+                        color: user.role === 'superadmin' ? '#af52de' : user.role === 'admin_sponsors' ? '#10b981' : user.role === 'admin' ? '#0071e3' : '#8e8e93',
+                        borderColor: user.role === 'superadmin' ? '#e9d5ff' : user.role === 'admin_sponsors' ? '#a7f3d0' : user.role === 'admin' ? '#d0e7ff' : '#e5e5ea',
+                        background: user.role === 'superadmin' ? '#f5e6ff' : user.role === 'admin_sponsors' ? '#ecfdf5' : user.role === 'admin' ? '#f0f7ff' : '#f2f2f7'
                     }}
                 >
                     <option value="user">USER</option>

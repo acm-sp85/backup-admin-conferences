@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
 import DashboardLayout from '@/app/components/DashboardLayout';
 import { verifySession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
@@ -5,7 +6,7 @@ import ChangePasswordForm from './ChangePasswordForm';
 
 export default async function SettingsPage() {
   const session = await verifySession();
-  if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+  if (!session || (!hasAdminAccess(session.role))) {
     redirect('/');
   }
 

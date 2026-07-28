@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
 import { decrypt, createSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { query } from '@/lib/db';
@@ -21,7 +22,7 @@ export async function GET(request) {
     redirect('/login?error=invalid_token');
   }
 
-  if (payload.role === 'admin' || payload.role === 'superadmin' || payload.role === 'admin_sponsors') {
+  if (hasAdminAccess(payload.role)) {
     const [user] = await query('SELECT password FROM users WHERE id = ?', [payload.userId]);
     if (user && !user.password) {
       console.log("🔍 AuthCallback: Redirecting to setup-password");

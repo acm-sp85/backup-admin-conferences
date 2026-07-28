@@ -1,4 +1,5 @@
 'use server';
+import { hasAdminAccess } from '@/lib/roles';
 
 import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
@@ -15,7 +16,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function syncSocialDinnerTickets() {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -65,7 +66,7 @@ export async function syncSocialDinnerTickets() {
 
 export async function sendSocialDinnerQR(registrationId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -152,7 +153,7 @@ export async function sendSocialDinnerQR(registrationId) {
 
 export async function manualCheckinSocialDinner(ticketId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -167,7 +168,7 @@ export async function manualCheckinSocialDinner(ticketId) {
 
 export async function addManualSocialDinnerTicket(registrationId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -185,7 +186,7 @@ export async function addManualSocialDinnerTicket(registrationId) {
 
 export async function removeSocialDinnerTicket(ticketId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -293,7 +294,7 @@ export async function resetTicketScan(ticketId) {
 
 export async function searchConferenceParticipants(conferenceAcronym, searchTerm) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 
@@ -314,7 +315,7 @@ export async function searchConferenceParticipants(conferenceAcronym, searchTerm
 
 export async function addGuestAndSocialDinnerTicket(name, email, conferenceAcronym) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 

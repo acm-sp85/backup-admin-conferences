@@ -1,4 +1,5 @@
 'use server';
+import { hasAdminAccess } from '@/lib/roles';
 
 import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
@@ -16,7 +17,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
  */
 export async function sendCertificateEmail(registrationId) {
     const session = await verifySession();
-    if (!session || (session.role !== 'admin' && session.role !== 'superadmin' && session.role !== 'admin_sponsors')) {
+    if (!session || (!hasAdminAccess(session.role))) {
         throw new Error('Unauthorized');
     }
 

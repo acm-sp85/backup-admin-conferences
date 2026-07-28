@@ -1,3 +1,4 @@
+import { hasAdminAccess } from '@/lib/roles';
 import { query } from '@/lib/db';
 import DashboardLayout from '../components/DashboardLayout';
 import { verifySession } from '@/lib/auth';
@@ -21,7 +22,7 @@ export default async function VotingPage() {
     : (user.cluster_for_review || []);
   
   const hasAssignedClusters = clustersIds && clustersIds.length > 0;
-  const isStaff = user.role === 'admin' || user.role === 'superadmin' || user.role === 'admin_sponsors';
+  const isStaff = hasAdminAccess(user.role);
 
   // 2. Fetch clusters that are active (if any)
   let activeClusters = [];
