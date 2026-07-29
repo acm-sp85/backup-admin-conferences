@@ -18,13 +18,15 @@ export async function POST(req) {
 
         const event = JSON.parse(payload);
         
-        // We only care about bounce or complaint events
-        if (event.type === 'email.bounced' || event.type === 'email.complained') {
+        // We care about bounce, complaint, and suppressed events
+        if (event.type === 'email.bounced' || event.type === 'email.complained' || event.type === 'email.suppressed') {
             const data = event.data;
             const email = data.to[0]; // recipient email
             let reason = 'Unknown';
             if (event.type === 'email.bounced') {
                 reason = (data.bounce && data.bounce.reason) ? data.bounce.reason : 'Bounced';
+            } else if (event.type === 'email.suppressed') {
+                reason = 'Suppressed by Resend (previously bounced/complained)';
             } else {
                 reason = 'Complained/Spam';
             }
