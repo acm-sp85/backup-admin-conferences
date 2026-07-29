@@ -1,11 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { createCampaign } from '@/app/actions/sponsors';
+import { createCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
 import Link from 'next/link';
 
 export default function CampaignsList({ initialCampaigns }) {
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [syncingId, setSyncingId] = useState(null);
     
     async function handleCreate(e) {
         e.preventDefault();
@@ -29,6 +30,23 @@ export default function CampaignsList({ initialCampaigns }) {
         } else {
             // Redirect to the new campaign detail page
             window.location.href = `/sponsors/${res.id}`;
+        }
+    }
+
+    async function handleSync(e, campaignId) {
+        e.preventDefault();
+        e.stopPropagation();
+        setSyncingId(campaignId);
+        const res = await syncCampaignBounces(campaignId);
+        setSyncingId(null);
+        if (res.error) {
+            alert(res.error);
+        } else {
+            alert(res.addedCount > 0 
+                ? `Found ${res.addedCount} new failed emails.` 
+                : `All failures are up to date.`
+            );
+            window.location.reload();
         }
     }
     
@@ -95,16 +113,29 @@ export default function CampaignsList({ initialCampaigns }) {
                                         </span>
                                     </div>
                                     <p className="text-xs text-[#8e8e93] line-clamp-1 mb-4">Subject: {camp.subject}</p>
-                                    
-                                    <div className="flex items-center gap-4 text-[10px] text-[#aeaeb2] font-semibold border-t border-[#f2f2f7] pt-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                            {recs.length} Recipients
+                                    <div className="flex items-center justify-between border-t border-[#f2f2f7] pt-3">
+                                        <div className="flex items-center gap-4 text-[10px] text-[#aeaeb2] font-semibold">
+                                            <div className="flex items-center gap-1.5">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                                {recs.length} Recipients
+                                            </div>
+                                            {camp.bounce_count > 0 && (
+                                                <div className="flex items-center gap-1.5 text-[#ff3b30]">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                                    {camp.bounce_count} Bounced
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                            {new Date(camp.created_at).toLocaleDateString()}
-                                        </div>
+                                        
+                                        {camp.status === 'completed' && (
+                                            <button
+                                                onClick={(e) => handleSync(e, camp.id)}
+                                                disabled={syncingId === camp.id}
+                                                className="px-2 py-1 bg-[#f2f2f7] hover:bg-[#e5e5ea] text-[#1d1d1f] text-[10px] font-bold rounded transition-colors disabled:opacity-50"
+                                            >
+                                                {syncingId === camp.id ? 'Syncing...' : 'Sync Bounces'}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </Link>

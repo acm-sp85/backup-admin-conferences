@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { updateCampaign, updateCampaignRecipients, sendSingleCampaignEmail, updateCampaignStatus, deleteCampaign } from '@/app/actions/sponsors';
+import { updateCampaign, updateCampaignRecipients, sendSingleCampaignEmail, updateCampaignStatus, deleteCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
 
 export default function CampaignDetails({ campaign, initialBounces = [] }) {
     const [name, setName] = useState(campaign.name || '');
@@ -24,6 +24,7 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
     const [manualCompany, setManualCompany] = useState('');
     
     const [isSending, setIsSending] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [sentCount, setSentCount] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showBounces, setShowBounces] = useState(false);
@@ -95,6 +96,23 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
         await updateCampaignStatus(campaign.id, 'completed');
         setIsSending(false);
         alert(`Campaign sent! ${successCount} succeeded, ${failCount} failed.`);
+    }
+
+    async function handleSyncBounces() {
+        setIsSyncing(true);
+        const res = await syncCampaignBounces(campaign.id);
+        setIsSyncing(false);
+        
+        if (res.error) {
+            alert(res.error);
+        } else {
+            alert(res.addedCount > 0 
+                ? `Synced successfully! Found ${res.addedCount} new failed emails.` 
+                : `Synced successfully! All failures are up to date.`
+            );
+            // Refresh to get the new bounces
+            window.location.reload();
+        }
     }
 
     function handleFileUpload(e) {
@@ -193,6 +211,15 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {isSent && (
+                        <button 
+                            onClick={handleSyncBounces}
+                            disabled={isSyncing}
+                            className="px-3 py-1.5 bg-[#f2f2f7] text-[#1d1d1f] text-xs font-semibold rounded-lg hover:bg-[#e5e5ea] transition-colors disabled:opacity-50"
+                        >
+                            {isSyncing ? 'Syncing...' : 'Sync Bounces'}
+                        </button>
+                    )}
                     {initialBounces.length > 0 && (
                         <button 
                             onClick={() => setShowBounces(!showBounces)}

@@ -19,7 +19,12 @@ async function requireAdmin() {
 
 export async function getCampaigns() {
     await requireAdmin();
-    return await query('SELECT * FROM sponsors_campaigns ORDER BY created_at DESC');
+    return await query(`
+        SELECT c.*, 
+        (SELECT COUNT(*) FROM sponsors_campaign_bounces b WHERE b.campaign_id = c.id) as bounce_count
+        FROM sponsors_campaigns c 
+        ORDER BY c.created_at DESC
+    `);
 }
 
 export async function getCampaign(id) {
@@ -36,6 +41,59 @@ export async function getCampaignBounces(campaignId) {
     } catch (e) {
         console.error('Error fetching bounces:', e);
         return []; // return empty array if table doesn't exist yet or error
+    }
+}
+
+export async function syncCampaignBounces(campaignId) {
+    await requireAdmin();
+    try {
+        // Fetch the campaign recipients
+        const campaign = await getCampaign(campaignId);
+        if (!campaign || !campaign.recipients) return { error: 'Campaign not found' };
+        
+        const recipients = typeof campaign.recipients === 'string' 
+            ? JSON.parse(campaign.recipients) 
+            : campaign.recipients;
+            
+        const recipientEmails = recipients.map(r => r.email);
+        
+        // Fetch recent emails from Resend API
+        const response = await resend.emails.list();
+        if (response.error || !response.data?.data) return { error: 'Failed to fetch from Resend' };
+        
+        // Filter for failures belonging to our recipients
+        const failedEmails = response.data.data.filter(e => 
+            recipientEmails.includes(e.to[0]) && 
+            ['bounced', 'complained', 'suppressed'].includes(e.last_event)
+        );
+        
+        // Log them if they don't exist
+        const existingBounces = await getCampaignBounces(campaignId);
+        const existingEmails = existingBounces.map(b => b.email);
+        
+        let addedCount = 0;
+        for (const failure of failedEmails) {
+            const email = failure.to[0];
+            if (!existingEmails.includes(email)) {
+                let reason = 'Manual Sync';
+                if (failure.last_event === 'suppressed') reason = 'Suppressed by Resend';
+                if (failure.last_event === 'bounced') reason = 'Bounced';
+                if (failure.last_event === 'complained') reason = 'Complained/Spam';
+                
+                await query(
+                    'INSERT INTO sponsors_campaign_bounces (campaign_id, email, type, reason) VALUES (?, ?, ?, ?)',
+                    [campaignId, email, 'email.' + failure.last_event, reason]
+                );
+                addedCount++;
+                existingEmails.push(email); // prevent duplicates in the loop
+            }
+        }
+        
+        revalidatePath(`/sponsors/${campaignId}`);
+        return { success: true, addedCount };
+    } catch (e) {
+        console.error('Error syncing bounces:', e);
+        return { error: 'Failed to sync bounces' };
     }
 }
 
