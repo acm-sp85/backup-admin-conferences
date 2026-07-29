@@ -1,9 +1,9 @@
 'use client';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { updateCampaign, updateCampaignRecipients, sendCampaign, deleteCampaign } from '@/app/actions/sponsors';
+import { updateCampaign, updateCampaignRecipients, sendSingleCampaignEmail, updateCampaignStatus, deleteCampaign } from '@/app/actions/sponsors';
 
-export default function CampaignDetails({ campaign }) {
+export default function CampaignDetails({ campaign, initialBounces = [] }) {
     const [name, setName] = useState(campaign.name || '');
     const [subject, setSubject] = useState(campaign.subject || '');
     const [body, setBody] = useState(campaign.body || '');
@@ -24,11 +24,13 @@ export default function CampaignDetails({ campaign }) {
     const [manualCompany, setManualCompany] = useState('');
     
     const [isSending, setIsSending] = useState(false);
+    const [sentCount, setSentCount] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showBounces, setShowBounces] = useState(false);
     const fileInputRef = useRef(null);
     
     const isSent = campaign.status === 'completed';
-    const isSendingStatus = campaign.status === 'sending';
+    const isSendingStatus = campaign.status === 'sending' || isSending;
     const isReadonly = isSent || isSendingStatus;
 
     async function handleSaveDetails() {
@@ -61,10 +63,38 @@ export default function CampaignDetails({ campaign }) {
         await updateCampaign(campaign.id, { name, subject, body });
         
         setIsSending(true);
-        const res = await sendCampaign(campaign.id);
-        if (res.error) alert(res.error);
-        else alert(res.message || 'Campaign sent successfully');
+        setSentCount(0);
+        
+        const statusRes = await updateCampaignStatus(campaign.id, 'sending');
+        if (statusRes.error) {
+            alert(statusRes.error);
+            setIsSending(false);
+            return;
+        }
+        
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (let i = 0; i < recipients.length; i++) {
+            const recipient = recipients[i];
+            if (!recipient.email) continue;
+            
+            const res = await sendSingleCampaignEmail(campaign.id, recipient);
+            if (res.error) {
+                console.error(res.error);
+                failCount++;
+            } else {
+                successCount++;
+            }
+            
+            setSentCount(i + 1);
+            // 500ms delay to avoid rate limiting
+            await new Promise(r => setTimeout(r, 500));
+        }
+        
+        await updateCampaignStatus(campaign.id, 'completed');
         setIsSending(false);
+        alert(`Campaign sent! ${successCount} succeeded, ${failCount} failed.`);
     }
 
     function handleFileUpload(e) {
@@ -163,6 +193,14 @@ export default function CampaignDetails({ campaign }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {initialBounces.length > 0 && (
+                        <button 
+                            onClick={() => setShowBounces(!showBounces)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${showBounces ? 'bg-[#ff3b30] text-white border-[#ff3b30]' : 'bg-[#fff0f0] text-[#ff3b30] border-[#ff3b30]/30 hover:bg-[#ffe5e5]'}`}
+                        >
+                            {initialBounces.length} Bounced
+                        </button>
+                    )}
                     {!isReadonly && (
                         <button 
                             onClick={handleDelete}
@@ -172,17 +210,37 @@ export default function CampaignDetails({ campaign }) {
                             Delete
                         </button>
                     )}
-                    {!isReadonly && (
+                    {!isReadonly && !isSending && (
                         <button 
                             onClick={handleSend}
-                            disabled={isSending || recipients.length === 0}
+                            disabled={recipients.length === 0}
                             className="px-4 py-2 bg-[#10b981] text-white text-sm font-semibold rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-50"
                         >
-                            {isSending ? 'Sending...' : 'Dispatch Campaign'}
+                            Dispatch Campaign
+                        </button>
+                    )}
+                    {isSending && (
+                        <button disabled className="px-4 py-2 bg-[#ff9500] text-white text-sm font-semibold rounded-lg opacity-80 cursor-not-allowed">
+                            Sending {sentCount} / {recipients.length}...
                         </button>
                     )}
                 </div>
             </div>
+
+            {showBounces && initialBounces.length > 0 && (
+                <div className="bg-[#fff0f0] border border-[#ff3b30]/30 rounded-xl p-4 mb-6 shadow-sm">
+                    <h3 className="text-[#ff3b30] font-bold text-sm mb-3">Bounce Details</h3>
+                    <div className="max-h-[200px] overflow-y-auto space-y-2">
+                        {initialBounces.map((b, i) => (
+                            <div key={i} className="bg-white p-3 rounded-lg border border-[#ff3b30]/20 text-xs">
+                                <span className="font-semibold text-[#1d1d1f]">{b.email}</span>
+                                <span className="ml-2 px-2 py-0.5 bg-[#f2f2f7] text-[#8e8e93] rounded text-[9px] uppercase tracking-wider">{b.type}</span>
+                                <p className="text-[#8e8e93] mt-1">{b.reason || 'No reason provided'}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
@@ -306,16 +364,24 @@ export default function CampaignDetails({ campaign }) {
                             {recipients.length === 0 ? (
                                 <p className="text-xs text-[#8e8e93] text-center py-8">No recipients uploaded yet.</p>
                             ) : (
-                                recipients.map((r, i) => (
-                                    <div key={i} className="flex flex-col bg-[#f9f9f9] p-2.5 rounded-lg border border-[#e5e5ea]/50">
-                                        <span className="text-xs font-semibold text-[#1d1d1f] truncate">{r.email}</span>
-                                        {(r.name || r.company) && (
-                                            <span className="text-[10px] text-[#8e8e93] truncate">
-                                                {r.name}{r.name && r.company ? ' • ' : ''}{r.company}
-                                            </span>
-                                        )}
-                                    </div>
-                                ))
+                                recipients.map((r, i) => {
+                                    const bounced = initialBounces.find(b => b.email === r.email);
+                                    const showBouncedStyle = bounced && showBounces;
+                                    
+                                    return (
+                                        <div key={i} className={`flex flex-col p-2.5 rounded-lg border ${showBouncedStyle ? 'bg-[#fff0f0] border-[#ff3b30]/30' : 'bg-[#f9f9f9] border-[#e5e5ea]/50'}`}>
+                                            <div className="flex justify-between items-start">
+                                                <span className={`text-xs font-semibold truncate ${showBouncedStyle ? 'text-[#ff3b30]' : 'text-[#1d1d1f]'}`}>{r.email}</span>
+                                                {showBouncedStyle && <span className="text-[9px] font-bold text-[#ff3b30] uppercase tracking-wider bg-[#ff3b30]/10 px-1.5 py-0.5 rounded">Bounced</span>}
+                                            </div>
+                                            {(r.name || r.company) && (
+                                                <span className="text-[10px] text-[#8e8e93] truncate mt-0.5">
+                                                    {r.name}{r.name && r.company ? ' • ' : ''}{r.company}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>

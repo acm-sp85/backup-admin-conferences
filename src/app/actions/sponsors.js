@@ -28,6 +28,17 @@ export async function getCampaign(id) {
     return campaigns[0] || null;
 }
 
+export async function getCampaignBounces(campaignId) {
+    await requireAdmin();
+    try {
+        const bounces = await query('SELECT * FROM sponsors_campaign_bounces WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+        return bounces;
+    } catch (e) {
+        console.error('Error fetching bounces:', e);
+        return []; // return empty array if table doesn't exist yet or error
+    }
+}
+
 export async function createCampaign(data) {
     await requireAdmin();
     const { name, subject, body } = data;
@@ -96,7 +107,24 @@ export async function deleteCampaign(id) {
     }
 }
 
-export async function sendCampaign(id) {
+export async function updateCampaignStatus(id, status) {
+    await requireAdmin();
+    try {
+        if (status === 'completed') {
+            await query("UPDATE sponsors_campaigns SET status = ?, sent_at = NOW() WHERE id = ?", [status, id]);
+        } else {
+            await query("UPDATE sponsors_campaigns SET status = ? WHERE id = ?", [status, id]);
+        }
+        revalidatePath(`/sponsors/${id}`);
+        revalidatePath('/sponsors');
+        return { success: true };
+    } catch (e) {
+        console.error('Error updating campaign status:', e);
+        return { error: 'Failed to update status' };
+    }
+}
+
+export async function sendSingleCampaignEmail(id, recipient) {
     await requireAdmin();
     
     try {
@@ -104,98 +132,55 @@ export async function sendCampaign(id) {
         const campaign = campaigns[0];
         
         if (!campaign) return { error: 'Campaign not found' };
-        if (campaign.status === 'completed') return { error: 'Campaign already sent' };
+        if (!recipient || !recipient.email) return { error: 'Invalid recipient' };
         
-        let recipients = [];
-        if (typeof campaign.recipients === 'string') {
-            recipients = JSON.parse(campaign.recipients || '[]');
-        } else {
-            recipients = campaign.recipients || [];
-        }
-        
-        if (recipients.length === 0) {
-            return { error: 'No recipients in this campaign' };
-        }
-        
-        // Update status to sending
-        await query("UPDATE sponsors_campaigns SET status = 'sending' WHERE id = ?", [id]);
-        
-        // Dispatch emails
         const sender = 'Sponsors Nanoge <sponsors@nanoge.org>';
         
-        // Dispatch in batches or sequentially. We will do it simple for now.
-        let successCount = 0;
-        let failCount = 0;
-        
-        for (const recipient of recipients) {
-            if (!recipient.email) continue;
+        // Interpolation function supporting nested fallbacks e.g. {name|{company|there}}
+        const replaceVars = (text) => {
+            if (!text) return '';
+            let previous = '';
+            let current = text;
             
-            // Interpolation function supporting nested fallbacks e.g. {name|{company|there}}
-            const replaceVars = (text) => {
-                if (!text) return '';
-                let previous = '';
-                let current = text;
-                
-                // Evaluate innermost {vars} recursively until no more changes
-                while (current !== previous && /{([^{}]+)}/.test(current)) {
-                    previous = current;
-                    current = current.replace(/{([^{}]+)}/g, (match, expression) => {
-                        const parts = expression.split('|');
-                        const key = parts[0].trim().toLowerCase();
-                        const fallback = parts.slice(1).join('|').trim() || '';
-                        
-                        if (key === 'name') {
-                            return recipient.name || fallback;
-                        }
-                        if (key === 'company') {
-                            return recipient.company || fallback;
-                        }
-                        if (key === 'email') {
-                            return recipient.email || fallback; 
-                        }
-                        return match; // return original if unknown var
-                    });
-                }
-                return current;
-            };
-            
-            const personalizedBody = replaceVars(campaign.body);
-            const personalizedSubject = replaceVars(campaign.subject);
-
-            try {
-                await resend.emails.send({
-                    from: sender,
-                    to: recipient.email,
-                    bcc: 'sponsors-enviados@nanoge.org',
-                    subject: personalizedSubject,
-                    html: personalizedBody
+            // Evaluate innermost {vars} recursively until no more changes
+            while (current !== previous && /{([^{}]+)}/.test(current)) {
+                previous = current;
+                current = current.replace(/{([^{}]+)}/g, (match, expression) => {
+                    const parts = expression.split('|');
+                    const key = parts[0].trim().toLowerCase();
+                    const fallback = parts.slice(1).join('|').trim() || '';
+                    
+                    if (key === 'name') {
+                        return recipient.name || fallback;
+                    }
+                    if (key === 'company') {
+                        return recipient.company || fallback;
+                    }
+                    if (key === 'email') {
+                        return recipient.email || fallback; 
+                    }
+                    return match; // return original if unknown var
                 });
-                successCount++;
-                
-                // 500ms delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (err) {
-                console.error(`Failed to send to ${recipient.email}:`, err);
-                failCount++;
             }
-        }
-        
-        await query(
-            "UPDATE sponsors_campaigns SET status = 'completed', sent_at = NOW() WHERE id = ?",
-            [id]
-        );
-        revalidatePath(`/sponsors/${id}`);
-        revalidatePath('/sponsors');
-        
-        return { 
-            success: true, 
-            message: `Campaign sent! ${successCount} succeeded, ${failCount} failed.` 
+            return current;
         };
         
+        const personalizedBody = replaceVars(campaign.body);
+        const personalizedSubject = replaceVars(campaign.subject);
+
+        await resend.emails.send({
+            from: sender,
+            to: recipient.email,
+            bcc: 'sponsors-enviados@nanoge.org',
+            subject: personalizedSubject,
+            html: personalizedBody,
+            tags: [{ name: 'campaign_id', value: String(id) }]
+        });
+        
+        return { success: true };
+        
     } catch (e) {
-        console.error('Error sending campaign:', e);
-        // Try to revert status
-        await query("UPDATE sponsors_campaigns SET status = 'draft' WHERE id = ?", [id]);
-        return { error: 'Failed to dispatch emails. Status reverted to draft.' };
+        console.error(`Failed to send to ${recipient?.email}:`, e);
+        return { error: `Failed to dispatch email to ${recipient?.email}` };
     }
 }
