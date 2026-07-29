@@ -2,7 +2,7 @@
 import { hasAdminAccess } from '@/lib/roles';
 
 import { useState, useEffect } from 'react';
-import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility, updateSessionData, updateSlotData, deleteSlotData } from '../actions/program';
+import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility, updateSessionData, updateSlotData, deleteSlotData, createSessionData, createSlotData, deleteSessionData } from '../actions/program';
 
 const formatName = (name) => {
     if (!name) return '';
@@ -72,6 +72,12 @@ export default function ProgramManager({ conferences, userRole }) {
     const [isUpdating, setIsUpdating] = useState(null);
     const [editingSession, setEditingSession] = useState(null);
     const [editingSlot, setEditingSlot] = useState(null);
+    
+    // Creation State
+    const [isCreatingSession, setIsCreatingSession] = useState(false);
+    const [isCreatingSlot, setIsCreatingSlot] = useState(null); // stores sessionId
+    const [newSessionData, setNewSessionData] = useState({ full_session_name: '', start_time: '', end_time: '' });
+    const [newSlotData, setNewSlotData] = useState({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '' });
 
     useEffect(() => {
         if (selectedConfId) {
@@ -154,6 +160,59 @@ export default function ProgramManager({ conferences, userRole }) {
             await loadData();
         } catch (error) {
             alert('Error deleting slot: ' + error.message);
+        }
+    };
+
+    const handleDeleteSession = async () => {
+        if (!confirm('Are you sure you want to permanently delete this session and ALL its slots?')) return;
+        try {
+            await deleteSessionData(editingSession.id);
+            setEditingSession(null);
+            await loadData();
+        } catch (error) {
+            alert('Error deleting session: ' + error.message);
+        }
+    };
+
+    const handleCreateSession = async (e) => {
+        e.preventDefault();
+        try {
+            await createSessionData(selectedConfId, newSessionData);
+            setIsCreatingSession(false);
+            setNewSessionData({ full_session_name: '', start_time: '', end_time: '' });
+            await loadData();
+        } catch (error) {
+            alert('Error creating session: ' + error.message);
+        }
+    };
+
+    const handleCreateSlot = async (e) => {
+        e.preventDefault();
+        try {
+            // Find the session to get the base date
+            const parentSession = program.find(s => s.id === isCreatingSlot);
+            if (!parentSession) return;
+            
+            // newSlotData.start_time is just "HH:MM". We need to attach it to the session's date.
+            const sessionDate = new Date(parentSession.start_time);
+            const [hours, minutes] = newSlotData.start_time.split(':');
+            sessionDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+            
+            // Format to MySQL datetime string (YYYY-MM-DD HH:MM:SS)
+            // Or just pass the ISO string, but the timezone might shift if we don't handle local correctly.
+            // Using a simple local string build:
+            const pad = (n) => String(n).padStart(2, '0');
+            const datetimeStr = `${sessionDate.getFullYear()}-${pad(sessionDate.getMonth()+1)}-${pad(sessionDate.getDate())} ${pad(sessionDate.getHours())}:${pad(sessionDate.getMinutes())}:00`;
+
+            await createSlotData(isCreatingSlot, { 
+                ...newSlotData, 
+                start_time: datetimeStr 
+            });
+            setIsCreatingSlot(null);
+            setNewSlotData({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '' });
+            await loadData();
+        } catch (error) {
+            alert('Error creating slot: ' + error.message);
         }
     };
 
@@ -263,18 +322,18 @@ export default function ProgramManager({ conferences, userRole }) {
                 
                 <div className="flex gap-2 flex-wrap">
                     <button 
+                        onClick={() => setIsCreatingSession(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Session
+                    </button>
+                    <button 
                         onClick={() => setIsCustomizing(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         Customize Door Signs
-                    </button>
-                    <button 
-                        onClick={() => window.open(`/program/timetable?conferenceId=${selectedConfId}`, '_blank')}
-                        className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        View Timetable
                     </button>
                     <button 
                         onClick={() => window.open(`/program/download/all?conferenceId=${selectedConfId}`, '_blank')}
@@ -454,6 +513,15 @@ export default function ProgramManager({ conferences, userRole }) {
                                                     </li>
                                                 ))}
                                                     </ul>
+                                                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                                                        <button 
+                                                            onClick={() => setIsCreatingSlot(session.id)}
+                                                            className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+                                                        >
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                                            Add Slot
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -567,9 +635,158 @@ export default function ProgramManager({ conferences, userRole }) {
                                 />
                                 <p className="text-[10px] text-purple-600 italic mt-1">Editing this will mark it as manual and prevent overwrites during sync.</p>
                             </div>
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button type="button" onClick={() => setEditingSession(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                                <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-200 transition-all">Save</button>
+                            <div className="flex justify-between items-center gap-3 pt-4 border-t mt-4">
+                                {userRole === 'superadmin' ? (
+                                    <button type="button" onClick={handleDeleteSession} className="px-5 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 flex items-center gap-2">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                        Delete Session
+                                    </button>
+                                ) : (
+                                    <div></div>
+                                )}
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setEditingSession(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-200 transition-all">Save</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Session Modal */}
+            {isCreatingSession && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                            <h3 className="text-lg font-bold">New Session</h3>
+                            <button onClick={() => setIsCreatingSession(false)} className="text-slate-400 hover:text-slate-600">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateSession} className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Session Name</label>
+                                <textarea 
+                                    required
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                                    placeholder="e.g. S1: Keynote Presentations"
+                                    value={newSessionData.full_session_name}
+                                    onChange={(e) => setNewSessionData({ ...newSessionData, full_session_name: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Start Time</label>
+                                    <input 
+                                        type="datetime-local"
+                                        required
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={newSessionData.start_time}
+                                        onChange={(e) => setNewSessionData({ ...newSessionData, start_time: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">End Time</label>
+                                    <input 
+                                        type="datetime-local"
+                                        required
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={newSessionData.end_time}
+                                        onChange={(e) => setNewSessionData({ ...newSessionData, end_time: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                                <button type="button" onClick={() => setIsCreatingSession(false)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-6 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Create Session
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Slot Modal */}
+            {isCreatingSlot && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                            <h3 className="text-lg font-bold">New Slot</h3>
+                            <button onClick={() => setIsCreatingSlot(null)} className="text-slate-400 hover:text-slate-600">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateSlot} className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Start Time</label>
+                                    <input 
+                                        type="time"
+                                        required
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={newSlotData.start_time}
+                                        onChange={(e) => setNewSlotData({ ...newSlotData, start_time: e.target.value })}
+                                    />
+                                    <p className="text-[10px] text-slate-400">Time on the session's date</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="e.g. Oral, Invited"
+                                        value={newSlotData.type}
+                                        onChange={(e) => setNewSlotData({ ...newSlotData, type: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Title</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                                    placeholder="Slot title or presentation title"
+                                    value={newSlotData.title}
+                                    onChange={(e) => setNewSlotData({ ...newSlotData, title: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Presenter Name</label>
+                                <input 
+                                    type="text"
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={newSlotData.presenter_name}
+                                    onChange={(e) => setNewSlotData({ ...newSlotData, presenter_name: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Entity/Institution</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={newSlotData.presenter_entity}
+                                        onChange={(e) => setNewSlotData({ ...newSlotData, presenter_entity: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Country</label>
+                                    <input 
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={newSlotData.presenter_country}
+                                        onChange={(e) => setNewSlotData({ ...newSlotData, presenter_country: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                                <button type="button" onClick={() => setIsCreatingSlot(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                                <button type="submit" className="px-6 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-bold shadow-lg transition-all flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Add Slot
+                                </button>
                             </div>
                         </form>
                     </div>

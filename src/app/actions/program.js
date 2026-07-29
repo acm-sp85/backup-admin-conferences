@@ -113,6 +113,50 @@ export async function updateSlotData(slotId, data) {
     return { success: true };
 }
 
+export async function createSessionData(conferenceId, data) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) {
+        throw new Error('Unauthorized');
+    }
+
+    const { full_session_name, start_time, end_time } = data;
+    await query(
+        'INSERT INTO program_sessions (conference_id, full_session_name, session_name, start_time, end_time, is_manual) VALUES (?, ?, ?, ?, ?, 1)',
+        [conferenceId, full_session_name, full_session_name, start_time, end_time]
+    );
+
+    revalidatePath('/program');
+    return { success: true };
+}
+
+export async function deleteSessionData(sessionId) {
+    const session = await verifySession();
+    if (!session || session.role !== 'superadmin') {
+        throw new Error('Unauthorized');
+    }
+
+    await query('DELETE FROM program_sessions WHERE id = ?', [sessionId]);
+
+    revalidatePath('/program');
+    return { success: true };
+}
+
+export async function createSlotData(sessionId, data) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) {
+        throw new Error('Unauthorized');
+    }
+
+    const { title, presenter_name, type, presenter_entity, presenter_country, start_time } = data;
+    await query(
+        'INSERT INTO program_slots (session_id, title, presenter_name, type, presenter_entity, presenter_country, start_time, is_manual) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+        [sessionId, title, presenter_name, type, presenter_entity, presenter_country, start_time]
+    );
+
+    revalidatePath('/program');
+    return { success: true };
+}
+
 export async function deleteSlotData(slotId) {
     const session = await verifySession();
     if (!session || session.role !== 'superadmin') {
