@@ -13,6 +13,14 @@ const nextConfig = {
   turbopack: {
     root: '/Users/franciscoacontellmonje/Desktop/SCITO/SCITO_webdev/Admin_Conferencias',
   },
+  serverActions: {
+    bodySizeLimit: '4mb',
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '4mb',
+    },
+  },
 };
 
 export default nextConfig;

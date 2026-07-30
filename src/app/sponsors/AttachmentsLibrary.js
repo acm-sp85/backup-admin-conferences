@@ -6,36 +6,36 @@ export default function AttachmentsLibrary({ initialAttachments }) {
     const [attachments, setAttachments] = useState(initialAttachments || []);
     const [isOpen, setIsOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         if (file.size > 3 * 1024 * 1024) {
-            alert('File must be smaller than 3MB');
+            setErrorMsg(`The file "${file.name}" is ${(file.size / 1024 / 1024).toFixed(2)}MB, which exceeds our 3MB limit. Please compress the PDF and try again.`);
             e.target.value = '';
             return;
         }
 
         setIsUploading(true);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            const base64Data = reader.result;
-            try {
-                const res = await uploadAttachment(file.name, base64Data);
-                if (res.error) {
-                    alert('Error uploading file');
-                } else {
-                    alert('Attachment uploaded successfully!');
-                    window.location.reload();
-                }
-            } catch (err) {
-                alert('Upload failed: ' + err.message);
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const res = await uploadAttachment(formData);
+            if (res.error) {
+                setErrorMsg(res.error);
+            } else {
+                alert('Attachment uploaded successfully!');
+                window.location.reload();
             }
-            setIsUploading(false);
-            e.target.value = '';
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+            setErrorMsg('Upload failed: ' + err.message);
+        }
+        
+        setIsUploading(false);
+        e.target.value = '';
     };
 
     const handleDelete = async (id) => {
@@ -119,6 +119,27 @@ export default function AttachmentsLibrary({ initialAttachments }) {
                                     {isUploading ? 'Uploading...' : 'Upload New PDF'}
                                 </span>
                             </label>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Error Modal */}
+            {errorMsg && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-500">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">Upload Failed</h3>
+                            <p className="text-sm text-slate-500 mb-6">{errorMsg}</p>
+                            <button 
+                                onClick={() => setErrorMsg('')}
+                                className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                            >
+                                Got it
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -12,9 +12,17 @@ export async function getAttachments() {
     return await query('SELECT id, file_name, created_at FROM sponsors_attachments ORDER BY created_at DESC');
 }
 
-export async function uploadAttachment(fileName, base64Data) {
+export async function uploadAttachment(formData) {
     const session = await verifySession();
     if (!session || (!hasAdminAccess(session.role))) throw new Error('Unauthorized');
+    
+    const file = formData.get('file');
+    if (!file) return { error: 'No file provided' };
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = `data:${file.type};base64,${buffer.toString('base64')}`;
+    const fileName = file.name;
     
     await query(
         'INSERT INTO sponsors_attachments (file_name, file_base64) VALUES (?, ?)',
