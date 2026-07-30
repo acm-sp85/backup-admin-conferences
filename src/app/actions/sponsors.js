@@ -21,15 +21,22 @@ export async function getCampaigns() {
     await requireAdmin();
     return await query(`
         SELECT c.*, 
-        (SELECT COUNT(*) FROM sponsors_campaign_bounces b WHERE b.campaign_id = c.id) as bounce_count
+        (SELECT COUNT(*) FROM sponsors_campaign_bounces b WHERE b.campaign_id = c.id) as bounce_count,
+        a.file_name as attachment_name
         FROM sponsors_campaigns c 
+        LEFT JOIN sponsors_attachments a ON c.attachment_id = a.id
         ORDER BY c.created_at DESC
     `);
 }
 
 export async function getCampaign(id) {
     await requireAdmin();
-    const campaigns = await query('SELECT * FROM sponsors_campaigns WHERE id = ?', [id]);
+    const campaigns = await query(`
+        SELECT c.*, a.file_name as attachment_name 
+        FROM sponsors_campaigns c 
+        LEFT JOIN sponsors_attachments a ON c.attachment_id = a.id
+        WHERE c.id = ?
+    `, [id]);
     return campaigns[0] || null;
 }
 
@@ -120,12 +127,12 @@ export async function createCampaign(data) {
 
 export async function updateCampaign(id, data) {
     await requireAdmin();
-    const { name, subject, body } = data;
+    const { name, subject, body, attachment_id } = data;
     
     try {
         await query(
-            'UPDATE sponsors_campaigns SET name = ?, subject = ?, body = ? WHERE id = ?',
-            [name, subject, body, id]
+            'UPDATE sponsors_campaigns SET name = ?, subject = ?, body = ?, attachment_id = ? WHERE id = ?',
+            [name, subject, body, attachment_id || null, id]
         );
         revalidatePath(`/sponsors/${id}`);
         revalidatePath('/sponsors');
@@ -186,7 +193,12 @@ export async function sendSingleCampaignEmail(id, recipient) {
     await requireAdmin();
     
     try {
-        const campaigns = await query('SELECT * FROM sponsors_campaigns WHERE id = ?', [id]);
+        const campaigns = await query(`
+            SELECT c.*, a.file_name as attachment_name, a.file_base64 as attachment_base64
+            FROM sponsors_campaigns c
+            LEFT JOIN sponsors_attachments a ON c.attachment_id = a.id
+            WHERE c.id = ?
+        `, [id]);
         const campaign = campaigns[0];
         
         if (!campaign) return { error: 'Campaign not found' };
@@ -226,14 +238,30 @@ export async function sendSingleCampaignEmail(id, recipient) {
         const personalizedBody = replaceVars(campaign.body);
         const personalizedSubject = replaceVars(campaign.subject);
 
-        await resend.emails.send({
+        const payload = {
             from: sender,
             to: recipient.email,
             bcc: 'sponsors-enviados@nanoge.org',
             subject: personalizedSubject,
             html: personalizedBody,
             tags: [{ name: 'campaign_id', value: String(id) }]
-        });
+        };
+
+        if (campaign.attachment_base64 && campaign.attachment_name) {
+            // Strip the Data URI scheme if present (e.g. data:application/pdf;base64,...)
+            const base64Data = campaign.attachment_base64.includes(',') 
+                ? campaign.attachment_base64.split(',')[1] 
+                : campaign.attachment_base64;
+                
+            payload.attachments = [
+                {
+                    filename: campaign.attachment_name,
+                    content: base64Data
+                }
+            ];
+        }
+
+        await resend.emails.send(payload);
         
         return { success: true };
         

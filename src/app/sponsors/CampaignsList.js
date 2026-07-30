@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { createCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
 import Link from 'next/link';
+import AttachmentsLibrary from './AttachmentsLibrary';
 
-export default function CampaignsList({ initialCampaigns }) {
+export default function CampaignsList({ initialCampaigns, initialAttachments }) {
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [syncingId, setSyncingId] = useState(null);
@@ -54,13 +55,16 @@ export default function CampaignsList({ initialCampaigns }) {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-[#1d1d1f]">All Campaigns</h2>
-                <button 
-                    onClick={() => setIsCreating(true)}
-                    className="btn-primary flex items-center gap-2 bg-[#10b981] hover:bg-[#059669] border-transparent"
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    New Campaign
-                </button>
+                <div className="flex gap-2">
+                    <AttachmentsLibrary initialAttachments={initialAttachments} />
+                    <button 
+                        onClick={() => setIsCreating(true)}
+                        className="btn-primary flex items-center gap-2 bg-[#10b981] hover:bg-[#059669] border-transparent"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Campaign
+                    </button>
+                </div>
             </div>
             
             {isCreating && (

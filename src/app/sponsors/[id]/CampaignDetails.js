@@ -1,12 +1,14 @@
 'use client';
 import { useState, useRef } from 'react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 import { updateCampaign, updateCampaignRecipients, sendSingleCampaignEmail, updateCampaignStatus, deleteCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
 
-export default function CampaignDetails({ campaign, initialBounces = [] }) {
+export default function CampaignDetails({ campaign, initialBounces = [], initialAttachments = [] }) {
     const [name, setName] = useState(campaign.name || '');
     const [subject, setSubject] = useState(campaign.subject || '');
     const [body, setBody] = useState(campaign.body || '');
+    const [attachmentId, setAttachmentId] = useState(campaign.attachment_id || '');
     const [isSaving, setIsSaving] = useState(false);
     
     // Parse recipients
@@ -36,7 +38,12 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
 
     async function handleSaveDetails() {
         setIsSaving(true);
-        const res = await updateCampaign(campaign.id, { name, subject, body });
+        const res = await updateCampaign(campaign.id, { 
+            name, 
+            subject, 
+            body, 
+            attachment_id: attachmentId ? parseInt(attachmentId, 10) : null 
+        });
         if (res.error) alert(res.error);
         setIsSaving(false);
     }
@@ -61,7 +68,12 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
         if (!confirm(`Are you sure you want to send this email to ${recipients.length} recipients? This action cannot be undone.`)) return;
         
         // ensure saved first
-        await updateCampaign(campaign.id, { name, subject, body });
+        await updateCampaign(campaign.id, { 
+            name, 
+            subject, 
+            body,
+            attachment_id: attachmentId ? parseInt(attachmentId, 10) : null 
+        });
         
         setIsSending(true);
         setSentCount(0);
@@ -121,45 +133,57 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
         
         const reader = new FileReader();
         reader.onload = async (event) => {
-            const text = event.target.result;
-            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-            if (lines.length < 2) {
-                alert('CSV must contain a header row and at least one data row.');
-                return;
-            }
-            
-            const delimiter = lines[0].includes(';') && !lines[0].includes(',') ? ';' : lines[0].includes(';') && lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
-            
-            const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
-            const emailIdx = headers.indexOf('email');
-            const nameIdx = headers.indexOf('name');
-            const companyIdx = headers.indexOf('company');
-            
-            if (emailIdx === -1) {
-                alert('CSV must contain an "email" column.');
-                return;
-            }
-            
-            const parsedRecipients = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(delimiter).map(c => c.trim());
-                if (cols[emailIdx]) {
-                    parsedRecipients.push({
-                        email: cols[emailIdx],
-                        name: nameIdx !== -1 ? cols[nameIdx] : '',
-                        company: companyIdx !== -1 ? cols[companyIdx] : ''
-                    });
+            const data = event.target.result;
+            try {
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Convert to array of arrays
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (json.length < 2) {
+                    alert('File must contain a header row and at least one data row.');
+                    return;
                 }
+                
+                const headers = json[0].map(h => String(h || '').trim().toLowerCase());
+                const emailIdx = headers.indexOf('email');
+                const nameIdx = headers.indexOf('name');
+                const companyIdx = headers.indexOf('company');
+                
+                if (emailIdx === -1) {
+                    alert('File must contain an "email" column.');
+                    return;
+                }
+                
+                const parsedRecipients = [];
+                for (let i = 1; i < json.length; i++) {
+                    const row = json[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const email = row[emailIdx];
+                    if (email) {
+                        parsedRecipients.push({
+                            email: String(email).trim(),
+                            name: nameIdx !== -1 && row[nameIdx] ? String(row[nameIdx]).trim() : '',
+                            company: companyIdx !== -1 && row[companyIdx] ? String(row[companyIdx]).trim() : ''
+                        });
+                    }
+                }
+                
+                setRecipients(parsedRecipients);
+                const res = await updateCampaignRecipients(campaign.id, parsedRecipients);
+                if (res.error) alert(res.error);
+                
+                // reset file input
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            } catch (err) {
+                alert('Failed to parse file. Make sure it is a valid CSV or Excel file.');
+                console.error(err);
             }
-            
-            setRecipients(parsedRecipients);
-            const res = await updateCampaignRecipients(campaign.id, parsedRecipients);
-            if (res.error) alert(res.error);
-            
-            // reset file input
-            if (fileInputRef.current) fileInputRef.current.value = '';
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file);
     }
 
     async function handleAddManualRecipient(e) {
@@ -309,6 +333,25 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
                                     placeholder="<p>Hello {name|{company|there}},</p>..."
                                 />
                             </div>
+                            
+                            {/* Attachment Selector */}
+                            <div>
+                                <label className="block text-xs font-semibold text-[#8e8e93] mb-1">Library Attachment</label>
+                                <select
+                                    value={attachmentId}
+                                    onChange={e => setAttachmentId(e.target.value)}
+                                    disabled={isReadonly}
+                                    className="input-base w-full text-xs py-2"
+                                >
+                                    <option value="">-- No Attachment --</option>
+                                    {initialAttachments.map(att => (
+                                        <option key={att.id} value={att.id}>
+                                            {att.file_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            
                             {!isReadonly && (
                                 <div className="flex justify-end">
                                     <button 
@@ -333,7 +376,7 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
                                 <div>
                                     <input 
                                         type="file" 
-                                        accept=".csv" 
+                                        accept=".csv,.xlsx,.xls" 
                                         className="hidden" 
                                         ref={fileInputRef}
                                         onChange={handleFileUpload}
@@ -342,7 +385,7 @@ export default function CampaignDetails({ campaign, initialBounces = [] }) {
                                         onClick={() => fileInputRef.current?.click()}
                                         className="text-[11px] font-bold text-[#10b981] bg-[#ecfdf5] px-2 py-1 rounded hover:bg-[#d1fae5] transition-colors"
                                     >
-                                        Upload CSV
+                                        Upload File
                                     </button>
                                 </div>
                             )}
