@@ -14,10 +14,24 @@ export default function CampaignsList({ initialCampaigns, initialAttachments }) 
         setIsSubmitting(true);
         const formData = new FormData(e.target);
         
-        const defaultBody = `<p>Dear {name|Sponsor},</p>
-<p>We are reaching out to {company|your organization} regarding...</p>
-<br>
-<p>Best regards,<br>Sponsors Nanoge</p>`;
+        const defaultBody = `<div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; line-height: 1.6;">
+
+  <p style="font-size: 16px;">Dear {name|Sponsor},</p>
+
+  <p style="font-size: 16px;">
+    We are reaching out to <strong>{company|your organization}</strong> regarding...
+  </p>
+  
+  <br>
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+  <p style="font-size: 15px; color: #374151;">
+    Best regards,<br>
+    <strong>Sponsors Nanoge</strong>
+  </p>
+
+</div>`;
 
         const res = await createCampaign({
             name: formData.get('name'),

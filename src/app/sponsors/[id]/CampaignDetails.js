@@ -8,8 +8,9 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     const [name, setName] = useState(campaign.name || '');
     const [subject, setSubject] = useState(campaign.subject || '');
     const [body, setBody] = useState(campaign.body || '');
-    const [attachmentId, setAttachmentId] = useState(campaign.attachment_id || '');
     const [isSaving, setIsSaving] = useState(false);
+    const [copiedId, setCopiedId] = useState(null);
+    const [buttonTexts, setButtonTexts] = useState({});
     
     // Parse recipients
     let initialRecipients = [];
@@ -38,12 +39,7 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
 
     async function handleSaveDetails() {
         setIsSaving(true);
-        const res = await updateCampaign(campaign.id, { 
-            name, 
-            subject, 
-            body, 
-            attachment_id: attachmentId ? parseInt(attachmentId, 10) : null 
-        });
+        const res = await updateCampaign(campaign.id, { name, subject, body });
         if (res.error) alert(res.error);
         setIsSaving(false);
     }
@@ -68,12 +64,7 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
         if (!confirm(`Are you sure you want to send this email to ${recipients.length} recipients? This action cannot be undone.`)) return;
         
         // ensure saved first
-        await updateCampaign(campaign.id, { 
-            name, 
-            subject, 
-            body,
-            attachment_id: attachmentId ? parseInt(attachmentId, 10) : null 
-        });
+        await updateCampaign(campaign.id, { name, subject, body });
         
         setIsSending(true);
         setSentCount(0);
@@ -211,6 +202,25 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
         }
     }
 
+    async function copyAttachmentLink(att) {
+        const url = window.location.origin + '/api/attachments/' + att.id;
+        const customText = buttonTexts[att.id]?.trim() || `Download ${att.file_name}`;
+        const buttonHtml = `
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${url}"
+       style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 8px; font-family: sans-serif; font-size: 15px; box-shadow: 0 2px 4px rgba(16,185,129,0.25);">
+${customText}
+    </a>
+  </div>`;
+        try {
+            await navigator.clipboard.writeText(buttonHtml);
+            setCopiedId(att.id);
+            setTimeout(() => setCopiedId(null), 2000);
+        } catch (err) {
+            alert("Failed to copy to clipboard");
+        }
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4 mb-2">
@@ -334,23 +344,37 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
                                 />
                             </div>
                             
-                            {/* Attachment Selector */}
-                            <div>
-                                <label className="block text-xs font-semibold text-[#8e8e93] mb-1">Library Attachment</label>
-                                <select
-                                    value={attachmentId}
-                                    onChange={e => setAttachmentId(e.target.value)}
-                                    disabled={isReadonly}
-                                    className="input-base w-full text-xs py-2"
-                                >
-                                    <option value="">-- No Attachment --</option>
-                                    {initialAttachments.map(att => (
-                                        <option key={att.id} value={att.id}>
-                                            {att.file_name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                            {/* Attachments Linker */}
+                            {!isReadonly && initialAttachments.length > 0 && (
+                                <div className="bg-[#f9f9f9] border border-[#e5e5ea] rounded-xl p-4">
+                                    <h4 className="text-xs font-semibold text-[#1d1d1f] mb-3">Attach Library PDF as Link</h4>
+                                    <div className="space-y-2">
+                                        {initialAttachments.map(att => (
+                                            <div key={att.id} className="flex items-center justify-between bg-white border border-[#e5e5ea] p-2 rounded-lg gap-2">
+                                                <span className="text-xs font-medium text-[#1d1d1f] truncate flex-1">{att.file_name}</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Button Text" 
+                                                    value={buttonTexts[att.id] || ''}
+                                                    onChange={e => setButtonTexts(prev => ({...prev, [att.id]: e.target.value}))}
+                                                    className="input-base py-1 px-2 text-[10px] w-32 shrink-0 border border-[#e5e5ea] rounded"
+                                                />
+                                                <button
+                                                    onClick={() => copyAttachmentLink(att)}
+                                                    className={`shrink-0 px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${
+                                                        copiedId === att.id 
+                                                        ? 'bg-[#10b981] text-white' 
+                                                        : 'bg-[#ecfdf5] text-[#10b981] hover:bg-[#d1fae5]'
+                                                    }`}
+                                                >
+                                                    {copiedId === att.id ? 'Copied HTML!' : 'Copy HTML'}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-[#8e8e93] mt-3">Clicking "Copy HTML" copies a mobile-friendly button snippet you can paste anywhere in your email.</p>
+                                </div>
+                            )}
                             
                             {!isReadonly && (
                                 <div className="flex justify-end">
