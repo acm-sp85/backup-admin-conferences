@@ -4,7 +4,7 @@ import { createCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
 import Link from 'next/link';
 import AttachmentsLibrary from './AttachmentsLibrary';
 
-export default function CampaignsList({ initialCampaigns, initialAttachments }) {
+export default function CampaignsList({ initialCampaigns, initialAttachments, isSuperadmin }) {
     const [isCreating, setIsCreating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [syncingId, setSyncingId] = useState(null);
@@ -70,7 +70,7 @@ export default function CampaignsList({ initialCampaigns, initialAttachments }) 
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-[#1d1d1f]">All Campaigns</h2>
                 <div className="flex gap-2">
-                    <AttachmentsLibrary initialAttachments={initialAttachments} />
+                    <AttachmentsLibrary initialAttachments={initialAttachments} isSuperadmin={isSuperadmin} />
                     <button 
                         onClick={() => setIsCreating(true)}
                         className="btn-primary flex items-center gap-2 bg-[#10b981] hover:bg-[#059669] border-transparent"

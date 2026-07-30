@@ -10,6 +10,8 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     const [body, setBody] = useState(campaign.body || '');
     const [isSaving, setIsSaving] = useState(false);
     const [copiedId, setCopiedId] = useState(null);
+    const [buttonUrl, setButtonUrl] = useState('');
+    const [buttonText, setButtonText] = useState('');
     const [buttonTexts, setButtonTexts] = useState({});
     
     // Parse recipients
@@ -203,7 +205,7 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     }
 
     async function copyAttachmentLink(att) {
-        const url = window.location.origin + '/api/attachments/' + att.id;
+        const url = att.url ? att.url : (window.location.origin + '/api/attachments/' + att.id);
         const customText = buttonTexts[att.id]?.trim() || `Download ${att.file_name}`;
         const buttonHtml = `
   <div style="text-align: center; margin: 32px 0;">
@@ -215,6 +217,28 @@ ${customText}
         try {
             await navigator.clipboard.writeText(buttonHtml);
             setCopiedId(att.id);
+            setTimeout(() => setCopiedId(null), 2000);
+        } catch (err) {
+            alert("Failed to copy to clipboard");
+        }
+    }
+
+    async function copyCustomButton() {
+        if (!buttonUrl) {
+            alert('Please enter a URL for the button.');
+            return;
+        }
+        const customText = buttonText.trim() || `Download PDF`;
+        const buttonHtml = `
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${buttonUrl}"
+       style="display: inline-block; padding: 14px 28px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 8px; font-family: sans-serif; font-size: 15px; box-shadow: 0 2px 4px rgba(16,185,129,0.25);">
+${customText}
+    </a>
+  </div>`;
+        try {
+            await navigator.clipboard.writeText(buttonHtml);
+            setCopiedId('custom');
             setTimeout(() => setCopiedId(null), 2000);
         } catch (err) {
             alert("Failed to copy to clipboard");
@@ -347,11 +371,14 @@ ${customText}
                             {/* Attachments Linker */}
                             {!isReadonly && initialAttachments.length > 0 && (
                                 <div className="bg-[#f9f9f9] border border-[#e5e5ea] rounded-xl p-4">
-                                    <h4 className="text-xs font-semibold text-[#1d1d1f] mb-3">Attach Library PDF as Link</h4>
+                                    <h4 className="text-xs font-semibold text-[#1d1d1f] mb-3">Saved Library Links</h4>
                                     <div className="space-y-2">
                                         {initialAttachments.map(att => (
                                             <div key={att.id} className="flex items-center justify-between bg-white border border-[#e5e5ea] p-2 rounded-lg gap-2">
-                                                <span className="text-xs font-medium text-[#1d1d1f] truncate flex-1">{att.file_name}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium text-[#1d1d1f] truncate">{att.file_name}</p>
+                                                    {att.url && <p className="text-[9px] text-[#10b981] truncate">{att.url}</p>}
+                                                </div>
                                                 <input 
                                                     type="text" 
                                                     placeholder="Button Text" 
@@ -372,7 +399,41 @@ ${customText}
                                             </div>
                                         ))}
                                     </div>
-                                    <p className="text-[10px] text-[#8e8e93] mt-3">Clicking "Copy HTML" copies a mobile-friendly button snippet you can paste anywhere in your email.</p>
+                                    <p className="text-[10px] text-[#8e8e93] mt-3">Clicking "Copy HTML" generates a styled button pointing to the saved PDF or URL.</p>
+                                </div>
+                            )}
+
+                            {/* Button Generator */}
+                            {!isReadonly && (
+                                <div className="bg-[#f9f9f9] border border-[#e5e5ea] rounded-xl p-4">
+                                    <h4 className="text-xs font-semibold text-[#1d1d1f] mb-3">Custom Button Generator</h4>
+                                    <div className="flex items-center gap-2 bg-white border border-[#e5e5ea] p-2 rounded-lg">
+                                        <input 
+                                            type="text" 
+                                            placeholder="PDF URL (e.g. https://mydomain.com/file.pdf)" 
+                                            value={buttonUrl}
+                                            onChange={e => setButtonUrl(e.target.value)}
+                                            className="input-base py-1 px-2 text-[10px] flex-1 border border-[#e5e5ea] rounded"
+                                        />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Button Text" 
+                                            value={buttonText}
+                                            onChange={e => setButtonText(e.target.value)}
+                                            className="input-base py-1 px-2 text-[10px] w-32 shrink-0 border border-[#e5e5ea] rounded"
+                                        />
+                                        <button
+                                            onClick={copyCustomButton}
+                                            className={`shrink-0 px-2.5 py-1 text-[10px] font-bold rounded transition-colors ${
+                                                copiedId === 'custom' 
+                                                ? 'bg-[#10b981] text-white' 
+                                                : 'bg-[#ecfdf5] text-[#10b981] hover:bg-[#d1fae5]'
+                                            }`}
+                                        >
+                                            {copiedId === 'custom' ? 'Copied HTML!' : 'Copy HTML'}
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-[#8e8e93] mt-3">Clicking "Copy HTML" generates a styled button pointing to your external PDF URL.</p>
                                 </div>
                             )}
                             

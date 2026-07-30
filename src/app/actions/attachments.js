@@ -8,8 +8,13 @@ export async function getAttachments() {
     const session = await verifySession();
     if (!session || (!hasAdminAccess(session.role))) throw new Error('Unauthorized');
     
-    // We only fetch the ID and file_name to save bandwidth. We don't need the base64 here.
-    return await query('SELECT id, file_name, created_at FROM sponsors_attachments ORDER BY created_at DESC');
+    // Auto-migrate to support URLs (ignore error if column already exists)
+    try {
+        await query('ALTER TABLE sponsors_attachments ADD COLUMN url TEXT DEFAULT NULL');
+    } catch (e) {}
+
+    // We only fetch the ID, file_name, and url to save bandwidth. We don't need the base64 here.
+    return await query('SELECT id, file_name, url, created_at FROM sponsors_attachments ORDER BY created_at DESC');
 }
 
 export async function uploadAttachment(formData) {
@@ -27,6 +32,19 @@ export async function uploadAttachment(formData) {
     await query(
         'INSERT INTO sponsors_attachments (file_name, file_base64) VALUES (?, ?)',
         [fileName, base64Data]
+    );
+    
+    revalidatePath('/sponsors');
+    return { success: true };
+}
+
+export async function addLinkAttachment(fileName, url) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) throw new Error('Unauthorized');
+    
+    await query(
+        'INSERT INTO sponsors_attachments (file_name, url) VALUES (?, ?)',
+        [fileName, url]
     );
     
     revalidatePath('/sponsors');

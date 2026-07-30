@@ -44,7 +44,7 @@ export default async function SponsorsPage() {
                     <p>It looks like the <code>sponsors_campaigns</code> or <code>sponsors_attachments</code> table hasn't been created yet. Please run the SQL command.</p>
                 </div>
             ) : (
-                <CampaignsList initialCampaigns={campaigns} initialAttachments={attachments} />
+                <CampaignsList initialCampaigns={campaigns} initialAttachments={attachments} isSuperadmin={session.role === 'superadmin'} />
             )}
             
         </DashboardLayout>
