@@ -220,7 +220,6 @@ export default function ProgramManager({ conferences, userRole }) {
         const conf = conferences.find(c => c.id == selectedConfId);
         
         const programDays = Object.entries(program
-            .filter(s => !s.is_hidden)
             .reduce((acc, session) => {
                 const date = new Date(session.start_time);
                 const dateString = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -314,7 +313,6 @@ export default function ProgramManager({ conferences, userRole }) {
         const conf = conferences.find(c => c.id == selectedConfId);
         
         const programDays = Object.entries(program
-            .filter(s => !s.is_hidden)
             .reduce((acc, session) => {
                 const date = new Date(session.start_time);
                 const dateString = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
