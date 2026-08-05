@@ -216,6 +216,199 @@ export default function ProgramManager({ conferences, userRole }) {
         }
     };
 
+    const handleDownloadJSON = () => {
+        const conf = conferences.find(c => c.id == selectedConfId);
+        
+        const programDays = Object.entries(program
+            .filter(s => !s.is_hidden)
+            .reduce((acc, session) => {
+                const date = new Date(session.start_time);
+                const dateString = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                
+                if (!acc[dateString]) acc[dateString] = [];
+                
+                const formatTime = (t) => {
+                    const d = new Date(t);
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                };
+                
+                const sessionStart = formatTime(session.start_time);
+                const sessionEnd = formatTime(session.end_time);
+                
+                const symposia = {
+                    code: session.session_name?.split(' ')[0] || `S${session.id}`,
+                    name: session.full_session_name || session.session_name,
+                    time: `${sessionStart} - ${sessionEnd}`,
+                    type: (session.full_session_name?.toLowerCase().includes('break') || session.session_name?.toLowerCase().includes('break')) ? 'break' : 'session',
+                    columns: 1,
+                    talks: (session.slots || []).map((slot, index, arr) => {
+                        const slotStart = formatTime(slot.start_time);
+                        let slotEnd = slotStart;
+                        if (slot.end_time) {
+                            slotEnd = formatTime(slot.end_time);
+                        } else if (index < arr.length - 1) {
+                            slotEnd = formatTime(arr[index + 1].start_time);
+                        } else {
+                            slotEnd = sessionEnd;
+                        }
+                        
+                        return {
+                            code: "",
+                            time: `${slotStart} - ${slotEnd}`,
+                            title: slot.title || "TBA",
+                            presenter: slot.presenter_name || "",
+                            room: "General",
+                            upload_url: ""
+                        };
+                    })
+                };
+                
+                if (symposia.type === 'break' && symposia.talks.length === 0) {
+                    symposia.talks.push({
+                        code: "",
+                        time: symposia.time,
+                        title: "TBA",
+                        presenter: "",
+                        room: "General",
+                        upload_url: ""
+                    });
+                }
+
+                acc[dateString].push(symposia);
+                return acc;
+            }, {}))
+            .map(([day, symposia]) => ({ day, symposia }));
+
+        const outputJSON = {
+            conference_url: conf?.acronym || "",
+            conference_name: conf?.name || "",
+            banner: conf?.banner_url || "https://www.nanoge.org/static/events/3f73c58ae713cfdbb5b13ab0c5b57445a460af84",
+            banner_url_link: `https://www.nanoge.org/${conf?.acronym || ''}/home`,
+            squareBanner: "https://www.nanoge.org/static/events/de088896698fd3028855e62c5863c9fa533412f1",
+            backgroundImage: conf?.door_sign_bg || "https://www.nanoge.org/static/ckeditor/c995d35810f552ed2d59ab1cabf088e3",
+            program_url: `https://www.nanoge.org/${conf?.acronym || ''}/program/program`,
+            theme: {
+                primaryColor: config?.config?.titleColor || "#487aab",
+                secondaryColor: "#7ca7ed",
+                backgroundColor: "#fbfaf0",
+                cardColor: "#fffbe2",
+                textColor: config?.config?.contentColor || "#3e69b0",
+                titleColor: config?.config?.titleColor || "#0369a1"
+            },
+            days: {
+                totalDays: programDays.length,
+                schedule: programDays
+            }
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(outputJSON, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `schedule-${conf?.acronym || 'program'}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
+    const handleDownloadParallelJSON = () => {
+        const conf = conferences.find(c => c.id == selectedConfId);
+        
+        const programDays = Object.entries(program
+            .filter(s => !s.is_hidden)
+            .reduce((acc, session) => {
+                const date = new Date(session.start_time);
+                const dateString = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                
+                if (!acc[dateString]) acc[dateString] = [];
+                
+                const formatTime = (t) => {
+                    const d = new Date(t);
+                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                };
+                
+                const sessionStart = formatTime(session.start_time);
+                const sessionEnd = formatTime(session.end_time);
+                
+                const symposia = {
+                    id: session.mongo_id || session.id.toString(),
+                    code: session.session_name?.split(' ')[0] || `S${session.id}`,
+                    name: session.full_session_name || session.session_name,
+                    room: "General",
+                    time: `${sessionStart} - ${sessionEnd}`,
+                    type: (session.full_session_name?.toLowerCase().includes('break') || session.session_name?.toLowerCase().includes('break')) ? 'break' : 'session',
+                    columns: 1,
+                    talks: (session.slots || []).map((slot, index, arr) => {
+                        const slotStart = formatTime(slot.start_time);
+                        let slotEnd = slotStart;
+                        if (slot.end_time) {
+                            slotEnd = formatTime(slot.end_time);
+                        } else if (index < arr.length - 1) {
+                            slotEnd = formatTime(arr[index + 1].start_time);
+                        } else {
+                            slotEnd = sessionEnd;
+                        }
+                        
+                        return {
+                            code: slot.code || "",
+                            type: slot.type || (symposia.type === 'break' ? 'oral' : 'oral'),
+                            time: `${slotStart} - ${slotEnd}`,
+                            title: slot.title || "TBA",
+                            presenter: slot.presenter_name || "",
+                            room: "General",
+                            upload_url: ""
+                        };
+                    })
+                };
+                
+                if (symposia.type === 'break' && symposia.talks.length === 0) {
+                    symposia.talks.push({
+                        code: "",
+                        type: "oral",
+                        time: symposia.time,
+                        title: "TBA",
+                        presenter: "",
+                        room: "General",
+                        upload_url: ""
+                    });
+                }
+
+                acc[dateString].push(symposia);
+                return acc;
+            }, {}))
+            .map(([day, symposia]) => ({ day, symposia }));
+
+        const outputJSON = {
+            conference_url: conf?.acronym || "",
+            conference_name: conf?.name || "",
+            banner: conf?.banner_url || "https://www.nanoge.org/static/events/4d2d04a17c3fb1eedf2d712a12ff5c9dfac84046",
+            banner_url_link: `https://www.nanoge.org/${conf?.acronym || ''}/home`,
+            squareBanner: "https://www.nanoge.org/static/events/3c90223b3aa57239c891177512daa1f99538532b",
+            backgroundImage: conf?.door_sign_bg || "https://www.nanoge.org/static/ckeditor/2bc1283e94a0b10e83c1bbb4d67db5ab",
+            program_url: `https://www.nanoge.org/${conf?.acronym || ''}/program/program`,
+            theme: {
+                primaryColor: config?.config?.titleColor || "#1f3338",
+                secondaryColor: "#23786e",
+                backgroundColor: "#d0efebd2",
+                cardColor: "#d0efebd2",
+                textColor: config?.config?.contentColor || "#000000",
+                titleColor: config?.config?.titleColor || "#000000",
+                colorHoras: "#000000"
+            },
+            days: {
+                totalDays: programDays.length,
+                schedule: programDays
+            }
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(outputJSON, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `schedule-parallel-${conf?.acronym || 'program'}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
     const isCipie = Number(selectedConfId) === 11;
 
     // Group sessions by day
@@ -349,6 +542,24 @@ export default function ProgramManager({ conferences, userRole }) {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                         Print All Door Signs
                     </button>
+                    {userRole === 'superadmin' && (
+                        <>
+                            <button 
+                                onClick={handleDownloadJSON}
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                JSON (Standard)
+                            </button>
+                            <button 
+                                onClick={handleDownloadParallelJSON}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                JSON (Parallel)
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
