@@ -1,9 +1,34 @@
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { createConference, updateConference, getRegistrationTypes } from '../actions/conferences';
 import { getDefaultEmailBody } from '@/lib/email-templates';
-import { Info, Settings, Mail, Award, Globe, Plus, Trash2 } from 'lucide-react';
+import { Info, Settings, Mail, Award, Globe, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { formatSocialDinnerDate, formatRegistrationDate } from '@/lib/date-formatter';
 
+const CollapsibleSection = ({ title, children, unfilledCount = 0, defaultOpen = false }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50 mb-5">
+            <button 
+                type="button" 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors ${isOpen ? 'border-b border-slate-100' : ''}`}
+            >
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">{title}</h4>
+                <div className="flex items-center gap-3">
+                    {unfilledCount > 0 && (
+                        <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {unfilledCount} unfilled
+                        </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </div>
+            </button>
+            <div className={`p-5 space-y-4 ${isOpen ? 'block' : 'hidden'}`}>
+                {children}
+            </div>
+        </div>
+    );
+};
 const formatDatetimeLocal = (val) => {
     if (!val) return '';
     try {
@@ -50,6 +75,18 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     const [activeTab, setActiveTab] = useState('general'); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
     const isEdit = !!conference;
 
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    const handleClose = () => {
+        if (hasUnsavedChanges) {
+            if (confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+                onClose();
+            }
+        } else {
+            onClose();
+        }
+    };
+
     // Track template contents and view modes
     const [templates, setTemplates] = useState({
         magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
@@ -66,6 +103,52 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         emailCheckin: 'preview',
         certificate: 'preview'
     });
+
+    const formRef = useRef(null);
+    const [unfilledCounts, setUnfilledCounts] = useState({
+        general: 0,
+        socialDinner: 0,
+        registration: 0,
+        voting: 0,
+        certificate: 0,
+        badge: 0
+    });
+
+    const calculateUnfilled = () => {
+        if (!formRef.current) return;
+        const fd = new FormData(formRef.current);
+        const getCount = (fields) => fields.filter(f => {
+            const val = fd.get(f);
+            const isEmpty = !val || String(val).trim() === '';
+            
+            const el = formRef.current.querySelector(`[name="${f}"]`);
+            if (el) {
+                // Clean up old attribute if present
+                el.removeAttribute('data-unfilled');
+                
+                // Add visual cue to label
+                const label = el.parentElement.querySelector('label') || el.parentElement.parentElement.querySelector('label');
+                if (label) {
+                    if (isEmpty) {
+                        label.setAttribute('data-unfilled-label', 'true');
+                    } else {
+                        label.removeAttribute('data-unfilled-label');
+                    }
+                }
+            }
+            
+            return isEmpty;
+        }).length;
+        
+        setUnfilledCounts({
+            general: getCount(['name', 'conference_full_name', 'acronym', 'email', 'start_date', 'end_date', 'logo_url', 'banner_url', 'conference_address']),
+            socialDinner: getCount(['social_dinner_date', 'social_dinner_location', 'social_dinner_maps_url']),
+            registration: getCount(['registration_venue', 'registration_starts_at', 'registration_maps_url', 'registration_notes']),
+            voting: getCount(['voting_instructions']),
+            certificate: getCount(['signature_image', 'text_under_signature']),
+            badge: getCount(['badge_bg'])
+        });
+    };
 
     const [badgeConfig, setBadgeConfig] = useState(conference?.badge_config ? (typeof conference.badge_config === 'string' ? JSON.parse(conference.badge_config) : conference.badge_config) : {
         nameSize: '28px',
@@ -177,6 +260,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 setSponsorsList([]);
             }
             setNewSponsorName('');
+            setHasUnsavedChanges(false);
 
             // Fetch available registration types
             getRegistrationTypes(conference?.id).then(types => {
@@ -184,6 +268,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
             }).catch(err => {
                 console.error("Failed to load registration types:", err);
             });
+
+            setTimeout(calculateUnfilled, 50);
         }
     }, [isOpen, conference]);
 
@@ -233,6 +319,11 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
 
     if (!isOpen) return null;
 
+    const handleFormChange = (e) => {
+        setHasUnsavedChanges(true);
+        calculateUnfilled();
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -254,6 +345,18 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <style dangerouslySetInnerHTML={{ __html: `
+                [data-unfilled-label="true"]::after {
+                    content: "";
+                    display: inline-block;
+                    width: 6px;
+                    height: 6px;
+                    background-color: #f97316 !important; /* orange-500 */
+                    border-radius: 50%;
+                    margin-left: 6px;
+                    vertical-align: middle;
+                }
+            `}} />
             <div 
                 className="bg-white w-full max-w-4xl rounded-[16px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
@@ -266,7 +369,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                         </h3>
                         <p className="text-xs text-slate-400 mt-0.5">Configure details, voting rules, templates, and sponsors</p>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-full transition-all">
+                    <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-50 rounded-full transition-all">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </button>
                 </div>
@@ -336,7 +439,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                 </div>
 
                 {/* Form and Scrollable Container */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
+                <form ref={formRef} onSubmit={handleSubmit} onChange={handleFormChange} className="flex-1 overflow-y-auto flex flex-col">
                     <div className="p-8 flex-1">
                         {error && (
                             <div className="mb-6 p-3.5 bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl flex items-center gap-2">
@@ -350,7 +453,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                         
                         {/* TAB 1: General Info */}
                         <div className={activeTab === 'general' ? 'space-y-5' : 'hidden'}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <CollapsibleSection title="Conference Info" unfilledCount={unfilledCounts.general} defaultOpen={true}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Conference Name</label>
                                     <input 
@@ -358,7 +462,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         type="text" 
                                         required
                                         defaultValue={conference?.name || ''}
-                                        placeholder="e.g. HOPV26"
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -369,7 +472,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         name="conference_full_name"
                                         type="text" 
                                         defaultValue={conference?.conference_full_name || ''}
-                                        placeholder="e.g. International Conference on Hybrid and Organic Photovoltaics"
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -383,7 +485,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         type="text" 
                                         required
                                         defaultValue={conference?.acronym || ''}
-                                        placeholder="e.g. HOPV26"
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
                                     />
                                 </div>
@@ -393,7 +494,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     name="email"
     type="email"
     defaultValue={conference?.email || ''}
-    placeholder="organizers@acronym.org"
     className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
 />
 {/* Email From Domain Selection */}
@@ -423,6 +523,9 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
         className="px-2 py-1 text-xs bg-indigo-50 border border-indigo-100 rounded hover:bg-indigo-100"
     >Add</button>
 </div>
+<p className="text-[10px] text-slate-500 mt-1.5 ml-1">
+    System emails will be sent from: <span className="font-mono font-bold text-indigo-600">{emailDomain}</span>
+</p>
 {/* Hidden field to send selected domain */}
 <input type="hidden" name="email_from_domain" value={emailDomain} />
                                 </div>
@@ -458,7 +561,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         name="logo_url"
                                         type="url" 
                                         defaultValue={conference?.logo_url || ''}
-                                        placeholder="https://..."
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -468,7 +570,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         name="banner_url"
                                         type="url" 
                                         defaultValue={conference?.banner_url || ''}
-                                        placeholder="https://..."
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -499,15 +600,14 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         name="conference_address"
                                         defaultValue={conference?.conference_address || ''}
-                                        placeholder="e.g. Venue Name, Address, City, Country"
                                         className="w-full h-16 p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
                                     />
                                 </div>
                             </div>
+                        </CollapsibleSection>
 
                             {/* Social Dinner Settings Subsection */}
-                            <div className="border-t border-slate-100/80 pt-5 mt-5 space-y-4">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Social Dinner Details</h4>
+                            <CollapsibleSection title="Social Dinner Details" unfilledCount={unfilledCounts.socialDinner}>
                                 <input type="hidden" name="social_dinner_time" value="" />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -548,7 +648,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="text" 
                                             value={socialDinnerLocation}
                                             onChange={(e) => setSocialDinnerLocation(e.target.value)}
-                                            placeholder="e.g. Playachica, Benicàssim"
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                         />
                                     </div>
@@ -559,16 +658,14 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="url" 
                                             value={socialDinnerMapsUrl}
                                             onChange={(e) => setSocialDinnerMapsUrl(e.target.value)}
-                                            placeholder="e.g. https://maps.app.goo.gl/bZSYHuqKcTgMFhK96"
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* Registration Process Subsection */}
-                            <div className="border-t border-slate-100/80 pt-5 mt-5 space-y-4">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Registration Process Details</h4>
+                            <CollapsibleSection title="Registration Process Details" unfilledCount={unfilledCounts.registration}>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="md:col-span-2">
                                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Registration Venue (Name & Address)</label>
@@ -577,7 +674,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="text" 
                                             value={registrationVenue}
                                             onChange={(e) => setRegistrationVenue(e.target.value)}
-                                            placeholder="e.g. Foyer, Main Building, University of Valencia"
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                         />
                                     </div>
@@ -600,7 +696,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="url" 
                                             value={registrationMapsUrl}
                                             onChange={(e) => setRegistrationMapsUrl(e.target.value)}
-                                            placeholder="e.g. https://maps.app.goo.gl/bZSYHuqKcTgMFhK96"
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
                                         />
                                     </div>
@@ -611,19 +706,17 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="text" 
                                             value={registrationNotes}
                                             onChange={(e) => setRegistrationNotes(e.target.value)}
-                                            placeholder="e.g. Please bring your identity card or student ID."
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </CollapsibleSection>
                         </div>
 
                         {/* TAB 2: Badge & Voting */}
                         <div className={activeTab === 'badge_voting' ? 'space-y-6' : 'hidden'}>
                             {/* Voting Settings Group */}
-                            <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Voting Settings</h4>
+                            <CollapsibleSection title="Voting Settings" unfilledCount={unfilledCounts.voting} defaultOpen={true}>
                                 
                                 <div className="flex items-center gap-3 p-3.5 bg-white border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
                                     <input 
@@ -643,15 +736,13 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         name="voting_instructions"
                                         defaultValue={conference?.voting_instructions || 'Rank your assigned posters from 1 to 10(1 being the lowest score and 10 the highest)'}
-                                        placeholder="Rank your assigned posters from 1 to 10..."
                                         className="w-full h-20 p-3 bg-white border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none shadow-sm"
                                     />
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* Certificate Signatures Group */}
-                            <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Certificate Configuration</h4>
+                            <CollapsibleSection title="Certificate Configuration" unfilledCount={unfilledCounts.certificate}>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -660,7 +751,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             name="signature_image"
                                             type="url"
                                             defaultValue={conference?.signature_image || ''}
-                                            placeholder="https://..."
                                             className="w-full h-11 px-4 bg-white border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
@@ -670,16 +760,14 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             name="text_under_signature"
                                             type="text"
                                             defaultValue={conference?.text_under_signature || ''}
-                                            placeholder="e.g. Prof. David Sanz, Chairperson"
                                             className="w-full h-11 px-4 bg-white border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </CollapsibleSection>
 
                             {/* Badge Settings Group */}
-                            <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Badge Settings (80x98mm)</h4>
+                            <CollapsibleSection title="Badge Settings" unfilledCount={unfilledCounts.badge}>
                                 
                                 <input type="hidden" name="badge_config" value={JSON.stringify(badgeConfig)} />
                                 
@@ -689,7 +777,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         name="badge_bg"
                                         type="url" 
                                         defaultValue={conference?.badge_bg || ''}
-                                        placeholder="https://..."
                                         className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
                                     />
                                 </div>
@@ -725,7 +812,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                                         type="url"
                                                         value={bg.url || ''}
                                                         onChange={(e) => handleUpdateCustomBg(index, 'url', e.target.value)}
-                                                        placeholder="https://example.com/custom-bg.png"
                                                         className="w-full h-9 px-3 bg-slate-55 border border-slate-100 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono"
                                                     />
                                                 </div>
@@ -963,7 +1049,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         <input 
                                             type="text" 
                                             value={badgeConfig.sideMargin || '10mm'}
-                                            placeholder="e.g. 10mm"
                                             onChange={(e) => setBadgeConfig({ ...badgeConfig, sideMargin: e.target.value })}
                                             className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
                                         />
@@ -999,7 +1084,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         />
                                     </div>
                                 </div>
-                            </div>
+                            </CollapsibleSection>
                         </div>
 
                         {/* TAB 3: Email Templates */}
@@ -1082,7 +1167,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         value={templates.emailCheckin}
                                         onChange={(e) => setTemplates(t => ({ ...t, emailCheckin: e.target.value }))}
-                                        placeholder="Use ${name}, ${conference}, ${registration_venue}, ${registration_starts_at}, and ${registration_notes} placeholders."
                                         className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
@@ -1133,7 +1217,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         value={templates.socialDinnerTickets}
                                         onChange={(e) => setTemplates(t => ({ ...t, socialDinnerTickets: e.target.value }))}
-                                        placeholder="Use ${name} placeholder."
                                         className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
@@ -1173,7 +1256,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         value={templates.posterVotingInvite}
                                         onChange={(e) => setTemplates(t => ({ ...t, posterVotingInvite: e.target.value }))}
-                                        placeholder="Use ${name} and ${magicLink} placeholders."
                                         className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
@@ -1212,7 +1294,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         value={templates.magicLink}
                                         onChange={(e) => setTemplates(t => ({ ...t, magicLink: e.target.value }))}
-                                        placeholder="Use ${magicLink} for the login URL."
                                         className="w-full h-44 p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y flex-1 shadow-sm"
                                     />
                                 )}
@@ -1235,7 +1316,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="text" 
                                             value={newSponsorName}
                                             onChange={(e) => setNewSponsorName(e.target.value)}
-                                            placeholder="e.g. SCITO"
                                             className="w-full h-11 px-4 bg-white border border-slate-150 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
                                         />
                                     </div>
@@ -1245,7 +1325,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                             type="url" 
                                             value={newSponsorLogo}
                                             onChange={(e) => setNewSponsorLogo(e.target.value)}
-                                            placeholder="https://..."
                                             className="w-full h-11 px-4 bg-white border border-slate-150 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
                                         />
                                     </div>
@@ -1346,7 +1425,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                         name="certificate_background_image"
                                         value={certificateBackgroundImage}
                                         onChange={(e) => setCertificateBackgroundImage(e.target.value)}
-                                        placeholder="https://example.com/bg.png"
                                         className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                                     />
                                     <p className="text-[10px] text-slate-400 ml-1">Optional background image for the certificate.</p>
@@ -1414,7 +1492,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                                     <textarea 
                                         value={templates.certificate}
                                         onChange={(e) => setTemplates(t => ({ ...t, certificate: e.target.value }))}
-                                        placeholder="Use ${name}, ${conference}, ${institution}, ${registrationType}, ${conferenceDates}, etc."
                                         className="w-full min-h-[500px] p-3 bg-white border border-slate-100 rounded-xl text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none resize-y shadow-sm"
                                     />
                                 )}
@@ -1429,7 +1506,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
                     <div className="px-8 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 rounded-b-[16px]">
                         <button 
                             type="button" 
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="h-11 px-5 border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-colors"
                         >
                             Cancel

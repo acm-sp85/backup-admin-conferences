@@ -154,7 +154,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                     <div className="flex items-center gap-2">
                         <div className={`font-medium ${person.is_removed ? 'line-through opacity-50 text-[var(--muted)]' : 'text-[var(--foreground)]'}`}>
                             {person.name}
-                            {person.is_removed && <span className="ml-2 text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded not-italic no-underline">REMOVED</span>}
+                            {Boolean(person.is_removed) && <span className="ml-2 text-[8px] bg-red-100 text-red-600 px-1 py-0.5 rounded not-italic no-underline">REMOVED</span>}
                         </div>
                         <span className={`text-[var(--muted)] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>

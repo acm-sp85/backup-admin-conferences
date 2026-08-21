@@ -33,6 +33,7 @@ export async function createConference(formData) {
     const registration_starts_at = formData.get('registration_starts_at') || null;
     const registration_notes = formData.get('registration_notes') || null;
     const registration_maps_url = formData.get('registration_maps_url') || null;
+    const email_from_domain = formData.get('email_from_domain') || '@scitoevents.com';
 
     if (!name || !acronym || !start_date || !end_date) {
         return { error: 'Name, Acronym, Start Date, and End Date are required' };
@@ -40,7 +41,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, email_certificate_body, certificate_orientation, certificate_background_image, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, email_certificate_body, certificate_orientation, certificate_background_image, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url, email_from_domain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -75,7 +76,8 @@ export async function createConference(formData) {
               registration_venue,
               registration_starts_at,
               registration_notes,
-              registration_maps_url
+              registration_maps_url,
+              email_from_domain
             ]
           );
         await logAction('CREATE', 'CONFERENCE', null, { acronym, name });
@@ -172,6 +174,7 @@ export async function updateConference(id, formData) {
     const registration_starts_at = formData.get('registration_starts_at') || null;
     const registration_notes = formData.get('registration_notes') || null;
     const registration_maps_url = formData.get('registration_maps_url') || null;
+    const email_from_domain = formData.get('email_from_domain') || '@scitoevents.com';
 
     if (!name || !acronym || !start_date || !end_date) {
         return { error: 'Name, Acronym, Start Date, and End Date are required' };
@@ -179,7 +182,7 @@ export async function updateConference(id, formData) {
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, email_certificate_body = ?, certificate_orientation = ?, certificate_background_image = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, email_certificate_body = ?, certificate_orientation = ?, certificate_background_image = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ?, email_from_domain = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -215,6 +218,7 @@ export async function updateConference(id, formData) {
               registration_starts_at,
               registration_notes,
               registration_maps_url,
+              email_from_domain,
               id
             ]
           );
