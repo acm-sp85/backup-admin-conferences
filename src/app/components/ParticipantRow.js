@@ -23,6 +23,7 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     const [userTypeInput, setUserTypeInput] = useState(person.registration_type || 'Standard');
     const [isSavingType, setIsSavingType] = useState(false);
     const [isRemoving, setIsRemoving] = useState(false);
+    const [showAllConfs, setShowAllConfs] = useState(false);
     
     const [editingPayment, setEditingPayment] = useState(null);
     const [isSavingPayment, setIsSavingPayment] = useState(false);
@@ -202,29 +203,59 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                     </div>
                 </td>
                 <td className="py-4">
-                    <div className="flex flex-wrap gap-1">
-                        {confTokens.length > 0 ? confTokens.map(({ acronym, token, registrationId, conferenceId }) => (
-                            <div key={acronym} className="flex items-center gap-1">
-                                <ParticipantBadge 
-                                    participantName={person.name} 
-                                    conferenceAcronym={acronym} 
-                                    token={token} 
-                                    registrationId={registrationId}
-                                    conferenceId={conferenceId}
-                                    institution={person.entity || person.regInstitution || person.institution}
-                                    registrationType={person.registration_type}
-                                />
-                                <ParticipantQRBadge 
-                                    participantName={person.name}
-                                    conferenceAcronym={acronym}
-                                    token={token}
-                                    registrationId={registrationId}
-                                    conferenceId={conferenceId}
-                                />
-                            </div>
-                        )) : (
-                            <span className="text-[var(--muted)] text-[10px]">—</span>
-                        )}
+                    <div className="flex flex-wrap gap-1 items-center">
+                        {(() => {
+                            const activeConfTokens = confTokens.filter(t => String(t.conferenceId) === String(activeConfId));
+                            const otherConfTokens = confTokens.filter(t => String(t.conferenceId) !== String(activeConfId));
+                            const displayTokens = showAllConfs ? confTokens : activeConfTokens;
+
+                            if (confTokens.length === 0) {
+                                return <span className="text-[var(--muted)] text-[10px]">—</span>;
+                            }
+
+                            return (
+                                <>
+                                    {displayTokens.length > 0 ? displayTokens.map(({ acronym, token, registrationId, conferenceId }) => (
+                                        <div key={acronym} className="flex items-center gap-1">
+                                            <ParticipantBadge 
+                                                participantName={person.name} 
+                                                conferenceAcronym={acronym} 
+                                                token={token} 
+                                                registrationId={registrationId}
+                                                conferenceId={conferenceId}
+                                                institution={person.entity || person.regInstitution || person.institution}
+                                                registrationType={person.registration_type}
+                                            />
+                                            <ParticipantQRBadge 
+                                                participantName={person.name}
+                                                conferenceAcronym={acronym}
+                                                token={token}
+                                                registrationId={registrationId}
+                                                conferenceId={conferenceId}
+                                            />
+                                        </div>
+                                    )) : (
+                                        !showAllConfs && <span className="text-[var(--muted)] text-[10px] italic">Not registered for active</span>
+                                    )}
+                                    {!showAllConfs && otherConfTokens.length > 0 && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowAllConfs(true); }}
+                                            className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 font-semibold transition-colors border border-slate-200"
+                                        >
+                                            +{otherConfTokens.length} other{otherConfTokens.length > 1 ? 's' : ''}
+                                        </button>
+                                    )}
+                                    {showAllConfs && otherConfTokens.length > 0 && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowAllConfs(false); }}
+                                            className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 font-semibold transition-colors border border-slate-200"
+                                        >
+                                            Show less
+                                        </button>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                 </td>
                 <td className="py-4">
