@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import VotingToggle from './VotingToggle';
 import CommunicationToggle from './CommunicationToggle';
 import ConferenceModal from './ConferenceModal';
+import NotesModal from './NotesModal';
 import { deleteConference } from '../actions/conferences';
 
 export default function ConferenceList({ initialConferences, userRole }) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConference, setEditingConference] = useState(null);
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [notesConference, setNotesConference] = useState(null);
   const [conferences, setConferences] = useState(initialConferences);
 
   // Sync state if server revalidates and sends new props
@@ -47,6 +50,19 @@ export default function ConferenceList({ initialConferences, userRole }) {
     }
   };
 
+  const handleOpenNotes = (conf) => {
+    setNotesConference(conf);
+    setIsNotesModalOpen(true);
+  };
+
+  const handleCloseNotesModal = (wasSaved) => {
+    setIsNotesModalOpen(false);
+    setNotesConference(null);
+    if (wasSaved) {
+      router.refresh();
+    }
+  };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -54,13 +70,26 @@ export default function ConferenceList({ initialConferences, userRole }) {
     if (!conf.end_date) return false;
     const endDate = new Date(conf.end_date);
     return endDate < today;
-  });
+  }).sort((a, b) => new Date(b.end_date) - new Date(a.end_date));
 
   const ongoingFutureConferences = conferences.filter(conf => {
     if (!conf.end_date) return true;
     const endDate = new Date(conf.end_date);
     return endDate >= today;
+  }).sort((a, b) => {
+    if (!a.start_date) return 1;
+    if (!b.start_date) return -1;
+    return new Date(a.start_date) - new Date(b.start_date);
   });
+
+  const formatDateRange = (start, end) => {
+    if (!start && !end) return <span className="text-[var(--muted)]">TBA</span>;
+    const formatOpts = { day: '2-digit', month: 'short', year: 'numeric' };
+    const s = start ? new Date(start).toLocaleDateString('en-GB', formatOpts) : 'TBA';
+    const e = end ? new Date(end).toLocaleDateString('en-GB', formatOpts) : 'TBA';
+    if (s === e) return s;
+    return `${s} - ${e}`;
+  };
 
   const renderConferenceTable = (confList, emptyMessage) => (
     <div className="table-container">
@@ -68,9 +97,9 @@ export default function ConferenceList({ initialConferences, userRole }) {
         <thead>
           <tr>
             <th>Acronym</th>
-            <th>Conference Name</th>
-            <th>Created</th>
+            <th>Dates</th>
             <th>Comms & Voting</th>
+            <th className="text-center">Notes</th>
             <th className="text-right">Actions</th>
           </tr>
         </thead>
@@ -78,15 +107,12 @@ export default function ConferenceList({ initialConferences, userRole }) {
           {confList.map((conf) => (
             <tr key={conf.id}>
               <td>
-                <span className="badge" style={{background:'var(--accent-light)',color:'var(--accent)'}}>
+                <span className="badge" style={{background:'var(--accent-light)',color:'var(--accent)', textTransform: 'none'}}>
                   {conf.acronym}
                 </span>
               </td>
-              <td>
-                <span className="font-medium text-[var(--foreground)]">{conf.name}</span>
-              </td>
               <td className="text-[var(--muted)] text-xs">
-                {new Date(conf.created_at + 'Z').toLocaleDateString('en-GB')}
+                {formatDateRange(conf.start_date, conf.end_date)}
               </td>
               <td>
                 <div className="flex items-center gap-2">
@@ -100,6 +126,15 @@ export default function ConferenceList({ initialConferences, userRole }) {
                     initialStatus={conf.voting_window_open} 
                   />
                 </div>
+              </td>
+              <td className="text-center">
+                <button 
+                  onClick={() => handleOpenNotes(conf)}
+                  className={`transition-colors p-2 inline-flex rounded-md hover:bg-[var(--muted)]/10 ${conf.notes ? 'text-[#007aff]' : 'text-[var(--muted)]'}`}
+                  title={conf.notes ? "View/Edit Notes" : "Add Notes"}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </button>
               </td>
               <td className="text-right">
                 <button 
@@ -158,6 +193,12 @@ export default function ConferenceList({ initialConferences, userRole }) {
         isOpen={isModalOpen} 
         conference={editingConference}
         onClose={handleCloseModal} 
+      />
+
+      <NotesModal
+        isOpen={isNotesModalOpen}
+        conference={notesConference}
+        onClose={handleCloseNotesModal}
       />
     </>
   );

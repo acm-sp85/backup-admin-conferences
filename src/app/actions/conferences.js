@@ -265,3 +265,21 @@ export async function getRegistrationTypes(conferenceId) {
     }
 }
 
+export async function updateConferenceNotes(id, notes) {
+    const session = await verifySession();
+    if (!session || (session.role !== 'superadmin' && session.role !== 'admin')) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        await query(
+            'UPDATE conferences SET notes = ? WHERE id = ?',
+            [notes || null, id]
+        );
+        revalidatePath('/');
+        return { success: true };
+    } catch (error) {
+        console.error('Update conference notes error:', error);
+        return { error: 'Failed to update notes.' };
+    }
+}

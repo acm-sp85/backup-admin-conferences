@@ -51,6 +51,7 @@ CREATE TABLE `conferences` (
   `voting_window_open` tinyint(1) DEFAULT '0',
   `door_sign_bg` text COLLATE utf8mb4_general_ci,
   `door_sign_config` json DEFAULT NULL,
+  `notes` text COLLATE utf8mb4_general_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `acronym` (`acronym`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
