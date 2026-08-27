@@ -232,6 +232,11 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
             setRegistrationMapsUrl(conference?.registration_maps_url || '');
             setCertificateOrientation(conference?.certificate_orientation || 'portrait');
             setCertificateBackgroundImage(conference?.certificate_background_image || '');
+            
+            const confDomain = conference?.email_from_domain || '@scitoevents.com';
+            setEmailDomain(confDomain);
+            setDomainOptions(prev => prev.includes(confDomain) ? prev : [...prev, confDomain]);
+
             setTemplates({
                 magicLink: conference?.email_magic_link_body || getDefaultEmailBody('magicLink', conference),
                 posterVotingInvite: conference?.email_poster_voting_invite_body || getDefaultEmailBody('posterVotingInvite', conference),
