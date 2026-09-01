@@ -45,7 +45,7 @@ const formatDatetimeLocal = (val) => {
     }
 };
 
-export default function ConferenceModal({ isOpen, onClose, conference = null }) {
+export default function ConferenceModal({ isOpen, onClose, conference = null, initialTab = 'general' }) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState('');
     const [accentColor, setAccentColor] = useState(conference?.accent_color || '#007aff');
@@ -72,7 +72,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
     const [certificateOrientation, setCertificateOrientation] = useState(conference?.certificate_orientation || 'portrait');
     const [certificateBackgroundImage, setCertificateBackgroundImage] = useState(conference?.certificate_background_image || '');
 
-    const [activeTab, setActiveTab] = useState('general'); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
+    const [activeTab, setActiveTab] = useState(initialTab); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
     const isEdit = !!conference;
 
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -277,6 +277,12 @@ export default function ConferenceModal({ isOpen, onClose, conference = null }) 
             setTimeout(calculateUnfilled, 50);
         }
     }, [isOpen, conference]);
+
+    useEffect(() => {
+        if (isOpen && initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
 
     const resetToDefault = (type) => {
         if (confirm(`Are you sure you want to reset the template to its default message? Any custom edits will be lost.`)) {
