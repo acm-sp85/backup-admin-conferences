@@ -268,10 +268,13 @@ export async function enqueueCampaign(id, recipients) {
             'pending'
         ]);
         
+        const placeholders = values.map(() => '(?, ?, ?, ?, ?)').join(', ');
+        const flatValues = values.flat();
+        
         // Insert in batches if very large, but mysql2/promise query handles multiple values fine up to reasonable limits
         await query(
-            'INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ?',
-            [values]
+            `INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ${placeholders}`,
+            flatValues
         );
         
         // Update campaign status
