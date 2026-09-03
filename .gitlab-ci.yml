@@ -2,14 +2,26 @@ image: node:20
 
 stages:
   - deploy
+  - cron
 
 vercel-production:
   stage: deploy
-  only:
-    - main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
   script:
     - npm i -g vercel
     # Pull the Vercel Project Configuration
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
     # Trigger Vercel to build and deploy the app using its own environment variables
     - vercel deploy --prod --token=$VERCEL_TOKEN
+
+process-sponsors-queue:
+  stage: cron
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  image: curlimages/curl:latest
+  script:
+    - echo "Triggering background queue..."
+    - curl -f -X GET -H "Authorization: Bearer $CRON_SECRET" "$PROD_DOMAIN/api/cron/process-sponsors-queue"
