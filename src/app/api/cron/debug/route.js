@@ -19,9 +19,19 @@ export async function GET(request) {
 
         if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
             try {
-                // Ensure Project ID is correctly encoded if they used a string instead of number
                 const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${encodeURIComponent(process.env.GITLAB_PROJECT_ID)}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
                 
+                // Test the PUT request to see why it's failing
+                const putRes = await fetch(gitlabUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: true })
+                });
+                const putData = await putRes.json();
+
                 const res = await fetch(gitlabUrl, {
                     method: 'GET',
                     headers: {
@@ -52,6 +62,7 @@ export async function GET(request) {
                 tokenSet: !!process.env.GITLAB_API_TOKEN,
                 httpStatus: gitlabStatus,
                 active: scheduleActive,
+                putResponse: putData,
                 error: gitlabError
             }
         });
