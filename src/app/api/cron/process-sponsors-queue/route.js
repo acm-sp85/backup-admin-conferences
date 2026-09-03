@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { Resend } from 'resend';
 
-export const maxDuration = 60; // Max execution time for Vercel Hobby
+export const maxDuration = 300; // Max execution time for Vercel Pro
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -39,7 +39,7 @@ export async function GET(request) {
             JOIN sponsors_campaigns c ON q.campaign_id = c.id
             WHERE q.status = 'pending' 
             ORDER BY q.created_at ASC 
-            LIMIT 50
+            LIMIT 250
         `);
 
         if (!pendingItems || pendingItems.length === 0) {

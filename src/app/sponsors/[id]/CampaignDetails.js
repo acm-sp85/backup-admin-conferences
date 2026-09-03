@@ -65,8 +65,8 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     useEffect(() => {
         if (progress && progress.pending > 0) {
             if (progress.pending !== lastPending) {
-                const blocks = Math.ceil(progress.pending / 50);
-                const etaSeconds = blocks * 120; // 2 mins per block
+                const blocks = Math.ceil(progress.pending / 250);
+                const etaSeconds = blocks * 600; // 10 mins per block
                 setTargetEndTime(Date.now() + (etaSeconds * 1000));
                 setLastPending(progress.pending);
             }
@@ -85,7 +85,7 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
             } else {
                 const m = Math.floor(diff / 60000);
                 const s = Math.floor((diff % 60000) / 1000);
-                setTimeLeftStr(`ETA: ~${m}m ${s}s`);
+                setTimeLeftStr(`ETA: ~${m}m ${s}s (Next batch every 10m)`);
             }
         };
         updateStr();
