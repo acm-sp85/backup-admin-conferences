@@ -35,6 +35,10 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     const [showBounces, setShowBounces] = useState(false);
     const fileInputRef = useRef(null);
     
+    const [lastPending, setLastPending] = useState(null);
+    const [targetEndTime, setTargetEndTime] = useState(null);
+    const [timeLeftStr, setTimeLeftStr] = useState('');
+    
     const isSent = campaign.status === 'completed';
     const isQueued = campaign.status === 'queued';
     const isSendingStatus = campaign.status === 'sending' || isSending || isQueued;
@@ -47,7 +51,6 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
                 const res = await getCampaignProgress(campaign.id);
                 setProgress(res);
                 if (res.pending === 0 && res.total > 0) {
-                    // It might be finished, reload to get 'completed' status
                     window.location.reload();
                 }
             };
@@ -58,6 +61,38 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
             if (interval) clearInterval(interval);
         };
     }, [isQueued, campaign.id]);
+
+    useEffect(() => {
+        if (progress && progress.pending > 0) {
+            if (progress.pending !== lastPending) {
+                const blocks = Math.ceil(progress.pending / 50);
+                const etaSeconds = blocks * 120; // 2 mins per block
+                setTargetEndTime(Date.now() + (etaSeconds * 1000));
+                setLastPending(progress.pending);
+            }
+        }
+    }, [progress, lastPending]);
+
+    useEffect(() => {
+        if (!targetEndTime) return;
+        
+        // Update immediately
+        const updateStr = () => {
+            const now = Date.now();
+            const diff = targetEndTime - now;
+            if (diff <= 0) {
+                setTimeLeftStr('Finishing up...');
+            } else {
+                const m = Math.floor(diff / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                setTimeLeftStr(`ETA: ~${m}m ${s}s`);
+            }
+        };
+        updateStr();
+        
+        const interval = setInterval(updateStr, 1000);
+        return () => clearInterval(interval);
+    }, [targetEndTime]);
 
     async function handleSaveDetails() {
         setIsSaving(true);
@@ -303,9 +338,12 @@ ${customText}
                         </button>
                     )}
                     {(isSending || isQueued) && (
-                        <button disabled className="px-4 py-2 bg-[#0ea5e9] text-white text-sm font-semibold rounded-lg opacity-80 cursor-not-allowed">
-                            {progress ? `Sent ${progress.sent + progress.failed} / ${progress.total}` : 'Queued for sending...'}
-                        </button>
+                        <div className="flex flex-col items-end">
+                            <button disabled className="px-4 py-2 bg-[#0ea5e9] text-white text-sm font-semibold rounded-lg opacity-80 cursor-not-allowed">
+                                {progress ? `Sent ${progress.sent + progress.failed} / ${progress.total}` : 'Queued for sending...'}
+                            </button>
+                            {timeLeftStr && <span className="text-[10px] text-[#0ea5e9] font-bold mt-1.5">{timeLeftStr}</span>}
+                        </div>
                     )}
                 </div>
             </div>

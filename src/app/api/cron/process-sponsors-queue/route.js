@@ -2,7 +2,27 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { Resend } from 'resend';
 
+export const maxDuration = 60; // Max execution time for Vercel Hobby
+
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function toggleGitlabSchedule(active) {
+    if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
+        try {
+            const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+            await fetch(gitlabUrl, {
+                method: 'PUT',
+                headers: {
+                    'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ active })
+            });
+        } catch (err) {
+            console.error(`Failed to toggle GitLab schedule to ${active}:`, err);
+        }
+    }
+}
 
 export async function GET(request) {
     if (process.env.CRON_SECRET) {
@@ -23,7 +43,8 @@ export async function GET(request) {
         `);
 
         if (!pendingItems || pendingItems.length === 0) {
-            return NextResponse.json({ message: 'No pending emails in the queue.' });
+            await toggleGitlabSchedule(false);
+            return NextResponse.json({ message: 'No pending emails in the queue. Schedule deactivated.' });
         }
 
         let successCount = 0;
@@ -59,7 +80,9 @@ export async function GET(request) {
             const personalizedSubject = replaceVars(item.subject, recipient);
 
             try {
-                await resend.emails.send({
+                // The Resend SDK resolves normally unless there is a network error, 
+                // but validation errors are returned inside the object.
+                const { error } = await resend.emails.send({
                     from: 'Sponsors Nanoge <sponsors@nanoge.org>',
                     to: recipient.email,
                     bcc: 'sponsors-enviados@nanoge.org',
@@ -68,15 +91,22 @@ export async function GET(request) {
                     tags: [{ name: 'campaign_id', value: String(item.campaign_id) }]
                 });
                 
-                successCount++;
-                await query(`UPDATE sponsors_campaign_queue SET status = 'sent' WHERE id = ?`, [item.id]);
+                if (error) {
+                    console.error(`Resend API error for ${recipient.email}:`, error);
+                    failCount++;
+                    await query(`UPDATE sponsors_campaign_queue SET status = 'failed', error_message = ? WHERE id = ?`, [error.message || 'Resend error', item.id]);
+                } else {
+                    successCount++;
+                    await query(`UPDATE sponsors_campaign_queue SET status = 'sent' WHERE id = ?`, [item.id]);
+                }
             } catch (err) {
                 console.error(`Failed to send to ${recipient.email}:`, err);
                 failCount++;
                 await query(`UPDATE sponsors_campaign_queue SET status = 'failed', error_message = ? WHERE id = ?`, [err.message || 'Unknown error', item.id]);
             }
             
-            await new Promise(r => setTimeout(r, 200));
+            // Sleep for 0.5s to drip-feed emails and protect reputation
+            await new Promise(r => setTimeout(r, 500));
         }
 
         for (const campaignId of processedCampaignIds) {
@@ -89,6 +119,11 @@ export async function GET(request) {
             if (remaining[0].count === 0 || remaining[0].count === '0') {
                 await query("UPDATE sponsors_campaigns SET status = 'completed', sent_at = NOW() WHERE id = ?", [campaignId]);
             }
+        }
+        
+        const totalRemaining = await query(`SELECT COUNT(*) as count FROM sponsors_campaign_queue WHERE status = 'pending'`);
+        if (totalRemaining[0].count === 0 || totalRemaining[0].count === '0') {
+            await toggleGitlabSchedule(false);
         }
 
         return NextResponse.json({

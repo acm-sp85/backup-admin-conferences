@@ -279,6 +279,24 @@ export async function enqueueCampaign(id, recipients) {
         
         // Update campaign status
         await updateCampaignStatus(id, 'queued');
+        
+        // Auto-enable GitLab schedule if variables are present
+        if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
+            try {
+                const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+                await fetch(gitlabUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: true })
+                });
+            } catch (err) {
+                console.error("Failed to activate GitLab schedule:", err);
+            }
+        }
+        
         return { success: true };
     } catch (e) {
         console.error('Error enqueueing campaign:', e);
