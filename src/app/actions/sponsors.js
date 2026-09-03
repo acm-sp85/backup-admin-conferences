@@ -283,7 +283,7 @@ export async function enqueueCampaign(id, recipients) {
         // Auto-enable GitLab schedule if variables are present
         if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
             try {
-                const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+                const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${encodeURIComponent(process.env.GITLAB_PROJECT_ID)}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
                 
                 // 1. Activate the schedule
                 await fetch(gitlabUrl, {

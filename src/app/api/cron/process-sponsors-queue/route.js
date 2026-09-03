@@ -9,7 +9,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 async function toggleGitlabSchedule(active) {
     if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
         try {
-            const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${process.env.GITLAB_PROJECT_ID}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+            const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${encodeURIComponent(process.env.GITLAB_PROJECT_ID)}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
             await fetch(gitlabUrl, {
                 method: 'PUT',
                 headers: {
