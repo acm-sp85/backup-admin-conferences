@@ -1,8 +1,8 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { updateCampaign, updateCampaignRecipients, sendSingleCampaignEmail, updateCampaignStatus, deleteCampaign, syncCampaignBounces } from '@/app/actions/sponsors';
+import { updateCampaign, updateCampaignRecipients, updateCampaignStatus, deleteCampaign, syncCampaignBounces, enqueueCampaign, getCampaignProgress } from '@/app/actions/sponsors';
 
 export default function CampaignDetails({ campaign, initialBounces = [], initialAttachments = [] }) {
     const [name, setName] = useState(campaign.name || '');
@@ -30,14 +30,34 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     
     const [isSending, setIsSending] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [sentCount, setSentCount] = useState(0);
+    const [progress, setProgress] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showBounces, setShowBounces] = useState(false);
     const fileInputRef = useRef(null);
     
     const isSent = campaign.status === 'completed';
-    const isSendingStatus = campaign.status === 'sending' || isSending;
+    const isQueued = campaign.status === 'queued';
+    const isSendingStatus = campaign.status === 'sending' || isSending || isQueued;
     const isReadonly = isSent || isSendingStatus;
+
+    useEffect(() => {
+        let interval;
+        if (isQueued) {
+            const fetchProgress = async () => {
+                const res = await getCampaignProgress(campaign.id);
+                setProgress(res);
+                if (res.pending === 0 && res.total > 0) {
+                    // It might be finished, reload to get 'completed' status
+                    window.location.reload();
+                }
+            };
+            fetchProgress();
+            interval = setInterval(fetchProgress, 5000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isQueued, campaign.id]);
 
     async function handleSaveDetails() {
         setIsSaving(true);
@@ -63,44 +83,21 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
             alert('Cannot send without recipients.');
             return;
         }
-        if (!confirm(`Are you sure you want to send this email to ${recipients.length} recipients? This action cannot be undone.`)) return;
+        if (!confirm(`Are you sure you want to queue this email to ${recipients.length} recipients?`)) return;
         
         // ensure saved first
         await updateCampaign(campaign.id, { name, subject, body });
         
         setIsSending(true);
-        setSentCount(0);
         
-        const statusRes = await updateCampaignStatus(campaign.id, 'sending');
-        if (statusRes.error) {
-            alert(statusRes.error);
+        const res = await enqueueCampaign(campaign.id, recipients);
+        if (res.error) {
+            alert(res.error);
             setIsSending(false);
             return;
         }
         
-        let successCount = 0;
-        let failCount = 0;
-        
-        for (let i = 0; i < recipients.length; i++) {
-            const recipient = recipients[i];
-            if (!recipient.email) continue;
-            
-            const res = await sendSingleCampaignEmail(campaign.id, recipient);
-            if (res.error) {
-                console.error(res.error);
-                failCount++;
-            } else {
-                successCount++;
-            }
-            
-            setSentCount(i + 1);
-            // 500ms delay to avoid rate limiting
-            await new Promise(r => setTimeout(r, 500));
-        }
-        
-        await updateCampaignStatus(campaign.id, 'completed');
-        setIsSending(false);
-        alert(`Campaign sent! ${successCount} succeeded, ${failCount} failed.`);
+        // The page will revalidate and status will become 'queued', triggering the useEffect
     }
 
     async function handleSyncBounces() {
@@ -256,6 +253,7 @@ ${customText}
                     <div className="flex items-center gap-2 mt-1">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                             isSent ? 'bg-[#ecfdf5] text-[#10b981]' : 
+                            isQueued ? 'bg-[#f0f9ff] text-[#0ea5e9]' :
                             isSendingStatus ? 'bg-[#fff5e6] text-[#ff9500]' : 
                             'bg-[#f2f2f7] text-[#8e8e93]'
                         }`}>
@@ -304,9 +302,9 @@ ${customText}
                             Dispatch Campaign
                         </button>
                     )}
-                    {isSending && (
-                        <button disabled className="px-4 py-2 bg-[#ff9500] text-white text-sm font-semibold rounded-lg opacity-80 cursor-not-allowed">
-                            Sending {sentCount} / {recipients.length}...
+                    {(isSending || isQueued) && (
+                        <button disabled className="px-4 py-2 bg-[#0ea5e9] text-white text-sm font-semibold rounded-lg opacity-80 cursor-not-allowed">
+                            {progress ? `Sent ${progress.sent + progress.failed} / ${progress.total}` : 'Queued for sending...'}
                         </button>
                     )}
                 </div>

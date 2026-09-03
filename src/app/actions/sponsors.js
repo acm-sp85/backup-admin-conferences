@@ -174,6 +174,8 @@ export async function updateCampaignStatus(id, status) {
     try {
         if (status === 'completed') {
             await query("UPDATE sponsors_campaigns SET status = ?, sent_at = NOW() WHERE id = ?", [status, id]);
+        } else if (status === 'queued') {
+            await query("UPDATE sponsors_campaigns SET status = ? WHERE id = ?", [status, id]);
         } else {
             await query("UPDATE sponsors_campaigns SET status = ? WHERE id = ?", [status, id]);
         }
@@ -248,5 +250,68 @@ export async function sendSingleCampaignEmail(id, recipient) {
     } catch (e) {
         console.error(`Failed to send to ${recipient?.email}:`, e);
         return { error: `Failed to dispatch email to ${recipient?.email}` };
+    }
+}
+
+export async function enqueueCampaign(id, recipients) {
+    await requireAdmin();
+    
+    if (!recipients || recipients.length === 0) return { error: 'No recipients provided' };
+    
+    try {
+        // Enqueue all recipients
+        const values = recipients.map(r => [
+            id, 
+            r.email, 
+            r.name || '', 
+            r.company || '',
+            'pending'
+        ]);
+        
+        // Insert in batches if very large, but mysql2/promise query handles multiple values fine up to reasonable limits
+        await query(
+            'INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ?',
+            [values]
+        );
+        
+        // Update campaign status
+        await updateCampaignStatus(id, 'queued');
+        return { success: true };
+    } catch (e) {
+        console.error('Error enqueueing campaign:', e);
+        return { error: 'Failed to enqueue campaign' };
+    }
+}
+
+export async function getCampaignProgress(id) {
+    await requireAdmin();
+    
+    try {
+        const results = await query(`
+            SELECT status, COUNT(*) as count 
+            FROM sponsors_campaign_queue 
+            WHERE campaign_id = ? 
+            GROUP BY status
+        `, [id]);
+        
+        let pending = 0;
+        let sent = 0;
+        let failed = 0;
+        
+        for (const row of results) {
+            if (row.status === 'pending') pending = Number(row.count);
+            if (row.status === 'sent') sent = Number(row.count);
+            if (row.status === 'failed') failed = Number(row.count);
+        }
+        
+        return { 
+            pending, 
+            sent, 
+            failed,
+            total: pending + sent + failed 
+        };
+    } catch (e) {
+        console.error('Error fetching campaign progress:', e);
+        return { pending: 0, sent: 0, failed: 0, total: 0 };
     }
 }
