@@ -4,7 +4,6 @@ import { jwtVerify } from 'jose';
 const secretKey = process.env.SESSION_SECRET || 'a-very-long-and-secure-fallback-secret-key-123';
 const encodedKey = new TextEncoder().encode(secretKey);
 
-// 1. Specify public routes (all others are protected)
 const PUBLIC_PATHS = [
   '/login',
   '/setup-password',
@@ -14,6 +13,7 @@ const PUBLIC_PATHS = [
   '/visualizacion-streaming-cipie-2026',
   '/api/participants/check-access',
   '/certificates',
+  '/api/cron',
 ];
 
 export default async function proxy(request) {
