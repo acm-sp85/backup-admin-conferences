@@ -24,4 +24,4 @@ process-sponsors-queue:
   image: curlimages/curl:latest
   script:
     - echo "Triggering background queue..."
-    - 'curl -f -X GET -H "Authorization: Bearer $CRON_SECRET" "$PROD_DOMAIN/api/cron/process-sponsors-queue"'
+    - 'curl -f -L -v -X GET -H "Authorization: Bearer $CRON_SECRET" "$PROD_DOMAIN/api/cron/process-sponsors-queue"'
