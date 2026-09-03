@@ -142,5 +142,6 @@ When manually creating participants or importing via CSV for the **CIPIE** confe
 - `Streaming`
 - `Coordinador de simposio Waved`
 - `Ponente Simposio Waved`
+-
 
 *(If left blank during CSV import, it defaults to `"Standard"`)*
