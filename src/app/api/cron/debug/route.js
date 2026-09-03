@@ -16,6 +16,7 @@ export async function GET(request) {
         let gitlabStatus = 'Not tested';
         let gitlabError = null;
         let scheduleActive = null;
+        let putData = null;
 
         if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
             try {
@@ -30,7 +31,7 @@ export async function GET(request) {
                     },
                     body: JSON.stringify({ active: true })
                 });
-                const putData = await putRes.json();
+                putData = await putRes.json();
 
                 const res = await fetch(gitlabUrl, {
                     method: 'GET',
