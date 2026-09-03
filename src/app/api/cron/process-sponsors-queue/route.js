@@ -122,7 +122,7 @@ export async function GET(request) {
         }
         
         const totalRemaining = await query(`SELECT COUNT(*) as count FROM sponsors_campaign_queue WHERE status = 'pending'`);
-        if (totalRemaining[0].count === 0 || totalRemaining[0].count === '0') {
+        if (Number(totalRemaining[0].count) === 0) {
             await toggleGitlabSchedule(false);
         }
 
