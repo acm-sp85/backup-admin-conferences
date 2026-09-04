@@ -125,7 +125,7 @@ export const emailTemplates = {
         const brand = getBranding(conference);
         
         return {
-            subject: `Entradas a la Cena de Gala - ${brand.name}`,
+            subject: `Social Dinner Tickets- ${brand.name}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     ${renderHeader(brand)}
