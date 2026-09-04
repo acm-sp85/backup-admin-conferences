@@ -39,10 +39,15 @@ export function formatSocialDinnerDate(dateStr, timeStr, timezone) {
 
         let formatted = `${weekday}, ${monthName} ${day}${suffix}`;
         if (actualTimeStr) {
-            formatted += `, at ${actualTimeStr}h`;
-        }
-        if (timezone) {
-            formatted += ` (${timezone})`;
+            let [hours, minutes] = actualTimeStr.split(':');
+            let period = 'AM';
+            hours = parseInt(hours, 10);
+            if (hours >= 12) {
+                period = 'PM';
+                if (hours > 12) hours -= 12;
+            }
+            if (hours === 0) hours = 12;
+            formatted += ` at ${hours}:${minutes} ${period}`;
         }
         return formatted;
     } catch (e) {
@@ -86,7 +91,15 @@ export function formatRegistrationDate(datetimeStr) {
 
         let formatted = `${weekday}, ${monthName} ${day}${suffix}`;
         if (timeStr) {
-            formatted += `, at ${timeStr}h`;
+            let [hours, minutes] = timeStr.split(':');
+            let period = 'AM';
+            hours = parseInt(hours, 10);
+            if (hours >= 12) {
+                period = 'PM';
+                if (hours > 12) hours -= 12;
+            }
+            if (hours === 0) hours = 12;
+            formatted += ` at ${hours}:${minutes} ${period}`;
         }
         return formatted;
     } catch (e) {
