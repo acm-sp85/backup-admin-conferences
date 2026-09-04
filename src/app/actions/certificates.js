@@ -179,7 +179,7 @@ export async function sendCertificateEmail(registrationId) {
     }
 
     // Build email
-    const { subject, html } = await getEmailTemplate(participant.conference_id, 'certificate', {
+    const { subject, html, from } = await getEmailTemplate(participant.conference_id, 'certificate', {
         name: participant.name,
         institution,
         entityAddress: participant.entity_address,
@@ -200,7 +200,7 @@ export async function sendCertificateEmail(registrationId) {
     });
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: from || EMAIL_CONFIG.fromConferences,
         to: [resolveEmail(participant)],
         subject,
         html

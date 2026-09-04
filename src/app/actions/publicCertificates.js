@@ -3,7 +3,7 @@
 import { query } from '@/lib/db';
 import { encrypt } from '@/lib/auth';
 import { Resend } from 'resend';
-import { EMAIL_CONFIG, getBranding, renderHeader } from '@/lib/email-templates';
+import { EMAIL_CONFIG, getBranding, renderHeader, getSenderForConference } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -106,7 +106,7 @@ export async function sendPublicCertificateEmail(email, conferenceId, registrati
     `;
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: getSenderForConference(conf),
         to: [email.trim().toLowerCase()],
         subject: textConfig.subject,
         html
@@ -172,7 +172,7 @@ export async function sendAdminCertificatesEmail(email, conferenceId) {
     `;
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: getSenderForConference(conf),
         to: [email.trim().toLowerCase()],
         subject: textConfig.subject,
         html

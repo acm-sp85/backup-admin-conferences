@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { headers } from 'next/headers';
 import { verifySession, encrypt } from '@/lib/auth';
-import { emailTemplates, EMAIL_CONFIG } from '@/lib/email-templates';
+import { emailTemplates, EMAIL_CONFIG, getSenderForConference } from '@/lib/email-templates';
 import { resolveEmail } from '@/lib/email-resolver';
 import { logAction } from '@/lib/logger';
 
@@ -86,7 +86,7 @@ export async function inviteUser(prevState, formData) {
         });
 
         const { data, error: mailError } = await resend.emails.send({
-            from: EMAIL_CONFIG.from,
+            from: getSenderForConference(conference),
             to: deliveryEmail,
             subject: template.subject,
             html: template.html

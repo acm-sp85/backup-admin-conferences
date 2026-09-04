@@ -122,13 +122,13 @@ export async function sendSocialDinnerQR(registrationId) {
     }
 
     // Send Email
-    const { subject, html } = await getEmailTemplate(conference?.id, 'socialDinnerTickets', {
+    const { subject, html, from } = await getEmailTemplate(conference?.id, 'socialDinnerTickets', {
         name: participant.name,
         qrCodes
     });
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: from || EMAIL_CONFIG.fromConferences,
         to: [resolveEmail(participant)],
         subject,
         html

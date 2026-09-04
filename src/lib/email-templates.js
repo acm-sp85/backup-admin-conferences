@@ -14,6 +14,19 @@ export const EMAIL_CONFIG = {
     fromVoting: process.env.EMAIL_FROM_VOTING || 'Smart Conference Voting <no-reply@smart-conference.org>',
 };
 
+export const getSenderForConference = (conference, type = '') => {
+    if (!conference || !conference.email_from_domain) {
+        return type.toLowerCase().includes('voting') ? EMAIL_CONFIG.fromVoting : EMAIL_CONFIG.fromConferences;
+    }
+    const domain = conference.email_from_domain;
+    const cleanDomain = domain.startsWith('@') ? domain.substring(1) : domain;
+    
+    if (type.toLowerCase().includes('voting')) {
+        return `${conference.acronym} Voting <no-reply@${cleanDomain}>`;
+    }
+    return `${conference.acronym} Admin <no-reply@${cleanDomain}>`;
+};
+
 /**
  * HELPER: Safe defaults for conference data
  */
@@ -125,7 +138,7 @@ export const emailTemplates = {
         const brand = getBranding(conference);
         
         return {
-            subject: `Social Dinner Tickets- ${brand.name}`,
+            subject: `${brand.name} - Social Dinner Tickets`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     ${renderHeader(brand)}

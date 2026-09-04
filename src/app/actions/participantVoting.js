@@ -228,13 +228,13 @@ export async function sendVoterInvite(participantId, conferenceId) {
             email_alias: participant.participant_email_alias
         });
         console.log(`📧 Sending Voting Invite to ${sendTo} from ${EMAIL_CONFIG.fromVoting}`);
-        const { subject, html } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
+        const { subject, html, from } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
             name: participant.firstName,
             magicLink
         });
 
         const { data, error } = await resend.emails.send({
-            from: EMAIL_CONFIG.fromVoting,
+            from: from || EMAIL_CONFIG.fromVoting,
             to: sendTo,
             subject,
             html

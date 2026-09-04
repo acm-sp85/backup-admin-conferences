@@ -7,7 +7,7 @@ import { Resend } from 'resend';
 import { generateQR } from '@/lib/qr';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
-import { EMAIL_CONFIG, getBranding, renderHeader } from '@/lib/email-templates';
+import { EMAIL_CONFIG, getBranding, renderHeader, getSenderForConference } from '@/lib/email-templates';
 import { resolveEmail } from '@/lib/email-resolver';
 import { logAction } from '@/lib/logger';
 
@@ -337,7 +337,7 @@ export async function sendActivityQREmail(attendeeId, activityId) {
     }
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: getSenderForConference(conference),
         to: [resolveEmail(attendee)],
         subject,
         html

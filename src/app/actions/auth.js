@@ -112,10 +112,10 @@ export async function requestMagicLink(prevState, formData) {
         conferenceId = results[0]?.id;
       }
 
-      const { subject, html } = await getEmailTemplate(conferenceId, 'magicLink', { magicLink });
+      const { subject, html, from } = await getEmailTemplate(conferenceId, 'magicLink', { magicLink });
       
       const { data, error } = await resend.emails.send({
-        from: EMAIL_CONFIG.from,
+        from: from || EMAIL_CONFIG.from,
         to: deliveryEmail,
         subject,
         html,

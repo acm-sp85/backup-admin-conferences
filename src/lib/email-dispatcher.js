@@ -25,10 +25,13 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   const bodyKey = columnMap[type];
   let html = conf ? conf[bodyKey] : null;
 
+  const { getSenderForConference } = require('@/lib/email-templates');
+  const from = getSenderForConference(conf, type);
+
   // If no custom body, fall back to generic template
   if (!html) {
     const generic = emailTemplates[type]({ ...placeholders, conference: conf });
-    return { subject: generic.subject, html: generic.html };
+    return { subject: generic.subject, html: generic.html, from };
   }
 
   // Clean up registration details for checkin email templates (whether custom or default)
@@ -183,5 +186,5 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   });
 
   const generic = emailTemplates[type]({ ...placeholders, conference: conf });
-  return { subject: generic.subject, html };
+  return { subject: generic.subject, html, from };
 }

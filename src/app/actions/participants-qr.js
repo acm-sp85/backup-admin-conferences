@@ -38,13 +38,13 @@ export async function sendParticipantCheckinQR(registrationId) {
     }
 
     // Send Email
-    const { subject, html } = await getEmailTemplate(participant.conference_id, 'emailCheckin', {
+    const { subject, html, from } = await getEmailTemplate(participant.conference_id, 'emailCheckin', {
         name: participant.name,
-        token: participant.token
+        token: participant.token,
     });
 
     const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.fromConferences,
+        from: from || EMAIL_CONFIG.fromConferences,
         to: [resolveEmail(participant)],
         subject,
         html
