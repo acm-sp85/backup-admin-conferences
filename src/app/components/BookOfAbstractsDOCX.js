@@ -96,7 +96,8 @@ const getImageDimensions = (base64Url) => {
     });
 };
 
-export async function generateBookOfAbstractsDOCX({ conferenceName, items, fieldsConfig }) {
+export async function generateBookOfAbstractsDOCX({ conferenceName, items, fieldsConfig, accentColor = '#003087' }) {
+    const docxAccentColor = accentColor.replace('#', '');
     
     // Group items by `groupInfo`
     const groupedItems = {};
@@ -121,7 +122,7 @@ export async function generateBookOfAbstractsDOCX({ conferenceName, items, field
                 text: 'BOOK OF ABSTRACTS',
                 size: 72,
                 bold: true,
-                color: '003087',
+                color: docxAccentColor,
             })],
             alignment: AlignmentType.CENTER
         }),
@@ -129,7 +130,7 @@ export async function generateBookOfAbstractsDOCX({ conferenceName, items, field
             children: [new TextRun({
                 text: (conferenceName || '').toUpperCase(),
                 size: 40,
-                color: '003087',
+                color: docxAccentColor,
             })],
             alignment: AlignmentType.CENTER
         }),
@@ -143,10 +144,10 @@ export async function generateBookOfAbstractsDOCX({ conferenceName, items, field
         // Group Header
         children.push(
             new Paragraph({
-                children: [new TextRun({ text: groupName, bold: true, size: 28, color: '003087' })],
+                children: [new TextRun({ text: groupName, bold: true, size: 28, color: docxAccentColor })],
                 heading: HeadingLevel.HEADING_2,
                 border: {
-                    bottom: { style: BorderStyle.SINGLE, size: 6, color: '003087', space: 1 },
+                    bottom: { style: BorderStyle.SINGLE, size: 6, color: docxAccentColor, space: 1 },
                 },
                 spacing: { before: convertInchesToTwip(0.2), after: convertInchesToTwip(0.2) },
             })
@@ -163,7 +164,7 @@ export async function generateBookOfAbstractsDOCX({ conferenceName, items, field
             children.push(
                 new Paragraph({
                     children: [
-                        new TextRun({ text: item.code ? `${item.code}. ` : `${index + 1}. `, bold: true, size: 20, color: '003087' }),
+                        new TextRun({ text: item.code ? `${item.code}. ` : `${index + 1}. `, bold: true, size: 20, color: docxAccentColor }),
                         new TextRun({ text: item.title || 'Untitled', bold: true, size: 20 })
                     ],
                     spacing: { after: convertInchesToTwip(0.04) }

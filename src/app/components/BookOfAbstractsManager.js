@@ -114,10 +114,12 @@ export default function BookOfAbstractsManager({ conferences, userRole }) {
         const activeItems = items.filter(i => !deletedItemIds.includes(i.id));
         if (!selectedConf || activeItems.length === 0) return;
         
+        const accentColor = selectedConf.accent_color || '#007aff';
         const printState = {
             conference: selectedConf,
             items: activeItems,
-            fieldsConfig
+            fieldsConfig,
+            accentColor
         };
         sessionStorage.setItem('book_of_abstracts_print_data', JSON.stringify(printState));
         window.open('/book-of-abstracts/print', '_blank');
@@ -128,10 +130,12 @@ export default function BookOfAbstractsManager({ conferences, userRole }) {
         if (!selectedConf || activeItems.length === 0) return;
         setIsGenerating(true);
         try {
+            const accentColor = selectedConf.accent_color || '#007aff';
             const blob = await generateBookOfAbstractsDOCX({
                 conferenceName: selectedConf.name,
                 items: activeItems,
-                fieldsConfig
+                fieldsConfig,
+                accentColor
             });
 
             const url = URL.createObjectURL(blob);

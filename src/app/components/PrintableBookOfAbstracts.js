@@ -88,7 +88,7 @@ export default function PrintableBookOfAbstracts() {
 
     if (!data) return <div className="p-8">Loading print view...</div>;
 
-    const { conference, items, fieldsConfig } = data;
+    const { conference, items, fieldsConfig, accentColor = '#003087' } = data;
 
     const groupedItems = {};
     items.forEach(item => {
@@ -105,8 +105,8 @@ export default function PrintableBookOfAbstracts() {
         <div className={`bg-white text-black min-h-screen ${inter.className}`}>
             {/* Cover Page */}
             <div className="flex flex-col items-center justify-center min-h-[90vh] break-after-page text-center">
-                <h1 className="text-5xl font-extrabold text-[#003087] mb-8 tracking-tight">BOOK OF ABSTRACTS</h1>
-                <h2 className="text-3xl font-semibold text-[#003087] max-w-3xl leading-snug">{conference?.name}</h2>
+                <h1 className="text-5xl font-extrabold mb-8 tracking-tight" style={{ color: accentColor }}>BOOK OF ABSTRACTS</h1>
+                <h2 className="text-3xl font-semibold max-w-3xl leading-snug" style={{ color: accentColor }}>{conference?.name}</h2>
             </div>
 
             {/* Content */}
@@ -115,13 +115,13 @@ export default function PrintableBookOfAbstracts() {
                     const groupItems = groupedItems[groupName];
                     return (
                         <div key={groupName} className={groupIdx < groups.length - 1 ? 'break-after-page' : ''}>
-                            <h2 className="text-2xl font-bold text-[#003087] border-b-2 border-[#003087] pb-2 mb-6 mt-8 break-after-avoid">
+                            <h2 className="text-2xl font-bold border-b-2 pb-2 mb-6 mt-8 break-after-avoid" style={{ color: accentColor, borderColor: accentColor }}>
                                 {groupName}
                             </h2>
 
                             {groupItems.map((item, idx) => (
                                 <div key={item.id} className="mb-10 break-inside-avoid">
-                                    <h3 className="text-lg font-bold text-[#003087] mb-3 leading-snug break-after-avoid">
+                                    <h3 className="text-lg font-bold mb-3 leading-snug break-after-avoid" style={{ color: accentColor }}>
                                         <span className="mr-2">{item.code ? item.code + '.' : (idx + 1) + '.'}</span>
                                         {item.title || 'Untitled'}
                                     </h3>
