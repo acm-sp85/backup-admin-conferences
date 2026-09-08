@@ -25,7 +25,7 @@ export async function getAbstractsData(conferenceId) {
             sess.start_time as session_start_time
         FROM program_slots ps
         JOIN program_sessions sess ON ps.session_id = sess.id
-        WHERE sess.conference_id = ? AND ps.type IN ('oral', 'invited')
+        WHERE sess.conference_id = ? AND ps.type IN ('oral', 'invited', 'keynote', 'plenary')
         ORDER BY sess.start_time ASC, ps.start_time ASC
     `, [conferenceId]);
 

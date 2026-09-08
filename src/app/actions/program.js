@@ -103,10 +103,10 @@ export async function updateSlotData(slotId, data) {
         throw new Error('Unauthorized');
     }
 
-    const { title, presenter_name, type, presenter_entity, presenter_country } = data;
+    const { title, presenter_name, type, presenter_entity, presenter_country, authors, content } = data;
     await query(
-        'UPDATE program_slots SET title = ?, presenter_name = ?, type = ?, presenter_entity = ?, presenter_country = ?, is_manual = 1 WHERE id = ?',
-        [title, presenter_name, type, presenter_entity, presenter_country, slotId]
+        'UPDATE program_slots SET title = ?, presenter_name = ?, type = ?, presenter_entity = ?, presenter_country = ?, authors = ?, content = ?, is_manual = 1 WHERE id = ?',
+        [title, presenter_name, type, presenter_entity, presenter_country, authors, content, slotId]
     );
 
     revalidatePath('/program');
@@ -147,10 +147,10 @@ export async function createSlotData(sessionId, data) {
         throw new Error('Unauthorized');
     }
 
-    const { title, presenter_name, type, presenter_entity, presenter_country, start_time } = data;
+    const { title, presenter_name, type, presenter_entity, presenter_country, start_time, authors, content } = data;
     await query(
-        'INSERT INTO program_slots (session_id, title, presenter_name, type, presenter_entity, presenter_country, start_time, is_manual) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-        [sessionId, title, presenter_name, type, presenter_entity, presenter_country, start_time]
+        'INSERT INTO program_slots (session_id, title, presenter_name, type, presenter_entity, presenter_country, start_time, authors, content, is_manual) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+        [sessionId, title, presenter_name, type, presenter_entity, presenter_country, start_time, authors, content]
     );
 
     revalidatePath('/program');

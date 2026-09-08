@@ -77,7 +77,7 @@ export default function ProgramManager({ conferences, userRole }) {
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isCreatingSlot, setIsCreatingSlot] = useState(null); // stores sessionId
     const [newSessionData, setNewSessionData] = useState({ full_session_name: '', start_time: '', end_time: '' });
-    const [newSlotData, setNewSlotData] = useState({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '' });
+    const [newSlotData, setNewSlotData] = useState({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '', authors: '', content: '' });
 
     useEffect(() => {
         if (selectedConfId) {
@@ -143,7 +143,9 @@ export default function ProgramManager({ conferences, userRole }) {
                 presenter_name: editingSlot.presenter_name, 
                 type: editingSlot.type,
                 presenter_entity: editingSlot.presenter_entity,
-                presenter_country: editingSlot.presenter_country
+                presenter_country: editingSlot.presenter_country,
+                authors: editingSlot.authors,
+                content: editingSlot.content
             });
             setEditingSlot(null);
             await loadData();
@@ -209,7 +211,7 @@ export default function ProgramManager({ conferences, userRole }) {
                 start_time: datetimeStr 
             });
             setIsCreatingSlot(null);
-            setNewSlotData({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '' });
+            setNewSlotData({ title: '', presenter_name: '', presenter_entity: '', presenter_country: '', type: '', start_time: '', authors: '', content: '' });
             await loadData();
         } catch (error) {
             alert('Error creating slot: ' + error.message);
@@ -990,6 +992,24 @@ export default function ProgramManager({ conferences, userRole }) {
                                     />
                                 </div>
                             </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Authors</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                                    placeholder="List of authors (e.g. John Doe, Jane Smith...)"
+                                    value={newSlotData.authors}
+                                    onChange={(e) => setNewSlotData({ ...newSlotData, authors: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Abstract Content</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
+                                    placeholder="Enter the abstract content here. You can use simple HTML tags if needed."
+                                    value={newSlotData.content}
+                                    onChange={(e) => setNewSlotData({ ...newSlotData, content: e.target.value })}
+                                />
+                            </div>
                             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
                                 <button type="button" onClick={() => setIsCreatingSlot(null)} className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
                                 <button type="submit" className="px-6 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg text-sm font-bold shadow-lg transition-all flex items-center gap-2">
@@ -1059,6 +1079,22 @@ export default function ProgramManager({ conferences, userRole }) {
                                     onChange={(e) => setEditingSlot({ ...editingSlot, type: e.target.value })}
                                 />
                                 <p className="text-[10px] text-purple-600 italic mt-1">Editing this will mark the slot as manual and prevent overwrites or deletion during sync.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Authors</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                                    value={editingSlot.authors || ''}
+                                    onChange={(e) => setEditingSlot({ ...editingSlot, authors: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Abstract Content</label>
+                                <textarea 
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
+                                    value={editingSlot.content || ''}
+                                    onChange={(e) => setEditingSlot({ ...editingSlot, content: e.target.value })}
+                                />
                             </div>
                             <div className="flex justify-between items-center gap-3 pt-4 border-t mt-4">
                                 {userRole === 'superadmin' ? (
