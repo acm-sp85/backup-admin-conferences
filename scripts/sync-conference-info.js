@@ -62,17 +62,13 @@ async function main() {
     console.log(`\n📡 Connecting to MariaDB...`);
     mariadb = await mysql.createConnection(mariadbConfig);
     
-    // Check if conference exists in MariaDB
     const [rows] = await mariadb.execute('SELECT id, name FROM conferences WHERE acronym = ?', [acronym]);
-    
     if (rows.length === 0) {
-      console.error(`${c.red}❌ Error: Conference '${acronym}' not found in local MariaDB database.${c.reset}`);
-      console.log(`${c.gray}The script requires the conference to be created locally first (e.g., via the Admin UI).${c.reset}`);
-      process.exit(1); // Exit if not found
+      console.log(`${c.yellow}⚠️ Conference '${acronym}' not found in local DB. It will be created.${c.reset}`);
+      // We will insert it later once we fetch the name from MongoDB
+    } else {
+      console.log(`${c.green}✓ Found local conference (ID: ${rows[0].id})${c.reset}`);
     }
-    
-    const confId = rows[0].id;
-    console.log(`${c.green}✓ Found local conference (ID: ${confId})${c.reset}`);
 
     // 2. Connect to MongoDB
     console.log(`\n📡 Connecting to MongoDB...`);
@@ -153,6 +149,14 @@ async function main() {
 
     updateFields.push('email_from_domain = ?');
     updateValues.push(sourceDB === 'nanoge' ? '@nanoge.org' : '@scitoevents.com');
+    
+    updateFields.push('mongo_id = ?');
+    updateValues.push(mongoData._id.toString());
+    
+    if (rows.length === 0) {
+      console.log(`➕ Creating new conference entry in MariaDB...`);
+      await mariadb.execute('INSERT INTO conferences (acronym, name) VALUES (?, ?)', [acronym, mongoData.name || acronym]);
+    }
     
     if (updateFields.length > 0) {
       updateValues.push(acronym); // for the WHERE clause

@@ -39,10 +39,8 @@ ${c.bold}Options:${c.reset}
   ${c.green}-e, --event <ObjectId>${c.reset}    Specify MongoDB Event ID (overrides MONGO_EVENT_ID in .env.local).
   ${c.green}-h, --help${c.reset}                  Show this help message.
 
-${c.bold}Configuration (from .env.local):${c.reset}
-  Conference Acronym: ${c.yellow}${process.env.CONFERENCE_ACRONYM || 'HOPV26'}${c.reset}
-  Platform:           ${c.yellow}${process.env.CONFERENCE_PLATFORM || 'NANOGE'}${c.reset}
-  Event ID:           ${c.yellow}${process.env.MONGO_EVENT_ID || 'Not Defined'}${c.reset}
+${c.bold}Configuration:${c.reset}
+  The script automatically reads the Conference Acronym from the CLI and fetches Platform & Event ID from MariaDB.
   MongoDB URI:        ${c.gray}${process.env.MONGO_URI ? 'Defined' : 'Missing'}${c.reset}
   MariaDB Host:       ${c.gray}${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 3306}${c.reset}
 `);
@@ -58,35 +56,11 @@ async function main() {
 
   const isDryRun = args.includes('--dry-run') || args.includes('-d');
   
-  // Parse event ID from arguments or fall back to env file
-  let eventId = process.env.MONGO_EVENT_ID;
-  const eventIdx = args.findIndex(a => a === '--event' || a === '-e');
-  if (eventIdx !== -1 && args[eventIdx + 1]) {
-    eventId = args[eventIdx + 1];
-  }
+  const positionalArgs = args.filter(a => !a.startsWith('-') && args[args.indexOf(a) - 1] !== '--event' && args[args.indexOf(a) - 1] !== '-e');
+  const ACRONYM = positionalArgs[0];
 
-  const ACRONYM = process.env.CONFERENCE_ACRONYM;
-  const PLATFORM = process.env.CONFERENCE_PLATFORM;
-  const isScito = PLATFORM === 'SCITO';
-  const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
-  
-  // MongoDB collection name is lowercase 'members' on both platforms
-  const collectionName = "members";
-  const mongoParticipantsView = `${ACRONYM} - Participants`;
-
-  console.log(`\n${c.bold}${c.cyan}=== Check-in Sync Pipeline ===${c.reset}`);
-  console.log(`${c.bold}Conference Acronym:${c.reset} ${c.yellow}${ACRONYM}${c.reset}`);
-  console.log(`${c.bold}Platform:${c.reset}           ${c.yellow}${PLATFORM}${c.reset}`);
-  console.log(`${c.bold}Target DB Name:${c.reset}     ${c.yellow}${mongoDbName}${c.reset}`);
-  console.log(`${c.bold}Target Collection:${c.reset}  ${c.yellow}${collectionName}${c.reset}`);
-  console.log(`${c.bold}Target Event ID:${c.reset}    ${eventId ? `${c.yellow}${eventId}${c.reset}` : `${c.red}Not Defined (Required for live writes)${c.reset}`}`);
-  console.log(`${c.bold}Execution Mode:${c.reset}     ${isDryRun ? `${c.bold}${c.magenta}OFFLINE DRY-RUN (No Mongo Connection)${c.reset}` : `${c.bold}${c.red}LIVE-WRITE (Modifying MongoDB)${c.reset}`}`);
-  console.log(`--------------------------------------------\n`);
-
-  // If in live mode, ensure we have an event ID
-  if (!eventId && !isDryRun) {
-    console.error(`${c.red}❌ Error: Event ID is required. Please define MONGO_EVENT_ID in .env.local or pass --event <id>${c.reset}`);
-    printHelp();
+  if (!ACRONYM) {
+    console.error('❌ Error: Conference acronym is required (e.g., node scripts/sync-checkins-to-mongo.js MATSUSFall26)');
     process.exit(1);
   }
 
@@ -95,9 +69,48 @@ async function main() {
 
   try {
     // 1. Establish Database Connections
+    console.log(`📡 Connecting to MariaDB...`);
+    mariadb = await mysql.createConnection(mariadbConfig);
+    
+    // Fetch dynamic config from MariaDB
+    const [confRows] = await mariadb.execute('SELECT name, email_from_domain, mongo_id FROM conferences WHERE acronym = ?', [ACRONYM]);
+    if (confRows.length === 0) {
+      console.error(`❌ Error: Conference ${ACRONYM} not found in local database. Run sync-conference-info first.`);
+      process.exit(1);
+    }
+    const confData = confRows[0];
+    const PLATFORM = confData.email_from_domain === '@scitoevents.com' ? 'SCITO' : 'NANOGE';
+    const isScito = PLATFORM === 'SCITO';
+    const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
+    
+    // Parse event ID from arguments or fall back to DB
+    let eventId = confData.mongo_id;
+    const eventIdx = args.findIndex(a => a === '--event' || a === '-e');
+    if (eventIdx !== -1 && args[eventIdx + 1]) {
+      eventId = args[eventIdx + 1];
+    }
+
+    // MongoDB collection name is lowercase 'members' on both platforms
+    const collectionName = "members";
+    const mongoParticipantsView = `${ACRONYM} - Participants`;
+
+    console.log(`\n${c.bold}${c.cyan}=== Check-in Sync Pipeline ===${c.reset}`);
+    console.log(`${c.bold}Conference Acronym:${c.reset} ${c.yellow}${ACRONYM}${c.reset}`);
+    console.log(`${c.bold}Platform:${c.reset}           ${c.yellow}${PLATFORM}${c.reset}`);
+    console.log(`${c.bold}Target DB Name:${c.reset}     ${c.yellow}${mongoDbName}${c.reset}`);
+    console.log(`${c.bold}Target Collection:${c.reset}  ${c.yellow}${collectionName}${c.reset}`);
+    console.log(`${c.bold}Target Event ID:${c.reset}    ${eventId ? `${c.yellow}${eventId}${c.reset}` : `${c.red}Not Defined (Required for live writes)${c.reset}`}`);
+    console.log(`${c.bold}Execution Mode:${c.reset}     ${isDryRun ? `${c.bold}${c.magenta}OFFLINE DRY-RUN (No Mongo Connection)${c.reset}` : `${c.bold}${c.red}LIVE-WRITE (Modifying MongoDB)${c.reset}`}`);
+    console.log(`--------------------------------------------\n`);
+
+    // If in live mode, ensure we have an event ID
+    if (!eventId && !isDryRun) {
+      console.error(`${c.red}❌ Error: Event ID is required. Please ensure mongo_id is in DB or pass --event <id>${c.reset}`);
+      printHelp();
+      process.exit(1);
+    }
+
     if (isDryRun) {
-      console.log(`📡 Connecting to MariaDB (Dry-Run Mode)...`);
-      mariadb = await mysql.createConnection(mariadbConfig);
       console.log(`${c.green}✅ MariaDB connected successfully! [MongoDB connection skipped for Dry-Run]${c.reset}\n`);
     } else {
       const MONGO_URI = process.env.MONGO_URI;
@@ -105,10 +118,9 @@ async function main() {
         console.error(`${c.red}❌ Error: MONGO_URI is missing from .env.local${c.reset}`);
         process.exit(1);
       }
-      console.log(`📡 Connecting to MariaDB and MongoDB (Live Mode)...`);
+      console.log(`📡 Connecting to MongoDB (Live Mode)...`);
       mongoClient = new MongoClient(MONGO_URI);
       await mongoClient.connect();
-      mariadb = await mysql.createConnection(mariadbConfig);
       console.log(`${c.green}✅ Both databases connected successfully!${c.reset}\n`);
     }
 

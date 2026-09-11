@@ -22,22 +22,8 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
 
-// --- CONFIGURATION SECTION ---
-const ACRONYM = process.env.CONFERENCE_ACRONYM || 'HOPV26';
-const PLATFORM = (process.env.CONFERENCE_PLATFORM || 'NANOGE').toUpperCase();
-const isScito = PLATFORM === 'SCITO';
-
-const SYNC_CONFIG = {
-  mongoDbName: isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production'),
-  baseUrl: isScito ? 'https://app.scitoevents.com/static/abstracts/' : 'https://www.nanoge.org/static/abstracts/',
-  mongoParticipantsView: `${ACRONYM} - Participants`, 
-  mongoPaymentsView: `${ACRONYM} - Payments`, 
-  mongoProgramView: `${ACRONYM} - Program`, 
-  mongoPostersView: `${ACRONYM} - Posters`,
-  mongoOralsView: `${ACRONYM} - Orals`,
-  targetConferenceAcronym: ACRONYM,
-  targetConferenceName: process.env.CONFERENCE_NAME || 'HOPV 2026',
-};
+// --- CONFIGURATION MOVED TO RUNTIME ---
+// Configuration will be fetched dynamically from MariaDB.
 // -----------------------------
 
 const { MongoClient } = require('mongodb');
@@ -86,7 +72,14 @@ async function syncAll() {
   const shouldSyncOrals = hasSpecificFlag ? onlyOrals : true;
   const shouldRunCleanup = hasSpecificFlag ? false : !isSafeMode;
 
-  const { targetConferenceAcronym, targetConferenceName, mongoDbName, baseUrl } = SYNC_CONFIG;
+  const positionalArgs = args.filter(a => !a.startsWith('-'));
+  const ACRONYM = positionalArgs[0];
+
+  if (!ACRONYM) {
+    console.error('❌ Error: Conference acronym is required (e.g., npm run sync MATSUSFall26)');
+    process.exit(1);
+  }
+
   const MONGO_URI = process.env.MONGO_URI;
 
   if (!MONGO_URI) {
@@ -94,15 +87,10 @@ async function syncAll() {
     process.exit(1);
   }
 
-  console.log(`🚀 Starting Master Sync for conference: ${targetConferenceAcronym} [Platform: ${PLATFORM}]...`);
-  if (isSafeMode) console.log('🛡️  SAFE MODE ENABLED: Skipping Graveyard Cleanup (No Deletions).');
-  if (hasSpecificFlag) console.log('🎯 SPECIFIC MODULE SYNC ENABLED.');
-
   const mongoClient = new MongoClient(MONGO_URI);
   let mariadb;
 
   try {
-    await mongoClient.connect();
     mariadb = await mysql.createConnection({
       host: process.env.DB_HOST || '127.0.0.1',
       port: Number(process.env.DB_PORT) || 3306,
@@ -110,6 +98,36 @@ async function syncAll() {
       password: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.replace(/\\(\$)/g, '$1') : process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
     });
+    
+    // Fetch dynamic config from MariaDB
+    const [confRows] = await mariadb.execute('SELECT name, email_from_domain FROM conferences WHERE acronym = ?', [ACRONYM]);
+    if (confRows.length === 0) {
+      console.error(`❌ Error: Conference ${ACRONYM} not found in local database. Run sync-conference-info first.`);
+      process.exit(1);
+    }
+    const confData = confRows[0];
+    const PLATFORM = confData.email_from_domain === '@scitoevents.com' ? 'SCITO' : 'NANOGE';
+    const isScito = PLATFORM === 'SCITO';
+    
+    const SYNC_CONFIG = {
+      mongoDbName: isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production'),
+      baseUrl: isScito ? 'https://app.scitoevents.com/static/abstracts/' : 'https://www.nanoge.org/static/abstracts/',
+      mongoParticipantsView: `${ACRONYM} - Participants`, 
+      mongoPaymentsView: `${ACRONYM} - Payments`, 
+      mongoProgramView: `${ACRONYM} - Program`, 
+      mongoPostersView: `${ACRONYM} - Posters`,
+      mongoOralsView: `${ACRONYM} - Orals`,
+      targetConferenceAcronym: ACRONYM,
+      targetConferenceName: confData.name,
+    };
+    
+    const { targetConferenceAcronym, targetConferenceName, mongoDbName, baseUrl } = SYNC_CONFIG;
+
+    console.log(`🚀 Starting Master Sync for conference: ${targetConferenceAcronym} [Platform: ${PLATFORM}]...`);
+    if (isSafeMode) console.log('🛡️  SAFE MODE ENABLED: Skipping Graveyard Cleanup (No Deletions).');
+    if (hasSpecificFlag) console.log('🎯 SPECIFIC MODULE SYNC ENABLED.');
+
+    await mongoClient.connect();
     console.log('📡 Databases connected');
 
     const mongoDb = mongoClient.db(mongoDbName);
