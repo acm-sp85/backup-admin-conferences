@@ -83,17 +83,19 @@ async function main() {
     mongoClient = new MongoClient(process.env.MONGO_URI);
     await mongoClient.connect();
     
-    // Assuming the database name is the production one, you might need to adjust if there's a specific env var
-    const PLATFORM = process.env.CONFERENCE_PLATFORM;
-    const isScito = PLATFORM === 'SCITO';
-    const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
+    console.log(`🔍 Searching for '${acronym}' in nanoge-production (view: All-Conferences)...`);
+    const dbNanoge = mongoClient.db('nanoge-production');
+    const colNanoge = dbNanoge.collection('All-Conferences');
+    let mongoData = await colNanoge.findOne({ acronym: acronym });
+    let sourceDB = 'nanoge';
     
-    const db = mongoClient.db(mongoDbName);
-    const collection = db.collection('All-Conferences');
-    
-    console.log(`🔍 Searching for '${acronym}' in MongoDB (db: ${mongoDbName}, view: All-Conferences)...`);
-    
-    const mongoData = await collection.findOne({ acronym: acronym });
+    if (!mongoData) {
+      console.log(`🔍 Searching for '${acronym}' in scito-prod (view: All-Events-ScitoEvents)...`);
+      const dbScito = mongoClient.db('scito-prod');
+      const colScito = dbScito.collection('All-Events-ScitoEvents');
+      mongoData = await colScito.findOne({ acronym: acronym });
+      sourceDB = 'scito';
+    }
     
     if (!mongoData) {
       console.error(`${c.red}❌ Error: Conference '${acronym}' not found in MongoDB view 'All-Conferences'.${c.reset}`);
@@ -134,6 +136,23 @@ async function main() {
             updateValues.push(endDate.toISOString().split('T')[0]);
         }
     }
+
+    const baseUrl = sourceDB === 'nanoge' 
+        ? 'https://www.nanoge.org/static/events/' 
+        : 'https://app.scitoevents.com/static/events/';
+
+    if (mongoData.image) {
+        updateFields.push('banner_url = ?');
+        updateValues.push(baseUrl + mongoData.image);
+    }
+    
+    if (mongoData.featuredimage) {
+        updateFields.push('logo_url = ?');
+        updateValues.push(baseUrl + mongoData.featuredimage);
+    }
+
+    updateFields.push('email_from_domain = ?');
+    updateValues.push(sourceDB === 'nanoge' ? '@nanoge.org' : '@scitoevents.com');
     
     if (updateFields.length > 0) {
       updateValues.push(acronym); // for the WHERE clause

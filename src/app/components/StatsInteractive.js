@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-export default function StatsInteractive({ total_registrations, total_checked_in, total_revenue, total_inferred, countriesData, countriesDataCheckedIn }) {
+export default function StatsInteractive({ total_registrations, total_checked_in, total_revenue, total_pending, total_inferred, countriesData, countriesDataCheckedIn }) {
   const [filter, setFilter] = useState('all'); // 'all' or 'checked-in'
 
   const activeCountries = filter === 'all' ? countriesData : countriesDataCheckedIn;
@@ -9,7 +9,7 @@ export default function StatsInteractive({ total_registrations, total_checked_in
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
         <div 
           onClick={() => setFilter('all')}
           className={`cursor-pointer bg-white p-6 rounded-2xl border shadow-sm transition-all ${filter === 'all' ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-slate-200/60 opacity-70 hover:opacity-100'}`}
@@ -38,6 +38,13 @@ export default function StatsInteractive({ total_registrations, total_checked_in
           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Revenue</h3>
           <p className="text-3xl font-black text-emerald-600">
             {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(total_revenue || 0)}
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm opacity-70 cursor-default">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Pending Payments</h3>
+          <p className="text-3xl font-black text-red-500">
+            {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(total_pending || 0)}
           </p>
         </div>
       </div>

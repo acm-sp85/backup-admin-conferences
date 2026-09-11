@@ -60,21 +60,21 @@ async function main() {
     mongoClient = new MongoClient(process.env.MONGO_URI);
     await mongoClient.connect();
     
-    const PLATFORM = process.env.CONFERENCE_PLATFORM;
-    const isScito = PLATFORM === 'SCITO';
-    const mongoDbName = isScito ? 'scito-prod' : (process.env.MONGO_DB_NAME || 'nanoge-production');
-    
-    const db = mongoClient.db(mongoDbName);
-    const collection = db.collection('All-Conferences');
-    
-    console.log(`🔍 Fetching all conferences from MongoDB (db: ${mongoDbName}, view: All-Conferences)...`);
-    
     const now = new Date();
     // Filter conferences that end in the future
     const query = { end: { $gte: now } };
     
-    const cursor = collection.find(query);
-    const allConferences = await cursor.toArray();
+    console.log(`🔍 Fetching from nanoge-production (All-Conferences)...`);
+    const dbNanoge = mongoClient.db('nanoge-production');
+    const colNanoge = dbNanoge.collection('All-Conferences');
+    const confsNanoge = await colNanoge.find(query).toArray();
+    
+    console.log(`🔍 Fetching from scito-prod (All-Events-ScitoEvents)...`);
+    const dbScito = mongoClient.db('scito-prod');
+    const colScito = dbScito.collection('All-Events-ScitoEvents');
+    const confsScito = await colScito.find(query).toArray();
+    
+    const allConferences = [...confsNanoge, ...confsScito];
     
     console.log(`${c.green}✓ Found ${allConferences.length} conferences in MongoDB!${c.reset}`);
     
