@@ -24,7 +24,7 @@ const CALENDAR_NAV = { name: 'Calendar', href: '/public-calendar-v9x2m', icon: <
 
 const SETTINGS_NAV = { name: 'Settings', href: '/settings', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> };
 
-export default function Sidebar({ userRole, userName, isOpen, onClose }) {
+export default function Sidebar({ userRole, userName, isOpen, onClose, nextConference }) {
   const pathname = usePathname();
   
   let items = [...NAV];
@@ -76,6 +76,22 @@ export default function Sidebar({ userRole, userName, isOpen, onClose }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-2 overflow-y-auto">
+          {nextConference && (
+            <div 
+              className="mb-4 mt-2 bg-white/[0.03] rounded-xl p-4 flex flex-col justify-center items-center text-center border relative overflow-hidden" 
+              style={{ borderColor: nextConference.accent_color ? `${nextConference.accent_color}40` : 'rgba(255,255,255,0.1)' }}
+            >
+              <div 
+                className="absolute inset-0 opacity-10" 
+                style={{ backgroundColor: nextConference.accent_color || '#ffffff' }}
+              />
+              <div className="relative z-10 w-full">
+                <div className="text-[10px] text-[#aeaeb2] font-bold tracking-wider uppercase mb-1">NEXT CONFERENCE</div>
+                <div className="text-white font-bold text-lg leading-none mb-1.5" style={{ color: nextConference.accent_color || '#ffffff' }}>{nextConference.acronym}</div>
+                <div className="text-xs text-[#aeaeb2]"><span className="font-semibold text-white">{nextConference.daysLeft}</span> days left</div>
+              </div>
+            </div>
+          )}
           <div className="space-y-[2px]">
             {items.map((item) => {
               const isActive = pathname === item.href;

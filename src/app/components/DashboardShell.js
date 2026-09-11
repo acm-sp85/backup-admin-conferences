@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Sidebar from './Sidebar';
 import MobileNavbar from './MobileNavbar';
 
-export default function DashboardShell({ children, userRole, userName, isVoter }) {
+export default function DashboardShell({ children, userRole, userName, isVoter, nextConference }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
@@ -15,6 +15,7 @@ export default function DashboardShell({ children, userRole, userName, isVoter }
           <Sidebar 
             userRole={userRole}
             userName={userName}
+            nextConference={nextConference}
             isOpen={isSidebarOpen} 
             onClose={() => setIsSidebarOpen(false)} 
           />
