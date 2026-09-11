@@ -5,6 +5,8 @@ export const metadata = {
   title: 'Calendar | Admin Conferencias'
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CalendarPage() {
   let conferences = [];
   try {
