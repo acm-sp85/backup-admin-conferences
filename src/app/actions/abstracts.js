@@ -20,6 +20,7 @@ export async function getAbstractsData(conferenceId) {
             ps.toc,
             ps.start_time as slot_start_time,
             ps.presenter_name,
+            ps.presenter_entity,
             sess.id as session_id,
             sess.full_session_name,
             sess.start_time as session_start_time
@@ -76,6 +77,7 @@ export async function getAbstractsData(conferenceId) {
             type: 'oral',
             title: s.title,
             authors: s.authors || s.presenter_name,
+            institution: s.presenter_entity,
             content: s.content,
             toc: s.toc,
             code: `${currentSessionPrefix}${oralCounter}`,

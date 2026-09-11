@@ -130,6 +130,9 @@ export default function PrintableBookOfAbstracts() {
                                         <div className="mb-3 text-[#444444]">
                                             <span className="font-bold underline text-black mr-2">Authors:</span>
                                             {parseJSONStr(item.authors)}
+                                            {item.institution && (
+                                                <span className="italic ml-1">({item.institution})</span>
+                                            )}
                                         </div>
                                     )}
 

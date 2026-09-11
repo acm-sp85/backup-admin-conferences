@@ -10,7 +10,10 @@
     "tunnel": "node scripts/start-tunnel.js",
     "tunnel-mongo": "node scripts/start-mongo-tunnel.js",
     "sync": "node scripts/sync-all.js",
-    "sync:safe": "node scripts/sync-all.js --safe"
+    "sync:safe": "node scripts/sync-all.js --safe",
+    "sync-attendance": "node scripts/sync-checkins-to-mongo.js",
+    "sync-conference-info": "node scripts/sync-conference-info.js",
+    "sync-calendar": "node scripts/sync-conferences-calendar.js"
   },
   "dependencies": {
     "autoprefixer": "^10.5.0",

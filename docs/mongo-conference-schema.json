@@ -1,0 +1,99 @@
+{
+  "_id": {
+    "$oid": "695b78d17bc4a65c90f24220"
+  },
+  "entity": {
+    "$oid": "695b78d17bc4a65c90f2421e"
+  },
+  "currency": "EUR",
+  "refundfull": {
+    "$date": "2026-07-21T22:00:00.000Z"
+  },
+  "refundhalf": {
+    "$date": "2026-08-30T21:59:59.999Z"
+  },
+  "featuredcolor": "#2b355c",
+  "doi": "10.29363/nanoge.emlem.2026.",
+  "reginstruct": "<p>Register for the conference:</p>\\n\\n<p>Select your category (Academic, Student, Industrial) &ndash; you can be requested to provide evidence of the category chosen - and any extra ticket if available.</p>\\n\\n<p>An email will be immediately sent with your registration data and conditions of payment.</p>\\n\\n<p>Please read carefully about DEADLINES.</p>\\n\\n<p>Registrations after Early bird should be paid same time as registration.</p>\\n\\n<p>Once payment is processed in our records, a confirmation email will be sent.</p>\\n\\n<p>&nbsp;</p>\\n\\n<p>Abstract submission:<br />\\nOnce logged in, select the abstract submission tab in your event user section.</p>\\n\\n<p>&nbsp;</p>\\n\\n<p>If you want to register as a sponsor, please contact us at sponsors@nanoge.org</p>\\n",
+  "regincluded": "",
+  "name": "Emerging Light Emitting Materials 2026",
+  "acronym": "EMLEM26",
+  "email": "emlem26@nanoge.org",
+  "start": {
+    "$date": "2026-09-19T22:00:00.000Z"
+  },
+  "end": {
+    "$date": "2026-09-23T21:59:59.999Z"
+  },
+  "image": "4a80992eef04879d8e080e351dd14d88ab29feef",
+  "minorimage": "4a80992eef04879d8e080e351dd14d88ab29feef",
+  "desc": "<p>The conference<strong>&nbsp;Emerging Light Emitting Materials</strong>&nbsp;will take place <strong>in the Halkidiki area from the 20th to the 23th of September 2026.</strong></p>\\n\\n<p>The fifth edition of the nanoGe EMLEM conference series will focus on new families of light emitting materials that have been developed over the past decade and possess diverse luminescent properties. These materials also offer new manufacturing and device integration approaches.&nbsp;</p>\\n",
+  "created": {
+    "$date": "2026-01-05T08:39:45.546Z"
+  },
+  "active": true,
+  "tags": [
+    {
+      "title": "Balance Conference",
+      "text": "Balance Conference",
+      "_id": {
+        "$oid": "695b78d17bc4a65c90f24221"
+      },
+      "bgcolor": "#2db6d2"
+    }
+  ],
+  "scitoconf": false,
+  "hybridconference": false,
+  "globalgeconference": false,
+  "globalge": false,
+  "external": false,
+  "alloweposterpresentation": false,
+  "epostersession": false,
+  "ignoreabstdl": [],
+  "publicabsts": true,
+  "abstfiles": true,
+  "allowabst": false,
+  "chairsmail": true,
+  "sponsors": false,
+  "organizers": false,
+  "regist": true,
+  "responsible": {
+    "sign": "9049cf4a07ebe8170822d55552f85f979ac8f985",
+    "text": "Alba Chover\\nConference Manager"
+  },
+  "bank": {
+    "recipient": "FUNDACIO DE LA COMUNITAT VALENCIANA SCITO",
+    "iban": "ES7200810201780001276236",
+    "bic": "BSABESBB",
+    "name": "Banco Sabadell",
+    "address": "Carrer del Dr. Manuel Candela, s/n, 46021 València, Valencia (Spain)"
+  },
+  "optype": 0,
+  "refundcharge": 0,
+  "onsitecharge": 0,
+  "deadlines": {
+    "early": {
+      "$date": "2026-07-13T21:59:59.999Z"
+    },
+    "earlypay": {
+      "$date": "2026-07-13T21:59:59.999Z"
+    },
+    "oral": {
+      "$date": "2026-06-30T21:59:59.999Z"
+    },
+    "poster": {
+      "$date": "2026-08-21T21:59:59.999Z"
+    },
+    "program": {
+      "$date": "2026-07-08T21:59:59.999Z"
+    },
+    "grpchange": {
+      "$date": "2026-08-30T21:59:59.999Z"
+    }
+  },
+  "assistants": [],
+  "inviteds": [],
+  "__v": 0,
+  "family": null,
+  "featuredimage": "3288b315aa6ba2ade3172206108fb7061675e45c"
+}

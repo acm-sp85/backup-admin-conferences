@@ -175,7 +175,10 @@ export async function generateBookOfAbstractsDOCX({ conferenceName, items, field
 
             // Authors
             if (fieldsConfig.showAuthors && item.authors) {
-                const authorsStr = parseJSONStr(item.authors);
+                let authorsStr = parseJSONStr(item.authors);
+                if (authorsStr && item.institution) {
+                    authorsStr += ` (${item.institution})`;
+                }
                 if (authorsStr) {
                     children.push(
                         new Paragraph({
