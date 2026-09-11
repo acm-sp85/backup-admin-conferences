@@ -45,6 +45,7 @@ async function main() {
         accent_color VARCHAR(20),
         conference_id INT NULL,
         deadlines JSON NULL,
+        mongo_id VARCHAR(50) NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_acronym (acronym),
         FOREIGN KEY (conference_id) REFERENCES conferences(id) ON DELETE SET NULL
@@ -60,9 +61,12 @@ async function main() {
     mongoClient = new MongoClient(process.env.MONGO_URI);
     await mongoClient.connect();
     
+    const args = process.argv.slice(2);
+    const syncAll = args.includes('--all');
+    
     const now = new Date();
-    // Filter conferences that end in the future
-    const query = { end: { $gte: now } };
+    // Filter conferences that end in the future, unless --all is specified
+    const query = syncAll ? {} : { end: { $gte: now } };
     
     console.log(`🔍 Fetching from nanoge-production (All-Conferences)...`);
     const dbNanoge = mongoClient.db('nanoge-production');
@@ -111,29 +115,36 @@ async function main() {
       }
 
       const deadlines = mongoData.deadlines ? JSON.stringify(mongoData.deadlines) : null;
+      const mongo_id = mongoData._id ? mongoData._id.toString() : null;
       
       // Auto-link if exists locally
       const conference_id = localConfMap.get(acronym) || null;
 
       // Upsert query
       const query = `
-        INSERT INTO global_calendar (acronym, name, start_date, end_date, accent_color, conference_id, deadlines)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO global_calendar (acronym, name, start_date, end_date, accent_color, conference_id, deadlines, mongo_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
           name = VALUES(name),
           start_date = VALUES(start_date),
           end_date = VALUES(end_date),
           accent_color = VALUES(accent_color),
           conference_id = VALUES(conference_id),
-          deadlines = VALUES(deadlines)
+          deadlines = VALUES(deadlines),
+          mongo_id = VALUES(mongo_id)
       `;
 
       try {
-        const [result] = await mariadb.execute(query, [acronym, name, start_date, end_date, accent_color, conference_id, deadlines]);
+        const [result] = await mariadb.execute(query, [acronym, name, start_date, end_date, accent_color, conference_id, deadlines, mongo_id]);
         if (result.insertId) {
           added++;
         } else {
           updated++;
+        }
+
+        // Keep conferences table up-to-date with mongo_id
+        if (conference_id && mongo_id) {
+          await mariadb.execute('UPDATE conferences SET mongo_id = ? WHERE id = ? AND (mongo_id IS NULL OR mongo_id != ?)', [mongo_id, conference_id, mongo_id]);
         }
       } catch (err) {
         console.error(`${c.red}Failed to upsert ${acronym}:${c.reset}`, err.message);
