@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   '/api/participants/check-access',
   '/certificates',
   '/api/cron',
+  '/public-calendar-v9x2m',
 ];
 
 export default async function proxy(request) {
