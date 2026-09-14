@@ -752,30 +752,6 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                 </div>
                             </CollapsibleSection>
 
-                            {/* Certificate Signatures Group */}
-                            <CollapsibleSection title="Certificate Configuration" unfilledCount={unfilledCounts.certificate}>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Signature Image URL</label>
-                                        <input 
-                                            name="signature_image"
-                                            type="url"
-                                            defaultValue={conference?.signature_image || ''}
-                                            className="w-full h-11 px-4 bg-white border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Text Under Signature</label>
-                                        <input 
-                                            name="text_under_signature"
-                                            type="text"
-                                            defaultValue={conference?.text_under_signature || ''}
-                                            className="w-full h-11 px-4 bg-white border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </CollapsibleSection>
 
                             {/* Badge Settings Group */}
                             <CollapsibleSection title="Badge Settings" unfilledCount={unfilledCounts.badge}>
@@ -1439,6 +1415,28 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                         className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                                     />
                                     <p className="text-[10px] text-slate-400 ml-1">Optional background image for the certificate.</p>
+                                </div>
+                                
+                                <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 block">Signature Image URL</label>
+                                    <input 
+                                        name="signature_image"
+                                        type="url"
+                                        defaultValue={conference?.signature_image || ''}
+                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                    <p className="text-[10px] text-slate-400 ml-1">Image URL for the certificate signature.</p>
+                                </div>
+                                
+                                <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1 block">Text Under Signature</label>
+                                    <input 
+                                        name="text_under_signature"
+                                        type="text"
+                                        defaultValue={conference?.text_under_signature || ''}
+                                        className="w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                                    />
+                                    <p className="text-[10px] text-slate-400 ml-1">Text displayed under the signature line.</p>
                                 </div>
                             </div>
 
