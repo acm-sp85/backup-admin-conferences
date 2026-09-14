@@ -87,10 +87,31 @@ export async function updateSessionData(sessionId, data) {
         throw new Error('Unauthorized');
     }
 
-    const { full_session_name } = data;
+    const { full_session_name, start_time, end_time } = data;
+    
+    let updateFields = ['is_manual = 1'];
+    let queryParams = [];
+
+    if (full_session_name !== undefined) {
+        updateFields.push('full_session_name = ?');
+        queryParams.push(full_session_name);
+    }
+    
+    if (start_time !== undefined) {
+        updateFields.push('start_time = ?');
+        queryParams.push(start_time);
+    }
+    
+    if (end_time !== undefined) {
+        updateFields.push('end_time = ?');
+        queryParams.push(end_time);
+    }
+
+    queryParams.push(sessionId);
+
     await query(
-        'UPDATE program_sessions SET full_session_name = ?, is_manual = 1 WHERE id = ?',
-        [full_session_name, sessionId]
+        `UPDATE program_sessions SET ${updateFields.join(', ')} WHERE id = ?`,
+        queryParams
     );
 
     revalidatePath('/program');

@@ -127,7 +127,19 @@ export default function ProgramManager({ conferences, userRole }) {
     const handleSaveSession = async (e) => {
         e.preventDefault();
         try {
-            await updateSessionData(editingSession.id, { full_session_name: editingSession.full_session_name });
+            const formatForDB = (d) => {
+                if (!d) return undefined;
+                const date = new Date(d);
+                if (isNaN(date.getTime())) return undefined;
+                // Get the ISO string and replace T with space for MySQL
+                return date.toISOString().slice(0, 19).replace('T', ' ');
+            };
+            
+            await updateSessionData(editingSession.id, { 
+                full_session_name: editingSession.full_session_name,
+                start_time: formatForDB(editingSession.start_time),
+                end_time: formatForDB(editingSession.end_time)
+            });
             setEditingSession(null);
             await loadData();
         } catch (error) {
@@ -593,7 +605,7 @@ export default function ProgramManager({ conferences, userRole }) {
                                     <div key={session.id} className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-300 transition-all ${session.is_hidden ? 'opacity-50 grayscale-[0.5]' : ''}`}>
                                         <div className="p-4 flex justify-between items-start bg-slate-50/50">
                                             <div>
-                                                <div className="flex items-center gap-2 mb-1.5">
+                                                <div className="flex items-center gap-2 mb-1.5 group/time">
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
                                                         {(() => {
                                                             const fmt = t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -608,6 +620,11 @@ export default function ProgramManager({ conferences, userRole }) {
                                                             return `${fmt(session.start_time)} – ${fmt(session.end_time)}`;
                                                         })()}
                                                     </span>
+                                                    {(hasAdminAccess(userRole)) && (
+                                                        <button onClick={() => setEditingSession(session)} className="opacity-0 group-hover/time:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Session Time">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                                        </button>
+                                                    )}
                                                     {!!session.is_hidden && (
                                                         <span className="text-[9px] font-bold uppercase tracking-tighter bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">Hidden</span>
                                                     )}
@@ -844,6 +861,28 @@ export default function ProgramManager({ conferences, userRole }) {
                                     value={editingSession.full_session_name || ''}
                                     onChange={(e) => setEditingSession({ ...editingSession, full_session_name: e.target.value })}
                                 />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Start Time</label>
+                                    <input 
+                                        type="datetime-local"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editingSession.start_time ? new Date(new Date(editingSession.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+                                        onChange={(e) => setEditingSession({ ...editingSession, start_time: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">End Time</label>
+                                    <input 
+                                        type="datetime-local"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={editingSession.end_time ? new Date(new Date(editingSession.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+                                        onChange={(e) => setEditingSession({ ...editingSession, end_time: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                                    />
+                                </div>
+                            </div>
+                            <div>
                                 <p className="text-[10px] text-purple-600 italic mt-1">Editing this will mark it as manual and prevent overwrites during sync.</p>
                             </div>
                             <div className="flex justify-between items-center gap-3 pt-4 border-t mt-4">
