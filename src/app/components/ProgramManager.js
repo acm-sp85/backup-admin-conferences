@@ -129,10 +129,23 @@ export default function ProgramManager({ conferences, userRole }) {
         try {
             const formatForDB = (d) => {
                 if (!d) return undefined;
+                
+                // If the string is directly from the datetime-local input (e.g. "YYYY-MM-DDTHH:mm")
+                if (typeof d === 'string' && d.includes('T') && d.length <= 16) {
+                    return d.replace('T', ' ') + ':00';
+                }
+
+                // If it's a JS Date object or an ISO string from the server
                 const date = new Date(d);
                 if (isNaN(date.getTime())) return undefined;
-                // Get the ISO string and replace T with space for MySQL
-                return date.toISOString().slice(0, 19).replace('T', ' ');
+                
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                const hh = String(date.getHours()).padStart(2, '0');
+                const min = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${yyyy}-${mm}-${dd} ${hh}:${min}:00`;
             };
             
             await updateSessionData(editingSession.id, { 
@@ -868,8 +881,17 @@ export default function ProgramManager({ conferences, userRole }) {
                                     <input 
                                         type="datetime-local"
                                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editingSession.start_time ? new Date(new Date(editingSession.start_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
-                                        onChange={(e) => setEditingSession({ ...editingSession, start_time: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                                        value={
+                                            editingSession.start_time 
+                                                ? (typeof editingSession.start_time === 'string' && editingSession.start_time.length <= 16 
+                                                    ? editingSession.start_time 
+                                                    : (() => {
+                                                        const d = new Date(editingSession.start_time);
+                                                        return !isNaN(d) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+                                                    })())
+                                                : ''
+                                        }
+                                        onChange={(e) => setEditingSession({ ...editingSession, start_time: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -877,8 +899,17 @@ export default function ProgramManager({ conferences, userRole }) {
                                     <input 
                                         type="datetime-local"
                                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={editingSession.end_time ? new Date(new Date(editingSession.end_time).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
-                                        onChange={(e) => setEditingSession({ ...editingSession, end_time: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                                        value={
+                                            editingSession.end_time 
+                                                ? (typeof editingSession.end_time === 'string' && editingSession.end_time.length <= 16 
+                                                    ? editingSession.end_time 
+                                                    : (() => {
+                                                        const d = new Date(editingSession.end_time);
+                                                        return !isNaN(d) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
+                                                    })())
+                                                : ''
+                                        }
+                                        onChange={(e) => setEditingSession({ ...editingSession, end_time: e.target.value })}
                                     />
                                 </div>
                             </div>
