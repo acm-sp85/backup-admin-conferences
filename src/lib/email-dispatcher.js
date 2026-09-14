@@ -29,7 +29,9 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
   const from = getSenderForConference(conf, type);
 
   // If no custom body, fall back to generic template
-  if (!html) {
+  // Note: Certificate has complex custom variable replacement logic inside emailTemplates.certificate
+  // so we always defer to it even if a custom body exists.
+  if (!html || type === 'certificate') {
     const generic = emailTemplates[type]({ ...placeholders, conference: conf });
     return { subject: generic.subject, html: generic.html, from };
   }

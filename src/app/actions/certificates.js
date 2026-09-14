@@ -2,7 +2,7 @@
 import { hasAdminAccess } from '@/lib/roles';
 
 import { query } from '@/lib/db';
-import { verifySession } from '@/lib/auth';
+import { verifySession, encrypt } from '@/lib/auth';
 import { Resend } from 'resend';
 import { revalidatePath } from 'next/cache';
 import { EMAIL_CONFIG } from '@/lib/email-templates';
@@ -178,6 +178,16 @@ export async function sendCertificateEmail(registrationId) {
         }
     }
 
+    // Generate magic link token for downloading PDF
+    const payload = {
+        email: resolveEmail(participant),
+        conferenceId: participant.conference_id,
+        registrationId,
+        type: 'public_certificate',
+        timestamp: Date.now()
+    };
+    const magicToken = await encrypt(payload, '30d');
+
     // Build email
     const { subject, html, from } = await getEmailTemplate(participant.conference_id, 'certificate', {
         name: participant.name,
@@ -196,7 +206,8 @@ export async function sendCertificateEmail(registrationId) {
         textUnderSignature: participant.text_under_signature,
         conferenceFullName: participant.conference_full_name,
         conferenceDates,
-        presentations
+        presentations,
+        token: magicToken
     });
 
     const { error } = await resend.emails.send({

@@ -1494,6 +1494,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                                     .replace(/\$\{textUnderSignatureHtml\}/g, '<p style="font-size:13px;font-weight:600;margin:5px 0 0 0;">Conference Chair</p>')
                                                     .replace(/\$\{sponsorsHtml\}/g, '<div style="text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #eee;"><p style="font-size:10px;color:#999;text-transform:uppercase;">Supported By</p><div style="height:30px;width:80px;background:#eee;margin:0 auto;"></div></div>')
                                                     .replace(/\$\{presentationsHtml\}/g, '<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px;"><p style="margin:0 0 6px 0;font-size:14px;"><strong>John Doe</strong> has presented:</p><ul style="margin:0;padding-left:20px;font-size:13px;"><li>Oral contribution entitled <strong>"Advancements in AI"</strong>.</li></ul></div>')
+                                                    .replace(/\$\{downloadButtonHtml\}/g, '<div style="text-align: center; margin-bottom: 30px;"><a href="#" style="background-color: #0ea5e9; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">Download PDF</a></div>')
                                             }}
                                         />
                                     </div>
@@ -1505,7 +1506,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                     />
                                 )}
                                 <p className="text-[9px] text-slate-400 px-1 italic mt-1 leading-relaxed">
-                                    Available placeholders: <strong>{"${name}"}</strong>, <strong>{"${conference}"}</strong>, <strong>{"${today}"}</strong>, <strong>{"${institution}"}</strong>, <strong>{"${entityAddress}"}</strong>, <strong>{"${entityLocation}"}</strong>, <strong>{"${registrationType}"}</strong>, <strong>{"${conferenceFullName}"}</strong>, <strong>{"${conferenceAddress}"}</strong>, <strong>{"${conferenceAddressInline}"}</strong>, <strong>{"${conferenceDates}"}</strong>, <strong>{"${signatureHtml}"}</strong>, <strong>{"${textUnderSignatureHtml}"}</strong>, <strong>{"${sponsorsHtml}"}</strong>, <strong>{"${presentationsHtml}"}</strong>.
+                                    Available placeholders: <strong>{"${name}"}</strong>, <strong>{"${conference}"}</strong>, <strong>{"${today}"}</strong>, <strong>{"${institution}"}</strong>, <strong>{"${entityAddress}"}</strong>, <strong>{"${entityLocation}"}</strong>, <strong>{"${registrationType}"}</strong>, <strong>{"${conferenceFullName}"}</strong>, <strong>{"${conferenceAddress}"}</strong>, <strong>{"${conferenceAddressInline}"}</strong>, <strong>{"${conferenceDates}"}</strong>, <strong>{"${signatureHtml}"}</strong>, <strong>{"${textUnderSignatureHtml}"}</strong>, <strong>{"${sponsorsHtml}"}</strong>, <strong>{"${presentationsHtml}"}</strong>, <strong>{"${downloadButtonHtml}"}</strong>.
                                 </p>
                             </div>
                         </div>

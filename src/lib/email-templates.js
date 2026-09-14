@@ -54,14 +54,14 @@ export const getBranding = (conf) => {
 /**
  * HELPER: Simple wrapper for logo if it exists
  */
-export const renderHeader = (brand) => {
+export const renderHeader = (brand, isCertificate = false) => {
     let html = '';
     
     // Banner (Wide, at the very top)
     if (brand.banner) {
         html += `
-            <div style="margin: -20px -20px 20px -20px;">
-                <img src="${brand.banner}" alt="Banner" style="width: 100%; height: auto; display: block; border-radius: 12px 12px 0 0;" />
+            <div style="margin: ${isCertificate ? '0 0 20px 0' : '-20px -20px 20px -20px'};">
+                <img src="${brand.banner}" alt="Banner" style="width: 100%; height: auto; display: block; border-radius: ${isCertificate ? '2px 2px 0 0' : '12px 12px 0 0'};" />
             </div>
         `;
     }
@@ -280,7 +280,7 @@ export const emailTemplates = {
         const htmlBody = processedBody
             .replace(/\${name}/g, name)
             .replace(/\${conference}/g, brand.name)
-            .replace(/\${renderHeader\(brand\)}/g, renderHeader(brand));
+            .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand, true));
 
         return {
             subject: `${brand.name} - Your Check-in QR Code`,
@@ -305,7 +305,7 @@ export const emailTemplates = {
     /**
      * Certificate of Participation
      */
-    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName, conferenceDates, presentations = [] }) => {
+    certificate: ({ name, conference, registrationType, institution, entityAddress, entityZip, entityCity, entityCountry, checkinDate, sponsorList, conferenceAddress, signatureImage, textUnderSignature, conferenceFullName, conferenceDates, token, presentations = [] }) => {
         const brand = getBranding(conference);
         const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         const confName = brand.name;
@@ -327,6 +327,14 @@ export const emailTemplates = {
             };
             displayRegistrationType = typeMapping[registrationType] || registrationType;
         }
+
+        const downloadButtonHtml = token ? `
+            <div style="text-align: center; margin-bottom: 30px;" class="no-print">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL}/certificates/${token}" target="_blank" rel="noopener noreferrer" style="background-color: ${brand.accentColor}; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; display: inline-block;">
+                    ${isSpanish ? 'Descargar PDF' : 'Download PDF'}
+                </a>
+            </div>
+        ` : '';
 
         // Parse and build sponsors block
         let sponsorsHtml = '';
@@ -380,7 +388,7 @@ export const emailTemplates = {
                 .replace(/\$\{name\}/g, name || '')
                 .replace(/\$\{conference\}/g, brand.name || '')
                 .replace(/\$\{today\}/g, today || '')
-                .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand) || '')
+                .replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand, true) || '')
                 .replace(/\$\{brand\.accentColor\}/g, brand.accentColor || '')
                 .replace(/\$\{brand\.email\}/g, brand.email || '')
                 .replace(/\$\{institution\}/g, institution || '')
@@ -394,7 +402,8 @@ export const emailTemplates = {
                 .replace(/\$\{signatureHtml\}/g, signatureHtml || '')
                 .replace(/\$\{textUnderSignatureHtml\}/g, textUnderSignatureHtml || '')
                 .replace(/\$\{sponsorsHtml\}/g, sponsorsHtml || '')
-                .replace(/\$\{presentationsHtml\}/g, presentationsHtml || '');
+                .replace(/\$\{presentationsHtml\}/g, presentationsHtml || '')
+                .replace(/\$\{downloadButtonHtml\}/g, downloadButtonHtml || '');
             
             // Clean up empty paragraphs/spans that might be left behind if a variable is empty
             // This is optional but helpful if they put variables in their own tags.
@@ -409,7 +418,7 @@ export const emailTemplates = {
             subject: `Certificate of Participation - ${confName}`,
             html: `
                 <div style="font-family: 'Georgia', 'Times New Roman', serif; max-width: 700px; margin: 0 auto; padding: 0; border: 2px solid ${brand.accentColor}; border-radius: 4px;">
-                    ${renderHeader(brand)}
+                    ${renderHeader(brand, true)}
                     <div style="padding: 40px 40px 30px 40px;">
                         <h1 style="text-align: center; color: ${brand.accentColor}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 1px;">${isSpanish ? 'CERTIFICADO DE PARTICIPACIÓN' : 'CERTIFICATE OF PARTICIPATION'}</h1>
                         <div style="text-align: center; border-bottom: 2px solid ${brand.accentColor}; padding-bottom: 20px; margin-bottom: 30px;">
@@ -449,6 +458,8 @@ export const emailTemplates = {
                                 </div>
                             ` : ''}
                         </div>
+
+                        ${downloadButtonHtml}
 
                         <div style="margin-bottom: 30px;">
                             <p style="font-size: 13px; color: #475569; margin: 0;">${isSpanish ? 'Atentamente,' : 'Sincerely,'}</p>
@@ -616,6 +627,8 @@ export const getDefaultEmailBody = (type, conference) => {
             \${presentationsHtml}
         </div>
 
+        \${downloadButtonHtml}
+
         <div style="margin-bottom: 30px;">
             <p style="font-size: 13px; color: #475569; margin: 0;">Sincerely,</p>
             \${signatureHtml}
@@ -630,7 +643,7 @@ export const getDefaultEmailBody = (type, conference) => {
             </p>
         </div>
     </div>
-</div>`.replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand))
+</div>`.replace(/\$\{renderHeader\(brand\)\}/g, renderHeader(brand, true))
   .replace(/\$\{brand\.accentColor\}/g, brand.accentColor)
   .replace(/\$\{brand\.email\}/g, brand.email)
   .replace(/\$\{conference\}/g, brand.name);
