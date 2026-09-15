@@ -419,49 +419,33 @@ export const emailTemplates = {
             html: `
                 <div style="font-family: 'Georgia', 'Times New Roman', serif; max-width: 700px; margin: 0 auto; padding: 0; border: 2px solid ${brand.accentColor}; border-radius: 4px;">
                     ${renderHeader(brand, true)}
-                    <div style="padding: 40px 40px 30px 40px;">
-                        <h1 style="text-align: center; color: ${brand.accentColor}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 1px;">${isSpanish ? 'CERTIFICADO DE PARTICIPACIÓN' : 'CERTIFICATE OF PARTICIPATION'}</h1>
-                        <div style="text-align: center; border-bottom: 2px solid ${brand.accentColor}; padding-bottom: 20px; margin-bottom: 30px;">
-                            <p style="color: #64748b; font-size: 13px; margin: 0;">${today}</p>
-                        </div>
+                    <div style="padding: 40px;">
+                        <h2 style="color: ${brand.accentColor}; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; text-align: center;">
+                            ${isSpanish ? '¡Gracias por participar!' : 'Thank you for participating!'}
+                        </h2>
+                        
+                        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 0 0 20px 0;">
+                            ${isSpanish ? 'Estimado/a' : 'Dear'} <strong>${name}</strong>,<br><br>
+                            ${isSpanish 
+                                ? `Ha sido un placer contar con su presencia en <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>. Le agradecemos sinceramente su participación y contribución al éxito del evento.`
+                                : `It was a pleasure to have you at <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>. We cordially thank you for your participation and contribution to the success of the event.`}
+                        </p>
 
-                        <table style="width: 100%; margin-bottom: 30px;" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td style="width: 50%; vertical-align: top; padding-right: 20px;">
-                                    <p style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">${name}</p>
-                                    ${institution ? `<p style="font-size: 13px; color: #64748b; margin: 0 0 2px 0;">${institution}</p>` : ''}
-                                    ${entityAddress ? `<p style="font-size: 12px; color: #64748b; margin: 0 0 2px 0;">${entityAddress}</p>` : ''}
-                                    ${(entityZip || entityCity || entityCountry) ? `<p style="font-size: 12px; color: #64748b; margin: 0;">${[[entityZip, entityCity].filter(Boolean).join(' '), entityCountry].filter(Boolean).join(', ')}</p>` : ''}
-                                </td>
-                                <td style="width: 50%; vertical-align: top; padding-left: 20px; border-left: 1px solid #e2e8f0;">
-                                    <p style="font-size: 11px; font-weight: 700; color: ${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">${isSpanish ? 'Este certificado acredita la participación en:' : 'This certifies participation at:'}</p>
-                                    <p style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">${confName}${conferenceFullName ? ` - ${conferenceFullName}` : ''}</p>
-                                    ${conferenceAddress ? `<p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.4;">${conferenceAddress.replace(/\n/g, '<br>')}</p>` : ''}
-                                </td>
-                            </tr>
-                        </table>
-
-                        <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
-                            <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
-                                ${isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>${name}</strong>
-                                ${displayRegistrationType ? ` ${isSpanish ? 'participó como' : 'participated as'} <strong>${displayRegistrationType}</strong> ` : ` ${isSpanish ? 'participó' : 'participated'} `}
-                                &nbsp;${isSpanish ? 'en' : 'at the'} <strong>${conferenceFullName ? `${conferenceFullName} - ${confName}` : confName}</strong>${conferenceAddress ? `${isSpanish ? ', celebrado en' : ', celebrated at'} <strong>${conferenceAddress.replace(/\n/g, ', ')}</strong>` : ''}${conferenceDates ? ` ${isSpanish ? 'del' : 'from'} <strong>${conferenceDates}</strong>` : ''}.
-                            </p>
-                            ${presentations && presentations.length > 0 ? `
-                                <div style="margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                                    <p style="margin: 0 0 6px 0; font-size: 14px; color: #334155; line-height: 1.7;">
-                                        <strong>${name}</strong> ${isSpanish ? 'ha presentado:' : 'has presented:'}
-                                    </p>
-                                    <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
-                                        ${presentations.map(pres => `<li>${isSpanish ? ({'poster': 'Póster', 'demo': 'Demostración'}[pres.type.toLowerCase()] || pres.type) : pres.type} ${isSpanish ? 'con título' : 'contribution entitled'} <strong>"${pres.title}"</strong>.</li>`).join('')}
-                                    </ul>
-                                </div>
-                            ` : ''}
-                        </div>
+                        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 0 0 30px 0;">
+                            ${isSpanish
+                                ? 'Puede descargar su certificado oficial de participación haciendo clic en el siguiente botón:'
+                                : 'You can download your official certificate of participation by clicking the button below:'}
+                        </p>
 
                         ${downloadButtonHtml}
 
-                        <div style="margin-bottom: 30px;">
+                        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 30px 0;">
+                            ${isSpanish
+                                ? 'Esperamos verle de nuevo en nuestras próximas conferencias.'
+                                : 'Thank you again, and we look forward to seeing you in our future conferences.'}
+                        </p>
+
+                        <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                             <p style="font-size: 13px; color: #475569; margin: 0;">${isSpanish ? 'Atentamente,' : 'Sincerely,'}</p>
                             ${signatureImage ? `<img src="${signatureImage}" style="max-height: 65px; display: block; margin: 8px 0;" alt="Signature" />` : ''}
                             ${textUnderSignature 
@@ -469,12 +453,12 @@ export const emailTemplates = {
                                 : `<p style="font-size: 13px; color: #1e293b; font-weight: 600; margin: 8px 0 0 0;">${confName} ${isSpanish ? 'Comité Organizador' : 'Organizing Committee'}</p>`
                             }
                         </div>
-
+                        
                         ${sponsorsHtml}
-
+                        
                         <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 20px;">
                             <p style="font-size: 11px; color: #94a3b8; margin: 0;">
-                                ${isSpanish ? 'Este es un certificado automático de' : 'This is an automated certificate from'} ${confName}. ${isSpanish ? 'Para soporte, contacta a' : 'For support, contact'} ${brand.email}.
+                                ${isSpanish ? 'Este es un mensaje automático de' : 'This is an automated message from'} ${confName}. ${isSpanish ? 'Para soporte, contacta a' : 'For support, contact'} ${brand.email}.
                             </p>
                         </div>
                     </div>
@@ -597,49 +581,37 @@ export const getDefaultEmailBody = (type, conference) => {
             return `
 <div style="font-family: 'Georgia', 'Times New Roman', serif; max-width: 700px; margin: 0 auto; padding: 0; border: 2px solid \${brand.accentColor}; border-radius: 4px;">
     \${renderHeader(brand)}
-    <div style="padding: 40px 40px 30px 40px;">
-        <h1 style="text-align: center; color: \${brand.accentColor}; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 1px;">CERTIFICATE OF PARTICIPATION</h1>
-        <div style="text-align: center; border-bottom: 2px solid \${brand.accentColor}; padding-bottom: 20px; margin-bottom: 30px;">
-            <p style="color: #64748b; font-size: 13px; margin: 0;">\${today}</p>
-        </div>
+    <div style="padding: 40px;">
+        <h2 style="color: \${brand.accentColor}; font-size: 22px; font-weight: 700; margin: 0 0 20px 0; text-align: center;">
+            Thank you for participating!
+        </h2>
+        
+        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 0 0 20px 0;">
+            Dear <strong>\${name}</strong>,<br><br>
+            It was a pleasure to have you at <strong>\${conferenceFullName} - \${conference}</strong>. We cordially thank you for your participation and contribution to the success of the event.
+        </p>
 
-        <table style="width: 100%; margin-bottom: 30px;" cellpadding="0" cellspacing="0">
-            <tr>
-                <td style="width: 50%; vertical-align: top; padding-right: 20px;">
-                    <p style="font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">\${name}</p>
-                    <p style="font-size: 13px; color: #64748b; margin: 0 0 2px 0;">\${institution}</p>
-                    <p style="font-size: 12px; color: #64748b; margin: 0 0 2px 0;">\${entityAddress}</p>
-                    <p style="font-size: 12px; color: #64748b; margin: 0;">\${entityLocation}</p>
-                </td>
-                <td style="width: 50%; vertical-align: top; padding-left: 20px; border-left: 1px solid #e2e8f0;">
-                    <p style="font-size: 11px; font-weight: 700; color: \${brand.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px 0;">This certifies participation at:</p>
-                    <p style="font-size: 12px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">\${conference} - \${conferenceFullName}</p>
-                    <p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.4;">\${conferenceAddress}</p>
-                </td>
-            </tr>
-        </table>
-
-        <div style="background: #f8fafc; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #e2e8f0;">
-            <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0;">
-                This letter certifies that <strong>\${name}</strong> participated as <strong>\${registrationType}</strong> 
-                at the <strong>\${conferenceFullName} - \${conference}</strong>, celebrated at <strong>\${conferenceAddressInline}</strong> from <strong>\${conferenceDates}</strong>.
-            </p>
-            \${presentationsHtml}
-        </div>
+        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 0 0 30px 0;">
+            You can download your official certificate of participation by clicking the button below:
+        </p>
 
         \${downloadButtonHtml}
 
-        <div style="margin-bottom: 30px;">
+        <p style="font-size: 15px; color: #334155; line-height: 1.7; margin: 30px 0;">
+            Thank you again, and we look forward to seeing you in our future conferences.
+        </p>
+
+        <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
             <p style="font-size: 13px; color: #475569; margin: 0;">Sincerely,</p>
             \${signatureHtml}
             \${textUnderSignatureHtml}
         </div>
-
+        
         \${sponsorsHtml}
-
+        
         <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; text-align: center; margin-top: 20px;">
             <p style="font-size: 11px; color: #94a3b8; margin: 0;">
-                This is an automated certificate from \${conference}. For support, contact \${brand.email}.
+                This is an automated message from \${conference}. For support, contact \${brand.email}.
             </p>
         </div>
     </div>
