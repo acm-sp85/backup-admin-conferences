@@ -9,7 +9,8 @@ export default function PrintButton({ filename = 'certificate.pdf' }) {
     const handleDownload = async () => {
         setIsGenerating(true);
         try {
-            const html2pdf = (await import('html2pdf.js')).default;
+            const html2canvas = (await import('html2canvas')).default;
+            const { jsPDF } = await import('jspdf');
             const element = document.getElementById('certificate-content');
             
             if (!element) {
@@ -17,27 +18,39 @@ export default function PrintButton({ filename = 'certificate.pdf' }) {
                 return;
             }
             
-            const opt = {
-                margin: 0,
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    letterRendering: true,
-                    onclone: (clonedDoc) => {
-                        const el = clonedDoc.getElementById('certificate-content');
-                        if (el) {
-                            el.style.marginBottom = '0';
-                            el.style.pageBreakAfter = 'auto';
-                            el.style.boxShadow = 'none';
-                        }
-                    }
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            // Temporarily disable any box shadow or margins for the capture
+            const originalShadow = element.style.boxShadow;
+            const originalMargin = element.style.margin;
+            element.style.boxShadow = 'none';
+            element.style.margin = '0';
+            
+            const canvas = await html2canvas(element, { 
+                scale: 2, 
+                useCORS: true, 
+                letterRendering: true,
+                scrollY: -window.scrollY // Fixes an issue where scrolling affects capture
+            });
+            
+            // Restore original styles
+            element.style.boxShadow = originalShadow;
+            element.style.margin = originalMargin;
 
-            await html2pdf().from(element).set(opt).save();
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            
+            // Create a perfectly sized A4 PDF
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            // Add the image exactly filling the first and only page
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            
+            pdf.save(filename);
         } catch (error) {
             console.error('Error generating PDF:', error);
             window.print();
