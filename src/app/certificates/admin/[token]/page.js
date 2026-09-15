@@ -175,36 +175,12 @@ export default async function AdminCertificatesViewPage({ params }) {
 
     const isSpanish = conference.name && conference.name.toUpperCase().includes('CIPIE');
     const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    const hasCustomBody = !!conference.email_certificate_body;
 
     // Process all participants
     const processedParticipants = participants.map(participant => {
         const presentations = getPresentationsForParticipant(participant);
 
-        let customHtml = null;
-        if (hasCustomBody) {
-            const templateData = {
-                name: participant.name,
-                conference: conference,
-                registrationType: participant.payment_group || participant.registration_type || '',
-                institution: participant.entity || participant.payment_group || '',
-                entityAddress: participant.entity_address || '',
-                entityZip: participant.entity_zip || '',
-                entityCity: participant.entity_city || '',
-                entityCountry: participant.entity_country || '',
-                checkinDate: participant.scanned_at || '',
-                sponsorList: conference.sponsor_list,
-                conferenceAddress: conference.conference_address,
-                signatureImage: conference.signature_image,
-                textUnderSignature: conference.text_under_signature,
-                conferenceFullName: conference.conference_full_name,
-                conferenceDates: conferenceDates,
-                presentations: presentations
-            };
-            customHtml = emailTemplates.certificate(templateData).html;
-        }
-
-        return { ...participant, presentations, customHtml };
+        return { ...participant, presentations };
     });
 
     return (
@@ -262,7 +238,6 @@ export default async function AdminCertificatesViewPage({ params }) {
                         conference={conference}
                         conferenceDates={conferenceDates}
                         presentations={p.presentations}
-                        customHtml={p.customHtml}
                         isSpanish={isSpanish}
                         today={today}
                     />
@@ -278,7 +253,6 @@ export default async function AdminCertificatesViewPage({ params }) {
                         conference={conference}
                         conferenceDates={conferenceDates}
                         presentations={p.presentations}
-                        customHtml={p.customHtml}
                         isSpanish={isSpanish}
                         today={today}
                     />

@@ -5,7 +5,6 @@ export default function PrintableCertificate({
     conference, 
     conferenceDates, 
     presentations,
-    customHtml,
     isSpanish,
     today
 }) {
@@ -35,12 +34,21 @@ export default function PrintableCertificate({
                 box-shadow: none !important;
                 margin-bottom: 0 !important;
                 page-break-after: always !important;
+                width: ${printWidth} !important;
+                height: ${printHeight} !important;
+            }
+        }
+
+        @media screen {
+            .certificate-page {
+                width: 100%;
+                max-width: ${printWidth};
+                height: auto;
+                aspect-ratio: ${isLandscape ? '297 / 210' : '210 / 297'};
             }
         }
 
         .certificate-page {
-            width: ${printWidth};
-            height: ${printHeight};
             background-color: white;
             position: relative;
             box-sizing: border-box;
@@ -59,7 +67,7 @@ export default function PrintableCertificate({
         .certificate-border {
             border: 2px solid ${conference.accent_color || '#007aff'};
             padding: 24px;
-            height: 100%;
+            flex: 1;
             box-sizing: border-box;
             border-radius: 4px;
             display: flex;
@@ -97,16 +105,7 @@ export default function PrintableCertificate({
         }
     }
 
-    if (customHtml) {
-        return (
-            <>
-                <style dangerouslySetInnerHTML={{ __html: styleHtml }} />
-                <div className="certificate-page print-container">
-                    <div dangerouslySetInnerHTML={{ __html: customHtml }} />
-                </div>
-            </>
-        );
-    }
+
 
     const institution = participant.entity || participant.payment_group || '';
     const regType = participant.payment_group || participant.registration_type || '';
