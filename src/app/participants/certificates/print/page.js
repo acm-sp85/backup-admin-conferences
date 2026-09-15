@@ -1,7 +1,8 @@
 import { hasAdminAccess } from '@/lib/roles';
     import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
-
+import PrintableCertificate from '@/components/PrintableCertificate';
+import { emailTemplates } from '@/lib/email-templates';
 export default async function CertificatePrintPage({ searchParams }) {
     const params = await searchParams;
     const registrationIds = params.registrationIds;
@@ -184,148 +185,51 @@ export default async function CertificatePrintPage({ searchParams }) {
 
     const isSpanish = conference.name && conference.name.toUpperCase().includes('CIPIE');
 
+    // Generate custom HTML if defined for this conference
+    const hasCustomBody = !!conference.email_certificate_body;
+
     return (
         <div className="print-container">
-            <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Georgia&display=swap');
-                
-                @page {
-                    size: A4;
-                    margin: 0;
-                }
-                
-                html, body {
-                    margin: 0;
-                    padding: 0;
-                    background: #e2e8f0;
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                }
-
-                .certificate-page {
-                    width: 210mm;
-                    height: 297mm;
-                    background-color: white;
-                    position: relative;
-                    box-sizing: border-box;
-                    padding: 12mm;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    page-break-after: always;
-                    font-family: 'Georgia', 'Times New Roman', serif;
-                    margin: 0 auto;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                    margin-bottom: 20px;
-                }
-
-                @media print {
-                    body { background: white; }
-                    .certificate-page {
-                        box-shadow: none;
-                        margin-bottom: 0;
-                    }
-                }
-
-                .certificate-border {
-                    border: 2px solid ${conference.accent_color || '#007aff'};
-                    padding: 24px;
-                    height: 100%;
-                    box-sizing: border-box;
-                    border-radius: 4px;
-                    display: flex;
-                    flex-direction: column;
-                }
-            `}} />
-            
             {participants.map(p => {
                 const presentations = getPresentationsForParticipant(p);
-                const institution = p.entity || p.payment_group || '';
-                const regType = p.payment_group || p.registration_type || '';
                 
-                let displayRegType = regType;
-                if (isSpanish) {
-                    const typeMapping = {
-                        'Industrial': 'Sponsor',
-                        // Add more mappings here if needed
+                let customHtml = null;
+                if (hasCustomBody) {
+                    const templateData = {
+                        name: p.name,
+                        conference: conference,
+                        registrationType: p.payment_group || p.registration_type || '',
+                        institution: p.entity || p.payment_group || '',
+                        entityAddress: p.entity_address || '',
+                        entityZip: p.entity_zip || '',
+                        entityCity: p.entity_city || '',
+                        entityCountry: p.entity_country || '',
+                        checkinDate: p.scanned_at || '',
+                        sponsorList: conference.sponsor_list,
+                        conferenceAddress: conference.conference_address,
+                        signatureImage: conference.signature_image,
+                        textUnderSignature: conference.text_under_signature,
+                        conferenceFullName: conference.conference_full_name,
+                        conferenceDates: conferenceDates,
+                        presentations: presentations
                     };
-                    displayRegType = typeMapping[regType] || regType;
+                    const emailObj = emailTemplates.certificate(templateData);
+                    customHtml = emailObj.html;
                 }
-                const locParts = [[p.entity_zip, p.entity_city].filter(Boolean).join(' '), p.entity_country].filter(Boolean).join(', ');
 
                 return (
-                <div key={p.registrationId} className="certificate-page">
-                    <div className="certificate-border">
-                        {conference.banner_url && (
-                            <div style={{ margin: '-24px -24px 20px -24px' }}>
-                                <img src={conference.banner_url} alt="Banner" style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '2px 2px 0 0' }} />
-                            </div>
-                        )}
-                        
-                        <div style={{ flex: 1 }}>
-                            <h1 style={{ textAlign: 'center', color: conference.accent_color || '#007aff', fontSize: '26px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '1px' }}>{isSpanish ? 'CERTIFICADO DE PARTICIPACIÓN' : 'CERTIFICATE OF PARTICIPATION'}</h1>
-                            <div style={{ textAlign: 'center', borderBottom: `2px solid ${conference.accent_color || '#007aff'}`, paddingBottom: '16px', marginBottom: '24px' }}>
-                                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>{today}</p>
-                            </div>
-
-                            <table style={{ width: '100%', marginBottom: '24px' }} cellPadding="0" cellSpacing="0">
-                                <tbody>
-                                    <tr>
-                                        <td style={{ width: '50%', verticalAlign: 'top', paddingRight: '20px' }}>
-                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: '0 0 4px 0' }}>{p.name}</p>
-                                            {institution && <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 2px 0' }}>{institution}</p>}
-                                            {p.entity_address && <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 2px 0' }}>{p.entity_address}</p>}
-                                            {locParts && <p style={{ fontSize: '12px', color: '#64748b', margin: '0' }}>{locParts}</p>}
-                                        </td>
-                                        <td style={{ width: '50%', verticalAlign: 'top', paddingLeft: '20px', borderLeft: '1px solid #e2e8f0' }}>
-                                            <p style={{ fontSize: '11px', fontWeight: '700', color: conference.accent_color || '#007aff', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px 0' }}>{isSpanish ? 'Este certificado acredita la participación en:' : 'This certifies participation at:'}</p>
-                                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b', margin: '0 0 4px 0' }}>{conference.name}{conference.conference_full_name ? ` - ${conference.conference_full_name}` : ''}</p>
-                                            {conference.conference_address && <p style={{ fontSize: '12px', color: '#64748b', margin: '0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{__html: conference.conference_address.replace(/\n/g, '<br>')}}></p>}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '20px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
-                                <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.7', margin: '0' }}>
-                                    {isSpanish ? 'El presente documento certifica que' : 'This letter certifies that'} <strong>{p.name}</strong>
-                                    {displayRegType ? <span> {isSpanish ? 'participó como' : 'participated as'} <strong>{displayRegType}</strong></span> : (isSpanish ? ' participó' : ' participated')}
-                                     &nbsp;{isSpanish ? 'en' : 'at the'} <strong>{conference.conference_full_name ? `${conference.conference_full_name} - ${conference.name}` : conference.name}</strong>
-                                    {conference.conference_address ? <span>{isSpanish ? ', celebrado en ' : ', celebrated at '}<strong>{conference.conference_address.replace(/\n/g, ', ')}</strong></span> : ''}
-                                    {conferenceDates ? <span> {isSpanish ? 'del' : 'from'} <strong>{conferenceDates}</strong></span> : ''}.
-                                </p>
-                                
-                                {presentations.length > 0 && (
-                                    <div style={{ marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                                        <p style={{ margin: '0 0 6px 0', fontSize: '14px', color: '#334155', lineHeight: '1.7' }}>
-                                            <strong>{p.name}</strong> {isSpanish ? 'ha presentado:' : 'has presented:'}
-                                        </p>
-                                        <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
-                                            {presentations.map((pres, idx) => (
-                                                <li key={idx}>
-                                                    {isSpanish ? ({'poster': 'Póster', 'demo': 'Demostración'}[pres.type.toLowerCase()] || pres.type) : pres.type} {isSpanish ? ' con título' : 'contribution entitled'} <strong>"{pres.title}"</strong>.
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
-
-                        </div>
-
-                        <div style={{ marginTop: 'auto', marginBottom: '12px' }}>
-                            <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>{isSpanish ? 'Atentamente,' : 'Sincerely,'}</p>
-                            {conference.signature_image && <img src={conference.signature_image} style={{ maxHeight: '65px', display: 'block', margin: '8px 0' }} alt="Signature" />}
-                            {conference.text_under_signature 
-                                ? <p style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600', margin: '5px 0 0 0', lineHeight: '1.4' }} dangerouslySetInnerHTML={{__html: conference.text_under_signature.replace(/\n/g, '<br>')}}></p>
-                                : <p style={{ fontSize: '13px', color: '#1e293b', fontWeight: '600', margin: '8px 0 0 0' }}>{conference.name} {isSpanish ? 'Comité Organizador' : 'Organizing Committee'}</p>
-                            }
-                        </div>
-                        
-                        {sponsorsHtml && <div dangerouslySetInnerHTML={{__html: sponsorsHtml}}></div>}
-                    </div>
-                </div>
-            )})}
+                    <PrintableCertificate 
+                        key={p.registrationId}
+                        participant={p}
+                        conference={conference}
+                        conferenceDates={conferenceDates}
+                        presentations={presentations}
+                        customHtml={customHtml}
+                        isSpanish={isSpanish}
+                        today={today}
+                    />
+                );
+            })}
             
             <script dangerouslySetInnerHTML={{ __html: `
                 window.onload = () => {

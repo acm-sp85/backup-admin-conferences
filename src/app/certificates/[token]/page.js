@@ -3,6 +3,7 @@ import { decrypt } from '@/lib/auth';
 import { emailTemplates } from '@/lib/email-templates';
 import { Award, AlertCircle } from 'lucide-react';
 import PrintButton from './PrintButton';
+import PrintableCertificate from '@/components/PrintableCertificate';
 
 export default async function PublicCertificateViewPage({ params }) {
     const { token } = await params;
@@ -166,66 +167,38 @@ export default async function PublicCertificateViewPage({ params }) {
 
     const presentations = getPresentationsForParticipant(participant);
 
-    const templateData = {
-        name: participant.name,
-        conference: conference,
-        registrationType: participant.payment_group || participant.registration_type || '',
-        institution: participant.entity || participant.payment_group || '',
-        entityAddress: participant.entity_address || '',
-        entityZip: participant.entity_zip || '',
-        entityCity: participant.entity_city || '',
-        entityCountry: participant.entity_country || '',
-        checkinDate: participant.scanned_at || '',
-        sponsorList: conference.sponsor_list,
-        conferenceAddress: conference.conference_address,
-        signatureImage: conference.signature_image,
-        textUnderSignature: conference.text_under_signature,
-        conferenceFullName: conference.conference_full_name,
-        conferenceDates: conferenceDates,
-        presentations: presentations
-    };
+    const isSpanish = conference.name && conference.name.toUpperCase().includes('CIPIE');
+    const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    const emailObj = emailTemplates.certificate(templateData);
-
-    const isLandscape = conference.certificate_orientation === 'landscape';
-    const bgImage = conference.certificate_background_image;
-
-    const printWidth = isLandscape ? '297mm' : '210mm';
-    const printHeight = isLandscape ? '210mm' : '297mm';
-    const pageOrientation = isLandscape ? 'landscape' : 'portrait';
-
-    const styleHtml = `
-        @media print {
-            @page { margin: 0; size: A4 ${pageOrientation}; }
-            html, body { background: white !important; margin: 0; padding: 0; overflow: hidden !important; height: ${printHeight} !important; }
-            .no-print { display: none !important; }
-            .print-container { 
-                width: ${printWidth} !important; 
-                height: ${printHeight} !important; 
-                max-height: ${printHeight} !important;
-                box-shadow: none !important; 
-                margin: 0 !important; 
-                padding: 12mm !important; 
-                box-sizing: border-box !important; 
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: center !important;
-                overflow: hidden !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                ${bgImage ? `background-image: url('${bgImage}') !important; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;` : ''}
-            }
-            .print-container > div {
-                height: 100%;
-                overflow: hidden !important;
-            }
-        }
-    `;
+    // Generate custom HTML if defined for this conference
+    const hasCustomBody = !!conference.email_certificate_body;
+    let customHtml = null;
+    
+    if (hasCustomBody) {
+        const templateData = {
+            name: participant.name,
+            conference: conference,
+            registrationType: participant.payment_group || participant.registration_type || '',
+            institution: participant.entity || participant.payment_group || '',
+            entityAddress: participant.entity_address || '',
+            entityZip: participant.entity_zip || '',
+            entityCity: participant.entity_city || '',
+            entityCountry: participant.entity_country || '',
+            checkinDate: participant.scanned_at || '',
+            sponsorList: conference.sponsor_list,
+            conferenceAddress: conference.conference_address,
+            signatureImage: conference.signature_image,
+            textUnderSignature: conference.text_under_signature,
+            conferenceFullName: conference.conference_full_name,
+            conferenceDates: conferenceDates,
+            presentations: presentations
+        };
+        const emailObj = emailTemplates.certificate(templateData);
+        customHtml = emailObj.html;
+    }
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-20">
-            <style dangerouslySetInnerHTML={{ __html: styleHtml }} />
-
+        <div className="min-h-screen bg-slate-50 pb-20 print:pb-0 print:bg-white flex flex-col">
             {/* Top Toolbar - Hidden on print */}
             <div className="bg-slate-900 text-white p-4 sticky top-0 z-10 shadow-md no-print">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -239,27 +212,16 @@ export default async function PublicCertificateViewPage({ params }) {
                 </div>
             </div>
 
-            {/* Certificate Container */}
-            <div className={`mx-auto mt-8 p-4 no-print ${isLandscape ? 'max-w-6xl' : 'max-w-4xl'}`}>
-                <div 
-                    className="bg-white rounded-xl shadow-xl overflow-hidden mx-auto print-container print:shadow-none print:rounded-none relative" 
-                    style={{ 
-                        maxWidth: isLandscape ? '1123px' : '794px',
-                        minHeight: isLandscape ? '794px' : '1123px',
-                        ...(bgImage ? {
-                            backgroundImage: `url(${bgImage})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            backgroundRepeat: 'no-repeat'
-                        } : {})
-                    }}
-                >
-                    <div dangerouslySetInnerHTML={{ __html: emailObj.html }} />
-                </div>
-            </div>
-            
-            <div className="hidden print:block print-container">
-                <div dangerouslySetInnerHTML={{ __html: emailObj.html }} />
+            <div className="flex-1 mt-8 print:mt-0 print:p-0">
+                <PrintableCertificate 
+                    participant={participant}
+                    conference={conference}
+                    conferenceDates={conferenceDates}
+                    presentations={presentations}
+                    customHtml={customHtml}
+                    isSpanish={isSpanish}
+                    today={today}
+                />
             </div>
         </div>
     );
