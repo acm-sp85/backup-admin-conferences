@@ -183,11 +183,11 @@ export default async function PublicCertificateViewPage({ params }) {
                     </div>
                     
                     {/* Client Component Button Wrapper */}
-                    <PrintButton />
+                    <PrintButton filename={`Certificate-${participant.name.replace(/\s+/g, '-')}.pdf`} />
                 </div>
             </div>
 
-            <div className="flex-1 mt-8 print:mt-0 print:p-0">
+            <div id="printable-certificate-container" className="flex-1 mt-8 print:mt-0 print:p-0">
                 <PrintableCertificate 
                     participant={participant}
                     conference={conference}

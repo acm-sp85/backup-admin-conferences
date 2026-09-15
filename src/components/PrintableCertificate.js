@@ -122,7 +122,7 @@ export default function PrintableCertificate({
     return (
         <>
             <style dangerouslySetInnerHTML={{ __html: styleHtml }} />
-            <div className="certificate-page print-container">
+            <div id="certificate-content" className="certificate-page print-container">
                 <div className="certificate-border">
                     {conference.banner_url && (
                         <div style={{ margin: '-24px -24px 20px -24px' }}>
