@@ -150,15 +150,31 @@ export default async function AdminCertificatesViewPage({ params }) {
             } catch (e) {}
             
             if (Array.isArray(authors) && authors.length > 0) {
-                const primaryAuthor = authors[0];
-                let aName = '';
-                if (typeof primaryAuthor === 'string') {
-                    aName = primaryAuthor;
-                } else if (primaryAuthor.name) {
-                    aName = primaryAuthor.name;
+                const hasExplicitPresenter = authors.some(a => a && a.presenting === true);
+                const authorsToCheck = hasExplicitPresenter 
+                    ? authors.filter(a => a && a.presenting === true) 
+                    : [authors[0]];
+                
+                let isAuthor = false;
+                for (const author of authorsToCheck) {
+                    let aName = '';
+                    if (typeof author === 'string') {
+                        aName = author;
+                    } else if (author && author.name) {
+                        aName = author.name;
+                    } else if (author && author.firstName) {
+                        aName = `${author.firstName} ${author.lastName || ''}`.trim();
+                    } else if (author && author.lastName) {
+                        aName = author.lastName;
+                    }
+                    
+                    if (aName && compareNames(aName, fName, lName)) {
+                        isAuthor = true;
+                        break;
+                    }
                 }
                 
-                if (aName && compareNames(aName, fName, lName)) {
+                if (isAuthor) {
                     presentations.push({
                         title: poster.title,
                         type: 'Poster'

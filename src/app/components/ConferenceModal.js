@@ -1441,8 +1441,8 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                             </div>
 
                             <div className="space-y-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col">
-                                <div className="flex justify-between items-center px-1 mb-1">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Certificate HTML</label>
+                                <div className="flex justify-between items-center px-1 mb-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Certificate Email HTML</label>
                                     <div className="flex items-center gap-1.5">
                                         <button 
                                             type="button"
@@ -1459,6 +1459,13 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                             {viewMode.certificate === 'preview' ? 'Edit HTML' : 'View Preview'}
                                         </button>
                                     </div>
+                                </div>
+                                
+                                <div className="mx-1 mb-3 bg-blue-50/50 border border-blue-100 p-2.5 rounded-lg">
+                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                        <strong className="text-blue-700 font-semibold">Note:</strong> This custom HTML template defines the contents of the <strong>email</strong> sent to participants. <strong>Solo los autores de posteres que han presentado el poster tendrán listado el título de su poster. Para los Orals, solo el autor principal aparecerá en el certificado.</strong>.
+                                    </p>
+                               
                                 </div>
                                 
                                 <input type="hidden" name="email_certificate_body" value={templates.certificate} />
