@@ -1463,7 +1463,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                 
                                 <div className="mx-1 mb-3 bg-blue-50/50 border border-blue-100 p-2.5 rounded-lg">
                                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                                        <strong className="text-blue-700 font-semibold">Note:</strong> This custom HTML template defines the contents of the <strong>email</strong> sent to participants. <strong>Solo los autores de posteres que han presentado el poster tendrán listado el título de su poster. Para los Orals, solo el autor principal aparecerá en el certificado.</strong>.
+                                        <strong className="text-blue-700 font-semibold">Note:</strong> This custom HTML template defines the contents of the <strong>email</strong> sent to participants. <strong>Todos los co-autores de los posters, que hayan acudido a la conferencia tendrán listado el título de su poster. Para los Orals, solo el autor principal aparecerá en el certificado.</strong>.
                                     </p>
                                
                                 </div>
