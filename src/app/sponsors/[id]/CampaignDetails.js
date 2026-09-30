@@ -314,9 +314,9 @@ ${customText}
                     {initialBounces.length > 0 && (
                         <button 
                             onClick={() => setShowBounces(!showBounces)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${showBounces ? 'bg-[#ff3b30] text-white border-[#ff3b30]' : 'bg-[#fff0f0] text-[#ff3b30] border-[#ff3b30]/30 hover:bg-[#ffe5e5]'}`}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors border ${showBounces ? 'bg-[#1d1d1f] text-white border-[#1d1d1f]' : 'bg-[#f2f2f7] text-[#1d1d1f] border-[#e5e5ea] hover:bg-[#e5e5ea]'}`}
                         >
-                            {initialBounces.length} Bounced
+                            {initialBounces.length} Events
                         </button>
                     )}
                     {!isReadonly && (
@@ -349,16 +349,20 @@ ${customText}
             </div>
 
             {showBounces && initialBounces.length > 0 && (
-                <div className="bg-[#fff0f0] border border-[#ff3b30]/30 rounded-xl p-4 mb-6 shadow-sm">
-                    <h3 className="text-[#ff3b30] font-bold text-sm mb-3">Bounce Details</h3>
+                <div className="bg-[#f9f9f9] border border-[#e5e5ea] rounded-xl p-4 mb-6 shadow-sm">
+                    <h3 className="text-[#1d1d1f] font-bold text-sm mb-3">Event Details</h3>
                     <div className="max-h-[200px] overflow-y-auto space-y-2">
-                        {initialBounces.map((b, i) => (
-                            <div key={i} className="bg-white p-3 rounded-lg border border-[#ff3b30]/20 text-xs">
-                                <span className="font-semibold text-[#1d1d1f]">{b.email}</span>
-                                <span className="ml-2 px-2 py-0.5 bg-[#f2f2f7] text-[#8e8e93] rounded text-[9px] uppercase tracking-wider">{b.type}</span>
-                                <p className="text-[#8e8e93] mt-1">{b.reason || 'No reason provided'}</p>
-                            </div>
-                        ))}
+                        {initialBounces.map((b, i) => {
+                            const isError = b.type.includes('bounce') || b.type.includes('complain') || b.type.includes('suppress');
+                            const isSuccess = b.type.includes('deliver') || b.type.includes('open');
+                            return (
+                                <div key={i} className={`bg-white p-3 rounded-lg border text-xs ${isError ? 'border-[#ff3b30]/30' : isSuccess ? 'border-[#10b981]/30' : 'border-[#e5e5ea]'}`}>
+                                    <span className="font-semibold text-[#1d1d1f]">{b.email}</span>
+                                    <span className={`ml-2 px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${isError ? 'bg-[#fff0f0] text-[#ff3b30]' : isSuccess ? 'bg-[#ecfdf5] text-[#10b981]' : 'bg-[#f2f2f7] text-[#8e8e93]'}`}>{b.type}</span>
+                                    <p className="text-[#8e8e93] mt-1">{b.reason || 'No reason provided'}</p>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -556,14 +560,39 @@ ${customText}
                                 <p className="text-xs text-[#8e8e93] text-center py-8">No recipients uploaded yet.</p>
                             ) : (
                                 recipients.map((r, i) => {
-                                    const bounced = initialBounces.find(b => b.email === r.email);
-                                    const showBouncedStyle = bounced && showBounces;
+                                    // Find the most recent event for this recipient (assuming initialBounces is sorted descending by time)
+                                    const latestEvent = initialBounces.find(b => b.email === r.email);
+                                    const hasEvent = !!latestEvent;
+                                    const showEventStyle = hasEvent && showBounces;
+                                    
+                                    let borderColor = 'border-[#e5e5ea]/50';
+                                    let bgColor = 'bg-[#f9f9f9]';
+                                    let textColor = 'text-[#1d1d1f]';
+                                    let tagBgColor = 'bg-[#f2f2f7]';
+                                    let tagTextColor = 'text-[#8e8e93]';
+                                    let tagText = latestEvent ? latestEvent.type.replace('email.', '') : '';
+
+                                    if (showEventStyle && latestEvent) {
+                                        if (latestEvent.type.includes('bounce') || latestEvent.type.includes('complain') || latestEvent.type.includes('suppress')) {
+                                            borderColor = 'border-[#ff3b30]/30';
+                                            bgColor = 'bg-[#fff0f0]';
+                                            textColor = 'text-[#ff3b30]';
+                                            tagBgColor = 'bg-[#ff3b30]/10';
+                                            tagTextColor = 'text-[#ff3b30]';
+                                        } else if (latestEvent.type.includes('deliver') || latestEvent.type.includes('open')) {
+                                            borderColor = 'border-[#10b981]/30';
+                                            bgColor = 'bg-[#ecfdf5]';
+                                            textColor = 'text-[#10b981]';
+                                            tagBgColor = 'bg-[#10b981]/10';
+                                            tagTextColor = 'text-[#10b981]';
+                                        }
+                                    }
                                     
                                     return (
-                                        <div key={i} className={`flex flex-col p-2.5 rounded-lg border ${showBouncedStyle ? 'bg-[#fff0f0] border-[#ff3b30]/30' : 'bg-[#f9f9f9] border-[#e5e5ea]/50'}`}>
+                                        <div key={i} className={`flex flex-col p-2.5 rounded-lg border ${showEventStyle ? `${bgColor} ${borderColor}` : 'bg-[#f9f9f9] border-[#e5e5ea]/50'}`}>
                                             <div className="flex justify-between items-start">
-                                                <span className={`text-xs font-semibold truncate ${showBouncedStyle ? 'text-[#ff3b30]' : 'text-[#1d1d1f]'}`}>{r.email}</span>
-                                                {showBouncedStyle && <span className="text-[9px] font-bold text-[#ff3b30] uppercase tracking-wider bg-[#ff3b30]/10 px-1.5 py-0.5 rounded">Bounced</span>}
+                                                <span className={`text-xs font-semibold truncate ${showEventStyle ? textColor : 'text-[#1d1d1f]'}`}>{r.email}</span>
+                                                {showEventStyle && <span className={`text-[9px] font-bold ${tagTextColor} uppercase tracking-wider ${tagBgColor} px-1.5 py-0.5 rounded`}>{tagText}</span>}
                                             </div>
                                             {(r.name || r.company) && (
                                                 <span className="text-[10px] text-[#8e8e93] truncate mt-0.5">

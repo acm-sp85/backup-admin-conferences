@@ -21,7 +21,7 @@ export async function getCampaigns() {
     await requireAdmin();
     return await query(`
         SELECT c.*, 
-        (SELECT COUNT(*) FROM sponsors_campaign_bounces b WHERE b.campaign_id = c.id) as bounce_count
+        (SELECT COUNT(*) FROM sponsors_campaign_bounces b WHERE b.campaign_id = c.id AND type IN ('email.bounced', 'email.complained', 'email.suppressed')) as bounce_count
         FROM sponsors_campaigns c 
         ORDER BY c.created_at DESC
     `);
@@ -65,31 +65,37 @@ export async function syncCampaignBounces(campaignId) {
         const response = await resend.emails.list();
         if (response.error || !response.data?.data) return { error: 'Failed to fetch from Resend' };
         
-        // Filter for failures belonging to our recipients
-        const failedEmails = response.data.data.filter(e => 
+        // Filter for events belonging to our recipients (we now track successes and opens too)
+        const eventEmails = response.data.data.filter(e => 
             recipientEmails.includes(e.to[0]) && 
-            ['bounced', 'complained', 'suppressed'].includes(e.last_event)
+            ['bounced', 'complained', 'suppressed', 'delivered', 'opened'].includes(e.last_event)
         );
         
         // Log them if they don't exist
         const existingBounces = await getCampaignBounces(campaignId);
-        const existingEmails = existingBounces.map(b => b.email);
         
         let addedCount = 0;
-        for (const failure of failedEmails) {
-            const email = failure.to[0];
-            if (!existingEmails.includes(email)) {
+        for (const ev of eventEmails) {
+            const email = ev.to[0];
+            const eventType = 'email.' + ev.last_event;
+            
+            // Check if this specific event type already exists for this email
+            const alreadyLogged = existingBounces.some(b => b.email === email && b.type === eventType);
+            
+            if (!alreadyLogged) {
                 let reason = 'Manual Sync';
-                if (failure.last_event === 'suppressed') reason = 'Suppressed by Resend';
-                if (failure.last_event === 'bounced') reason = 'Bounced';
-                if (failure.last_event === 'complained') reason = 'Complained/Spam';
+                if (ev.last_event === 'suppressed') reason = 'Suppressed by Resend';
+                else if (ev.last_event === 'bounced') reason = 'Bounced';
+                else if (ev.last_event === 'complained') reason = 'Complained/Spam';
+                else if (ev.last_event === 'delivered') reason = 'Delivered';
+                else if (ev.last_event === 'opened') reason = 'Opened';
                 
                 await query(
                     'INSERT INTO sponsors_campaign_bounces (campaign_id, email, type, reason) VALUES (?, ?, ?, ?)',
-                    [campaignId, email, 'email.' + failure.last_event, reason]
+                    [campaignId, email, eventType, reason]
                 );
                 addedCount++;
-                existingEmails.push(email); // prevent duplicates in the loop
+                existingBounces.push({ email, type: eventType }); // prevent duplicates in the loop
             }
         }
         

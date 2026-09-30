@@ -18,8 +18,16 @@ export async function POST(req) {
 
         const event = JSON.parse(payload);
         
-        // We care about bounce, complaint, and suppressed events
-        if (event.type === 'email.bounced' || event.type === 'email.complained' || event.type === 'email.suppressed') {
+        const allowedEvents = [
+            'email.bounced', 
+            'email.complained', 
+            'email.suppressed',
+            'email.delivered',
+            'email.opened'
+        ];
+        
+        // We care about bounce, complaint, suppressed, delivered, and opened events
+        if (allowedEvents.includes(event.type)) {
             const data = event.data;
             const email = data.to[0]; // recipient email
             let reason = 'Unknown';
@@ -27,8 +35,12 @@ export async function POST(req) {
                 reason = (data.bounce && data.bounce.reason) ? data.bounce.reason : 'Bounced';
             } else if (event.type === 'email.suppressed') {
                 reason = 'Suppressed by Resend (previously bounced/complained)';
-            } else {
+            } else if (event.type === 'email.complained') {
                 reason = 'Complained/Spam';
+            } else if (event.type === 'email.delivered') {
+                reason = 'Delivered';
+            } else if (event.type === 'email.opened') {
+                reason = 'Opened';
             }
             
             // Find campaign_id from tags
