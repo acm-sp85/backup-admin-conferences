@@ -127,7 +127,7 @@ To prevent synchronization from wiping administrative overrides or manually mana
 
 ---
 
-## 📝 Reference: Registration Types (CIPIE)
+## 📝 Reference: Registration Types (CIPIE)--
 
 When manually creating participants or importing via CSV for the **CIPIE** conference, you can use the following standard registration types:
 - `Staff`
