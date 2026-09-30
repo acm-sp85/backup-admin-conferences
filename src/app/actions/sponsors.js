@@ -259,61 +259,127 @@ export async function sendSingleCampaignEmail(id, recipient) {
     }
 }
 
-export async function enqueueCampaign(id, recipients) {
+export async function enqueueCampaign(id, recipients, isImmediate = false) {
     await requireAdmin();
     
     if (!recipients || recipients.length === 0) return { error: 'No recipients provided' };
     
     try {
-        // Enqueue all recipients
-        const values = recipients.map(r => [
-            id, 
-            r.email, 
-            r.name || '', 
-            r.company || '',
-            'pending'
-        ]);
-        
-        const placeholders = values.map(() => '(?, ?, ?, ?, ?)').join(', ');
-        const flatValues = values.flat();
-        
-        // Insert in batches if very large, but mysql2/promise query handles multiple values fine up to reasonable limits
-        await query(
-            `INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ${placeholders}`,
-            flatValues
-        );
-        
-        // Update campaign status
-        await updateCampaignStatus(id, 'queued');
-        
-        // Auto-enable GitLab schedule if variables are present
-        if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
-            try {
-                const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${encodeURIComponent(process.env.GITLAB_PROJECT_ID)}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+        if (isImmediate) {
+            // Immediate batch sending using Resend Batch API
+            const campaigns = await query(`SELECT * FROM sponsors_campaigns WHERE id = ?`, [id]);
+            const campaign = campaigns[0];
+            if (!campaign) return { error: 'Campaign not found' };
+
+            const sender = 'Sponsors Nanoge <sponsors@nanoge.org>';
+            
+            // Interpolation function
+            const replaceVars = (text, recipient) => {
+                if (!text) return '';
+                let previous = '';
+                let current = text;
+                while (current !== previous && /{([^{}]+)}/.test(current)) {
+                    previous = current;
+                    current = current.replace(/{([^{}]+)}/g, (match, expression) => {
+                        const parts = expression.split('|');
+                        const key = parts[0].trim().toLowerCase();
+                        const fallback = parts.slice(1).join('|').trim() || '';
+                        
+                        if (key === 'name') return recipient.name || fallback;
+                        if (key === 'company') return recipient.company || fallback;
+                        if (key === 'email') return recipient.email || fallback; 
+                        return match; 
+                    });
+                }
+                return current;
+            };
+
+            const batchLimit = 100;
+            const values = []; 
+
+            for (let i = 0; i < recipients.length; i += batchLimit) {
+                const chunk = recipients.slice(i, i + batchLimit);
+                const batchPayload = chunk.map(r => ({
+                    from: sender,
+                    to: r.email,
+                    bcc: 'sponsors-enviados@nanoge.org',
+                    subject: replaceVars(campaign.subject, r),
+                    html: replaceVars(campaign.body, r),
+                    tags: [{ name: 'campaign_id', value: String(id) }]
+                }));
+
+                const { error } = await resend.batch.send(batchPayload);
                 
-                // 1. Activate the schedule
-                await fetch(gitlabUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ active: true })
+                const status = error ? 'failed' : 'sent';
+                chunk.forEach(r => {
+                    values.push([id, r.email, r.name || '', r.company || '', status]);
                 });
-                
-                // 2. Play the schedule immediately for the first batch
-                await fetch(`${gitlabUrl}/play`, {
-                    method: 'POST',
-                    headers: {
-                        'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN
-                    }
-                });
-            } catch (err) {
-                console.error("Failed to activate/play GitLab schedule:", err);
             }
+
+            // Insert log of all sent/failed emails
+            if (values.length > 0) {
+                const placeholders = values.map(() => '(?, ?, ?, ?, ?)').join(', ');
+                const flatValues = values.flat();
+                await query(
+                    `INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ${placeholders}`,
+                    flatValues
+                );
+            }
+
+            await updateCampaignStatus(id, 'completed');
+            return { success: true };
+            
+        } else {
+            // Enqueue all recipients
+            const values = recipients.map(r => [
+                id, 
+                r.email, 
+                r.name || '', 
+                r.company || '',
+                'pending'
+            ]);
+            
+            const placeholders = values.map(() => '(?, ?, ?, ?, ?)').join(', ');
+            const flatValues = values.flat();
+            
+            // Insert in batches if very large, but mysql2/promise query handles multiple values fine up to reasonable limits
+            await query(
+                `INSERT INTO sponsors_campaign_queue (campaign_id, recipient_email, recipient_name, recipient_company, status) VALUES ${placeholders}`,
+                flatValues
+            );
+            
+            // Update campaign status
+            await updateCampaignStatus(id, 'queued');
+            
+            // Auto-enable GitLab schedule if variables are present
+            if (process.env.GITLAB_API_TOKEN && process.env.GITLAB_PROJECT_ID && process.env.GITLAB_SCHEDULE_ID) {
+                try {
+                    const gitlabUrl = `https://gitlab.scito.org/api/v4/projects/${encodeURIComponent(process.env.GITLAB_PROJECT_ID)}/pipeline_schedules/${process.env.GITLAB_SCHEDULE_ID}`;
+                    
+                    // 1. Activate the schedule
+                    await fetch(gitlabUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ active: true })
+                    });
+                    
+                    // 2. Play the schedule immediately for the first batch
+                    await fetch(`${gitlabUrl}/play`, {
+                        method: 'POST',
+                        headers: {
+                            'PRIVATE-TOKEN': process.env.GITLAB_API_TOKEN
+                        }
+                    });
+                } catch (err) {
+                    console.error("Failed to activate/play GitLab schedule:", err);
+                }
+            }
+            
+            return { success: true };
         }
-        
-        return { success: true };
     } catch (e) {
         console.error('Error enqueueing campaign:', e);
         return { error: 'Failed to enqueue campaign' };

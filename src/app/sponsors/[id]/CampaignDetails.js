@@ -33,6 +33,8 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
     const [progress, setProgress] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showBounces, setShowBounces] = useState(false);
+    const [sendImmediate, setSendImmediate] = useState(false);
+    const [eventTab, setEventTab] = useState('errors');
     const fileInputRef = useRef(null);
     
     const [lastPending, setLastPending] = useState(null);
@@ -118,14 +120,14 @@ export default function CampaignDetails({ campaign, initialBounces = [], initial
             alert('Cannot send without recipients.');
             return;
         }
-        if (!confirm(`Are you sure you want to queue this email to ${recipients.length} recipients?`)) return;
+        if (!confirm(`Are you sure you want to ${sendImmediate ? 'instantly send' : 'queue'} this email to ${recipients.length} recipients?`)) return;
         
         // ensure saved first
         await updateCampaign(campaign.id, { name, subject, body });
         
         setIsSending(true);
         
-        const res = await enqueueCampaign(campaign.id, recipients);
+        const res = await enqueueCampaign(campaign.id, recipients, sendImmediate);
         if (res.error) {
             alert(res.error);
             setIsSending(false);
@@ -329,13 +331,24 @@ ${customText}
                         </button>
                     )}
                     {!isReadonly && !isSending && (
-                        <button 
-                            onClick={handleSend}
-                            disabled={recipients.length === 0}
-                            className="px-4 py-2 bg-[#10b981] text-white text-sm font-semibold rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-50"
-                        >
-                            Dispatch Campaign
-                        </button>
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-[#1d1d1f] cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={sendImmediate} 
+                                    onChange={(e) => setSendImmediate(e.target.checked)}
+                                    className="w-4 h-4 rounded text-[#10b981] border-[#e5e5ea] focus:ring-[#10b981]"
+                                />
+                                Send Immediate (Batch)
+                            </label>
+                            <button 
+                                onClick={handleSend}
+                                disabled={recipients.length === 0}
+                                className="px-4 py-2 bg-[#10b981] text-white text-sm font-semibold rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-50"
+                            >
+                                Dispatch Campaign
+                            </button>
+                        </div>
                     )}
                     {(isSending || isQueued) && (
                         <div className="flex flex-col items-end">
@@ -350,9 +363,32 @@ ${customText}
 
             {showBounces && initialBounces.length > 0 && (
                 <div className="bg-[#f9f9f9] border border-[#e5e5ea] rounded-xl p-4 mb-6 shadow-sm">
-                    <h3 className="text-[#1d1d1f] font-bold text-sm mb-3">Event Details</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-[#1d1d1f] font-bold text-sm">Event Details</h3>
+                        <div className="flex gap-2">
+                            {['all', 'delivered', 'opened', 'errors'].map(tab => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setEventTab(tab)}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                                        eventTab === tab 
+                                            ? 'bg-[#1d1d1f] text-white' 
+                                            : 'bg-[#e5e5ea]/50 text-[#8e8e93] hover:bg-[#e5e5ea]'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div className="max-h-[200px] overflow-y-auto space-y-2">
-                        {initialBounces.map((b, i) => {
+                        {initialBounces.filter(b => {
+                            if (eventTab === 'all') return true;
+                            if (eventTab === 'delivered') return b.type.includes('deliver');
+                            if (eventTab === 'opened') return b.type.includes('open');
+                            if (eventTab === 'errors') return b.type.includes('bounce') || b.type.includes('complain') || b.type.includes('suppress');
+                            return true;
+                        }).map((b, i) => {
                             const isError = b.type.includes('bounce') || b.type.includes('complain') || b.type.includes('suppress');
                             const isSuccess = b.type.includes('deliver') || b.type.includes('open');
                             return (
