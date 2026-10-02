@@ -1071,6 +1071,29 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                                         />
                                     </div>
                                 </div>
+                                <div className="grid grid-cols-2 gap-4 mt-3">
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Layout</label>
+                                        <select 
+                                            value={badgeConfig.nameLayout || 'two-lines'}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, nameLayout: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        >
+                                            <option value="two-lines">Two Lines (First Name + Last Name)</option>
+                                            <option value="single">Single Line</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1 ml-1">Name Box Width</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. 100%, 70mm"
+                                            value={badgeConfig.nameWidth || ''}
+                                            onChange={(e) => setBadgeConfig({ ...badgeConfig, nameWidth: e.target.value })}
+                                            className="w-full h-10 px-3 bg-white border border-slate-100 rounded-xl text-[11px] shadow-sm"
+                                        />
+                                    </div>
+                                </div>
                             </CollapsibleSection>
                         </div>
 

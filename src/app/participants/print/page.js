@@ -8,20 +8,39 @@ export default async function PrintBadgesPage({ searchParams }) {
     
     const ids = registrationIds.split(',');
     
-    // Fetch participant data
-    const participants = await query(`
-        SELECT 
-            p.*, 
-            CONCAT(p.firstName, ' ', p.lastName) as name,
-            r.id as registrationId, 
-            t.token, 
-            c.acronym
-        FROM participants p
-        JOIN registrations r ON p.id = r.participant_id
-        JOIN conferences c ON r.conference_id = c.id
-        LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
-        WHERE r.id IN (${ids.map(() => '?').join(',')})
-    `, ids);
+    // Try fetching with badge_adjustments if column exists
+    let participants = [];
+    try {
+        participants = await query(`
+            SELECT 
+                p.*, 
+                CONCAT(p.firstName, ' ', p.lastName) as name,
+                r.id as registrationId, 
+                r.badge_adjustments,
+                t.token, 
+                c.acronym
+            FROM participants p
+            JOIN registrations r ON p.id = r.participant_id
+            JOIN conferences c ON r.conference_id = c.id
+            LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
+            WHERE r.id IN (${ids.map(() => '?').join(',')})
+        `, ids);
+    } catch (e) {
+        // Fallback if column doesn't exist yet
+        participants = await query(`
+            SELECT 
+                p.*, 
+                CONCAT(p.firstName, ' ', p.lastName) as name,
+                r.id as registrationId, 
+                t.token, 
+                c.acronym
+            FROM participants p
+            JOIN registrations r ON p.id = r.participant_id
+            JOIN conferences c ON r.conference_id = c.id
+            LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
+            WHERE r.id IN (${ids.map(() => '?').join(',')})
+        `, ids);
+    }
 
     const { config, bgUrl } = await getBadgeConfig(conferenceId);
 
@@ -287,12 +306,15 @@ export default async function PrintBadgesPage({ searchParams }) {
             </div>
             
             {(() => {
-                const formatBadgeName = (fullName) => {
+                const formatBadgeName = (fullName, forceSingle) => {
                     if (!fullName) return '';
                     let name = fullName;
                     if (config?.capitalizeName === false) {
                         name = name.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
                     }
+                    
+                    if (forceSingle || config?.nameLayout === 'single') return name;
+
                     const parts = name.trim().split(/\s+/);
                     if (parts.length <= 1) return name;
                     return `${parts[0]}<br/>${parts.slice(1).join(' ')}`;
@@ -309,8 +331,39 @@ export default async function PrintBadgesPage({ searchParams }) {
                         }
                     }
                     
+                    let adjs = {};
+                    if (p.badge_adjustments) {
+                        try {
+                            adjs = typeof p.badge_adjustments === 'string' 
+                                ? JSON.parse(p.badge_adjustments) 
+                                : p.badge_adjustments;
+                        } catch(e) {}
+                    }
+                    
+                    const singleLine = adjs.singleLine !== undefined ? adjs.singleLine : (config?.nameLayout === 'single');
+                    const customWidth = adjs.nameWidth !== undefined ? adjs.nameWidth : config.nameWidth;
+                    
+                    let nameStyles = {};
+                    if (config.nameY) {
+                        nameStyles = {
+                            position: 'absolute',
+                            top: adjs.nameY !== undefined ? `${adjs.nameY}%` : config.nameY,
+                            transform: 'translateY(-50%)'
+                        };
+                        
+                        if (customWidth) {
+                            nameStyles.left = '50%';
+                            nameStyles.width = customWidth.toString().includes('%') || customWidth.toString().includes('mm') ? customWidth : `${customWidth}%`;
+                            nameStyles.transform = 'translate(-50%, -50%)';
+                        } else {
+                            nameStyles.left = adjs.margin !== undefined ? `${adjs.margin}mm` : (config.sideMargin || '10mm');
+                            nameStyles.right = adjs.margin !== undefined ? `${adjs.margin}mm` : (config.sideMargin || '10mm');
+                            nameStyles.margin = '0 auto';
+                        }
+                    }
+
                     return (
-                        <div key={p.registrationId} className="badge-wrapper">
+                        <div key={p.registrationId} className="badge-wrapper" data-reg-id={p.registrationId} data-raw-name={p.name}>
                             {/* Card-specific alignment controls (hidden on print) */}
                             <div className="badge-editor-controls">
                                 <div>
@@ -319,7 +372,7 @@ export default async function PrintBadgesPage({ searchParams }) {
                                         type="range" 
                                         min="0" 
                                         max="100" 
-                                        defaultValue={parseInt(config.nameY) || 50}
+                                        defaultValue={adjs.nameY !== undefined ? adjs.nameY : (parseInt(config.nameY) || 50)}
                                         className="slider-name-y"
                                     />
                                 </div>
@@ -329,7 +382,7 @@ export default async function PrintBadgesPage({ searchParams }) {
                                         type="range" 
                                         min="0" 
                                         max="100" 
-                                        defaultValue={parseInt(config.instY) || 60}
+                                        defaultValue={adjs.instY !== undefined ? adjs.instY : (parseInt(config.instY) || 60)}
                                         className="slider-inst-y"
                                     />
                                 </div>
@@ -339,15 +392,36 @@ export default async function PrintBadgesPage({ searchParams }) {
                                         type="range" 
                                         min="0" 
                                         max="40" 
-                                        defaultValue={parseInt(config.sideMargin) || 10}
+                                        defaultValue={adjs.margin !== undefined ? adjs.margin : (parseInt(config.sideMargin) || 10)}
                                         className="slider-margin"
                                     />
+                                </div>
+                                <div>
+                                    <label>Width (%)</label>
+                                    <input 
+                                        type="range" 
+                                        min="20" 
+                                        max="100" 
+                                        defaultValue={customWidth ? parseInt(customWidth) : 100}
+                                        className="slider-width"
+                                    />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className="toggle-name-layout" 
+                                        id={`single-line-${p.registrationId}`}
+                                        defaultChecked={singleLine}
+                                        style={{ margin: 0, width: 'auto', cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor={`single-line-${p.registrationId}`} style={{ margin: 0, cursor: 'pointer', whiteSpace: 'nowrap' }}>Single Line</label>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                                     <input 
                                         type="checkbox" 
                                         className="toggle-inst-white" 
                                         id={`inst-white-${p.registrationId}`}
+                                        defaultChecked={adjs.whiteInst}
                                         style={{ margin: 0, width: 'auto', cursor: 'pointer' }}
                                     />
                                     <label htmlFor={`inst-white-${p.registrationId}`} style={{ margin: 0, cursor: 'pointer', whiteSpace: 'nowrap' }}>White Inst</label>
@@ -365,13 +439,15 @@ export default async function PrintBadgesPage({ searchParams }) {
                                     className="name" 
                                     contentEditable="true" 
                                     suppressContentEditableWarning={true}
-                                    dangerouslySetInnerHTML={{ __html: formatBadgeName(p.name) }} 
+                                    style={nameStyles}
+                                    dangerouslySetInnerHTML={{ __html: adjs.customNameHTML || formatBadgeName(p.name, singleLine) }} 
                                 />
                                 {p.entity ? (
                                     <div 
                                         className="institution" 
                                         contentEditable="true" 
                                         suppressContentEditableWarning={true}
+                                        style={adjs.whiteInst ? { color: '#FFFFFF' } : {}}
                                     >
                                         {p.entity}
                                     </div>
@@ -407,12 +483,37 @@ export default async function PrintBadgesPage({ searchParams }) {
                     const badge = wrapper.querySelector('.badge');
                     const nameEl = badge.querySelector('.name');
                     const instEl = badge.querySelector('.institution');
+                    const regId = wrapper.dataset.regId;
+                    const rawName = wrapper.dataset.rawName;
+                    
+                    let saveTimeout;
+                    function saveAdjustment(updates) {
+                        clearTimeout(saveTimeout);
+                        saveTimeout = setTimeout(() => {
+                            fetch('/api/participants/' + regId + '/badge-adjustments', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(updates)
+                            }).catch(e => console.error('Error saving:', e));
+                        }, 500);
+                    }
+                    
+                    // Direct text edits
+                    nameEl.addEventListener('input', function() {
+                        saveAdjustment({ customNameHTML: this.innerHTML });
+                    });
                     
                     const nameYSlider = wrapper.querySelector('.slider-name-y');
                     nameYSlider.addEventListener('input', function() {
                         nameEl.style.position = 'absolute';
                         nameEl.style.transform = 'translateY(-50%)';
+                        
+                        // If we are centered by width
+                        if (nameEl.style.left === '50%') {
+                            nameEl.style.transform = 'translate(-50%, -50%)';
+                        }
                         nameEl.style.top = this.value + '%';
+                        saveAdjustment({ nameY: this.value });
                     });
                     
                     const instYSlider = wrapper.querySelector('.slider-inst-y');
@@ -421,17 +522,45 @@ export default async function PrintBadgesPage({ searchParams }) {
                             instEl.style.position = 'absolute';
                             instEl.style.transform = 'translateY(-50%)';
                             instEl.style.top = this.value + '%';
+                            saveAdjustment({ instY: this.value });
                         }
                     });
                     
                     const marginSlider = wrapper.querySelector('.slider-margin');
                     marginSlider.addEventListener('input', function() {
-                        nameEl.style.left = this.value + 'mm';
-                        nameEl.style.right = this.value + 'mm';
+                        if (nameEl.style.left !== '50%') {
+                            nameEl.style.left = this.value + 'mm';
+                            nameEl.style.right = this.value + 'mm';
+                        }
                         if (instEl) {
                             instEl.style.left = this.value + 'mm';
                             instEl.style.right = this.value + 'mm';
                         }
+                        saveAdjustment({ margin: this.value });
+                    });
+                    
+                    const widthSlider = wrapper.querySelector('.slider-width');
+                    widthSlider.addEventListener('input', function() {
+                        nameEl.style.position = 'absolute';
+                        nameEl.style.left = '50%';
+                        nameEl.style.width = this.value + '%';
+                        nameEl.style.right = 'auto';
+                        nameEl.style.margin = '0';
+                        nameEl.style.transform = 'translate(-50%, -50%)';
+                        saveAdjustment({ nameWidth: this.value + '%' });
+                    });
+
+                    const nameLayoutCheckbox = wrapper.querySelector('.toggle-name-layout');
+                    nameLayoutCheckbox.addEventListener('change', function() {
+                        const parts = rawName.trim().split(/\\s+/);
+                        if (this.checked) {
+                            nameEl.innerHTML = rawName;
+                        } else {
+                            if (parts.length > 1) {
+                                nameEl.innerHTML = parts[0] + '<br/>' + parts.slice(1).join(' ');
+                            }
+                        }
+                        saveAdjustment({ singleLine: this.checked, customNameHTML: nameEl.innerHTML });
                     });
 
                     const whiteInstCheckbox = wrapper.querySelector('.toggle-inst-white');
@@ -443,6 +572,7 @@ export default async function PrintBadgesPage({ searchParams }) {
                             } else {
                                 instEl.style.color = instEl.dataset.originalColor || '';
                             }
+                            saveAdjustment({ whiteInst: this.checked });
                         }
                     });
                 });

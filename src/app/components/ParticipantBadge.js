@@ -95,6 +95,9 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
                                                     if (config?.config?.capitalizeName === false) {
                                                         name = name.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
                                                     }
+                                                    
+                                                    if (config?.config?.nameLayout === 'single') return name;
+
                                                     const parts = name.trim().split(/\s+/);
                                                     if (parts.length <= 1) return name;
                                                     return `${parts[0]}<br/>${parts.slice(1).join(' ')}`;
@@ -112,10 +115,16 @@ export default function ParticipantBadge({ participantName, conferenceAcronym, t
                                                             ...(config?.config?.nameY ? {
                                                                 position: 'absolute',
                                                                 top: config.config.nameY,
-                                                                left: config.config.sideMargin || '10mm',
-                                                                right: config.config.sideMargin || '10mm',
-                                                                margin: '0 auto',
-                                                                transform: 'translateY(-50%)'
+                                                                ...(config.config.nameWidth ? {
+                                                                    left: '50%',
+                                                                    width: config.config.nameWidth,
+                                                                    transform: 'translate(-50%, -50%)'
+                                                                } : {
+                                                                    left: config.config.sideMargin || '10mm',
+                                                                    right: config.config.sideMargin || '10mm',
+                                                                    margin: '0 auto',
+                                                                    transform: 'translateY(-50%)'
+                                                                })
                                                             } : {})
                                                         }}
                                                         dangerouslySetInnerHTML={{ __html: formatBadgeName(participantName) }}

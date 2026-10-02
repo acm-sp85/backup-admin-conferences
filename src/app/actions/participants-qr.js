@@ -236,3 +236,44 @@ export async function updateParticipantEmailAlias(participantId, emailAlias) {
         return { error: 'Failed to update email alias' };
     }
 }
+
+export async function saveBadgeAdjustment(registrationId, updates) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) {
+        return { error: 'Unauthorized' };
+    }
+    
+    try {
+        // Since we can't guarantee the badge_adjustments column exists if the migration failed,
+        // we'll try to update it and just ignore the error if the column is missing (graceful fallback).
+        const currentAdjQuery = await query(
+            `SELECT badge_adjustments FROM registrations WHERE id = ?`, 
+            [registrationId]
+        ).catch(() => null);
+
+        let currentAdjs = {};
+        if (currentAdjQuery && currentAdjQuery.length > 0 && currentAdjQuery[0].badge_adjustments) {
+            try {
+                currentAdjs = typeof currentAdjQuery[0].badge_adjustments === 'string' 
+                    ? JSON.parse(currentAdjQuery[0].badge_adjustments)
+                    : currentAdjQuery[0].badge_adjustments;
+            } catch (e) {}
+        }
+        
+        const newAdjs = { ...currentAdjs, ...updates };
+        
+        await query(
+            'UPDATE registrations SET badge_adjustments = ? WHERE id = ?',
+            [JSON.stringify(newAdjs), registrationId]
+        );
+        
+        return { success: true };
+    } catch (error) {
+        // If column doesn't exist, we just fail silently so it doesn't crash the app
+        if (error.code === 'ER_BAD_FIELD_ERROR') {
+            return { error: 'Column missing, skipping save' };
+        }
+        console.error('Save badge adjustment error:', error);
+        return { error: 'Failed to save adjustment' };
+    }
+}
