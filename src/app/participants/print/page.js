@@ -442,23 +442,13 @@ export default async function PrintBadgesPage({ searchParams }) {
                                     style={nameStyles}
                                     dangerouslySetInnerHTML={{ __html: adjs.customNameHTML || formatBadgeName(p.name, singleLine) }} 
                                 />
-                                {p.entity ? (
-                                    <div 
-                                        className="institution" 
-                                        contentEditable="true" 
-                                        suppressContentEditableWarning={true}
-                                        style={adjs.whiteInst ? { color: '#FFFFFF' } : {}}
-                                    >
-                                        {p.entity}
-                                    </div>
-                                ) : (
-                                    <div 
-                                        className="institution" 
-                                        contentEditable="true" 
-                                        suppressContentEditableWarning={true}
-                                        style={{ minHeight: '1.2em', minWidth: '50px' }}
-                                    />
-                                )}
+                                <div 
+                                    className="institution" 
+                                    contentEditable="true" 
+                                    suppressContentEditableWarning={true}
+                                    style={adjs.whiteInst ? { color: '#FFFFFF', minHeight: '1.2em', minWidth: '50px' } : { minHeight: '1.2em', minWidth: '50px' }}
+                                    dangerouslySetInnerHTML={{ __html: adjs.customInstHTML !== undefined ? adjs.customInstHTML : (p.entity || '') }}
+                                />
                             </div>
                         </div>
                     );
@@ -502,6 +492,12 @@ export default async function PrintBadgesPage({ searchParams }) {
                     nameEl.addEventListener('input', function() {
                         saveAdjustment({ customNameHTML: this.innerHTML });
                     });
+                    
+                    if (instEl) {
+                        instEl.addEventListener('input', function() {
+                            saveAdjustment({ customInstHTML: this.innerHTML });
+                        });
+                    }
                     
                     const nameYSlider = wrapper.querySelector('.slider-name-y');
                     nameYSlider.addEventListener('input', function() {
