@@ -28,7 +28,7 @@ export default async function CampaignPage({ params }) {
 
     return (
         <DashboardLayout userRole={session.role} userName={session.email}>
-            <CampaignDetails campaign={campaign} initialBounces={bounces} initialAttachments={attachments} />
+            <CampaignDetails campaign={campaign} initialBounces={bounces} initialAttachments={attachments} userRole={session.role} />
         </DashboardLayout>
     );
 }

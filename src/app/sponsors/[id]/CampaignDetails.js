@@ -4,7 +4,7 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { updateCampaign, updateCampaignRecipients, updateCampaignStatus, deleteCampaign, syncCampaignBounces, enqueueCampaign, getCampaignProgress } from '@/app/actions/sponsors';
 
-export default function CampaignDetails({ campaign, initialBounces = [], initialAttachments = [] }) {
+export default function CampaignDetails({ campaign, initialBounces = [], initialAttachments = [], userRole }) {
     const [name, setName] = useState(campaign.name || '');
     const [subject, setSubject] = useState(campaign.subject || '');
     const [body, setBody] = useState(campaign.body || '');
@@ -321,7 +321,7 @@ ${customText}
                             {initialBounces.length} Events
                         </button>
                     )}
-                    {!isReadonly && (
+                    {(!isReadonly || userRole === 'superadmin') && (
                         <button 
                             onClick={handleDelete}
                             disabled={isDeleting}
