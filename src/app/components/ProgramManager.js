@@ -261,9 +261,13 @@ export default function ProgramManager({ conferences, userRole }) {
                 const sessionStart = formatTime(session.start_time);
                 const sessionEnd = formatTime(session.end_time);
                 
+                const sessionTopicSlot = (session.slots || []).find(s => s.topic_name);
+                const topic = sessionTopicSlot ? (sessionTopicSlot.parent_topic_name ? `${sessionTopicSlot.parent_topic_name} > ${sessionTopicSlot.topic_name}` : sessionTopicSlot.topic_name) : "";
+
                 const symposia = {
                     code: session.session_name?.split(' ')[0] || `S${session.id}`,
                     name: session.full_session_name || session.session_name,
+                    topic: topic,
                     time: `${sessionStart} - ${sessionEnd}`,
                     type: (session.full_session_name?.toLowerCase().includes('break') || session.session_name?.toLowerCase().includes('break')) ? 'break' : 'session',
                     columns: 1,
@@ -354,10 +358,14 @@ export default function ProgramManager({ conferences, userRole }) {
                 const sessionStart = formatTime(session.start_time);
                 const sessionEnd = formatTime(session.end_time);
                 
+                const sessionTopicSlot = (session.slots || []).find(s => s.topic_name);
+                const topic = sessionTopicSlot ? (sessionTopicSlot.parent_topic_name ? `${sessionTopicSlot.parent_topic_name} > ${sessionTopicSlot.topic_name}` : sessionTopicSlot.topic_name) : "";
+
                 const symposia = {
                     id: session.mongo_id || session.id.toString(),
                     code: session.session_name?.split(' ')[0] || `S${session.id}`,
                     name: session.full_session_name || session.session_name,
+                    topic: topic,
                     room: "General",
                     time: `${sessionStart} - ${sessionEnd}`,
                     type: (session.full_session_name?.toLowerCase().includes('break') || session.session_name?.toLowerCase().includes('break')) ? 'break' : 'session',
@@ -633,6 +641,15 @@ export default function ProgramManager({ conferences, userRole }) {
                                                             return `${fmt(session.start_time)} – ${fmt(session.end_time)}`;
                                                         })()}
                                                     </span>
+                                                    {(() => {
+                                                        const sessionTopicSlot = slots.find(s => s.topic_name);
+                                                        if (!sessionTopicSlot) return null;
+                                                        return (
+                                                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded" title="Topic">
+                                                                {sessionTopicSlot.parent_topic_name ? `${sessionTopicSlot.parent_topic_name} > ${sessionTopicSlot.topic_name}` : sessionTopicSlot.topic_name}
+                                                            </span>
+                                                        );
+                                                    })()}
                                                     {(hasAdminAccess(userRole)) && (
                                                         <button onClick={() => setEditingSession(session)} className="opacity-0 group-hover/time:opacity-100 text-slate-400 hover:text-blue-600 transition-all" title="Edit Session Time">
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
@@ -748,7 +765,9 @@ export default function ProgramManager({ conferences, userRole }) {
                                                                         )}
                                                                     </div>
                                                                 )}
-                                                                <div className="text-[10px] text-slate-400 uppercase mt-1 tracking-wider">{slot.type}</div>
+                                                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">{slot.type}</div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </li>

@@ -18,9 +18,14 @@ export async function getProgram(conferenceId) {
     // Fetch slots for each session
     const sessionsWithSlots = await Promise.all(sessions.map(async (s) => {
         const slots = await query(`
-            SELECT * FROM program_slots 
-            WHERE session_id = ? 
-            ORDER BY start_time ASC
+            SELECT s.*, 
+                   t.name as topic_name, 
+                   p.name as parent_topic_name
+            FROM program_slots s
+            LEFT JOIN topics t ON s.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN topics p ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = p.mongo_id COLLATE utf8mb4_unicode_ci
+            WHERE s.session_id = ? 
+            ORDER BY s.start_time ASC
         `, [s.id]);
         return { ...s, slots };
     }));

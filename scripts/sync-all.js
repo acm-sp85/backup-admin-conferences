@@ -211,6 +211,11 @@ async function syncAll() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // 0.5 Ensure program_slots has topic_mongo_id
+    try {
+      await mariadb.execute('ALTER TABLE program_slots ADD COLUMN topic_mongo_id VARCHAR(100) DEFAULT NULL');
+    } catch (e) { /* ignore duplicate */ }
+
     // 1. Ensure Conference exists
     let conferenceId = await ensureConference(mariadb, targetConferenceAcronym, targetConferenceName, baseUrl);
 
@@ -556,6 +561,26 @@ async function syncAll() {
           
           if (!title) continue;
           
+          let topicMongoId = null;
+          if (record.topic) {
+            if (typeof record.topic === 'object') {
+              if (record.topic._id) {
+                // If it's a hydrated topic object, the ID is here
+                topicMongoId = typeof record.topic._id === 'object' && record.topic._id.$oid 
+                    ? record.topic._id.$oid 
+                    : record.topic._id.toString();
+              } else if (record.topic.$id) {
+                topicMongoId = record.topic.$id.toString(); // DBRef fallback
+              } else if (record.topic.$oid) {
+                topicMongoId = record.topic.$oid; // EJSON fallback
+              } else if (record.topic.toString() !== '[object Object]') {
+                topicMongoId = record.topic.toString(); // Native ObjectId fallback
+              }
+            } else {
+              topicMongoId = String(record.topic);
+            }
+          }
+
           // Match by exact title
           const [slots] = await mariadb.execute(
             'SELECT id FROM program_slots WHERE title = ? AND session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)', 
@@ -565,13 +590,14 @@ async function syncAll() {
           if (slots.length > 0) {
             const slotId = slots[0].id;
             await mariadb.execute(
-              'UPDATE program_slots SET mongo_id = ?, authors = ?, content = ?, code = ?, toc = ? WHERE id = ?',
+              'UPDATE program_slots SET mongo_id = ?, authors = ?, content = ?, code = ?, toc = ?, topic_mongo_id = ? WHERE id = ?',
               [
                 mongoId, 
                 JSON.stringify(record.authors || []), 
                 record.content || null, 
                 record.code || null,
                 record.toc || null,
+                topicMongoId,
                 slotId
               ]
             );
