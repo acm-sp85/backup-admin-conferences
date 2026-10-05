@@ -28,6 +28,19 @@ export async function getProgram(conferenceId) {
     return sessionsWithSlots;
 }
 
+export async function getTopics(conferenceId) {
+    const session = await verifySession();
+    if (!session) throw new Error('Unauthorized');
+
+    const topics = await query(`
+        SELECT * FROM topics 
+        WHERE conference_id = ? 
+        ORDER BY weight DESC, name ASC
+    `, [conferenceId]);
+
+    return topics;
+}
+
 export async function updateDoorSignConfig(conferenceId, config, bgUrl) {
     const session = await verifySession();
     if (!session || (!hasAdminAccess(session.role))) {

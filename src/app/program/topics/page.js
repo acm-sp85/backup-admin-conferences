@@ -1,12 +1,12 @@
 import { hasAdminAccess } from '@/lib/roles';
 import { query } from '@/lib/db';
-import DashboardLayout from '../components/DashboardLayout';
+import DashboardLayout from '@/app/components/DashboardLayout';
 import { verifySession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import ProgramManager from '../components/ProgramManager';
+import TopicsManager from '@/app/components/TopicsManager';
 import Link from 'next/link';
 
-export default async function ProgramPage() {
+export default async function ProgramTopicsPage() {
   const session = await verifySession();
   if (!session || (!hasAdminAccess(session.role))) {
     redirect('/login');
@@ -24,12 +24,12 @@ export default async function ProgramPage() {
           </div>
         </div>
         <div className="flex gap-6 border-b border-slate-200">
-          <Link href="/program" className="pb-2 border-b-2 border-blue-600 text-blue-600 font-medium text-sm">Schedule</Link>
-          <Link href="/program/topics" className="pb-2 text-slate-500 hover:text-slate-800 font-medium text-sm transition-colors">Topics Tree</Link>
+          <Link href="/program" className="pb-2 text-slate-500 hover:text-slate-800 font-medium text-sm transition-colors">Schedule</Link>
+          <Link href="/program/topics" className="pb-2 border-b-2 border-blue-600 text-blue-600 font-medium text-sm">Topics Tree</Link>
         </div>
       </header>
 
-      <ProgramManager conferences={conferences} userRole={session.role} />
+      <TopicsManager conferences={conferences} />
     </DashboardLayout>
   );
 }

@@ -17,6 +17,7 @@
  *   --only-payments      : Syncs ONLY payments and dinner tickets.
  *   --only-posters       : Syncs ONLY posters.
  *   --only-program       : Syncs ONLY program sessions and slots.
+ *   --only-topics        : Syncs ONLY topics and subtopics.
  * --------------------------------------------------------------------------
  */
 const path = require('path');
@@ -51,6 +52,7 @@ const summary = {
   slots: 0,
   orals: 0,
   posters: { new: 0, updated: 0 },
+  topics: { new: 0, updated: 0 },
   errors: []
 };
 
@@ -62,14 +64,16 @@ async function syncAll() {
   const onlyPosters = args.includes('--only-posters');
   const onlyProgram = args.includes('--only-program');
   const onlyOrals = args.includes('--only-orals');
+  const onlyTopics = args.includes('--only-topics');
   
-  const hasSpecificFlag = onlyParticipants || onlyPayments || onlyPosters || onlyProgram || onlyOrals;
+  const hasSpecificFlag = onlyParticipants || onlyPayments || onlyPosters || onlyProgram || onlyOrals || onlyTopics;
   
   const shouldSyncParticipants = hasSpecificFlag ? onlyParticipants : true;
   const shouldSyncPayments = hasSpecificFlag ? onlyPayments : true;
   const shouldSyncPosters = hasSpecificFlag ? onlyPosters : true;
   const shouldSyncProgram = hasSpecificFlag ? onlyProgram : true;
   const shouldSyncOrals = hasSpecificFlag ? onlyOrals : true;
+  const shouldSyncTopics = hasSpecificFlag ? onlyTopics : true;
   const shouldRunCleanup = hasSpecificFlag ? false : !isSafeMode;
 
   const positionalArgs = args.filter(a => !a.startsWith('-'));
@@ -117,6 +121,7 @@ async function syncAll() {
       mongoProgramView: `${ACRONYM} - Program`, 
       mongoPostersView: `${ACRONYM} - Posters`,
       mongoOralsView: `${ACRONYM} - Orals`,
+      mongoTopicsView: `${ACRONYM} - Topics`,
       targetConferenceAcronym: ACRONYM,
       targetConferenceName: confData.name,
     };
@@ -191,6 +196,21 @@ async function syncAll() {
       await mariadb.execute('ALTER TABLE program_sessions ADD COLUMN is_hidden TINYINT(1) DEFAULT 0');
     } catch (e) { /* ignore duplicate */ }
 
+    // 0.4 Ensure topics table exists
+    await mariadb.execute(`
+      CREATE TABLE IF NOT EXISTS topics (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        conference_id INT NOT NULL,
+        mongo_id VARCHAR(100) UNIQUE NOT NULL,
+        parent_mongo_id VARCHAR(100) DEFAULT NULL,
+        name VARCHAR(255) NOT NULL,
+        weight INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (conference_id),
+        INDEX (parent_mongo_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     // 1. Ensure Conference exists
     let conferenceId = await ensureConference(mariadb, targetConferenceAcronym, targetConferenceName, baseUrl);
 
@@ -208,6 +228,7 @@ async function syncAll() {
     const seenPosterMongoIds = new Set();
     const seenSessionMongoIds = new Set();
     const seenTicketIds = new Set();
+    const seenTopicMongoIds = new Set();
     // --------------------------------
 
     // --- EXECUTE SYNC MODULES ---
@@ -560,6 +581,55 @@ async function syncAll() {
       });
     }
 
+    // Module: Topics
+    if (shouldSyncTopics) {
+      await runSyncModule('Topics', async () => {
+        // Check if collection/view exists first to avoid crashing on conferences without topics
+        const collections = await mongoDb.listCollections({ name: SYNC_CONFIG.mongoTopicsView }).toArray();
+        if (collections.length === 0) {
+          console.log(`⏭️  View '${SYNC_CONFIG.mongoTopicsView}' not found in MongoDB. Skipping topics sync.`);
+          return;
+        }
+
+        const [existingTopics] = await mariadb.execute('SELECT mongo_id FROM topics WHERE conference_id = ?', [conferenceId]);
+        const topicSet = new Set(existingTopics.map(t => t.mongo_id));
+        const records = await mongoDb.collection(SYNC_CONFIG.mongoTopicsView).find({}).toArray();
+        console.log(`📑 Processing ${records.length} topics...`);
+        
+        for (const record of records) {
+          const mongoId = record._id?.toString() || record._id?.$oid || null;
+          if (!mongoId) continue;
+          seenTopicMongoIds.add(mongoId);
+          
+          // Extract parent_mongo_id if it exists
+          let parentMongoId = null;
+          if (record.parent) {
+            parentMongoId = typeof record.parent === 'object' && record.parent.$oid 
+              ? record.parent.$oid 
+              : record.parent.toString();
+          }
+          
+          const name = record.name || 'Unnamed Topic';
+          const weight = record.weight || 0;
+          
+          if (!topicSet.has(mongoId)) {
+            await mariadb.execute(
+              'INSERT INTO topics (conference_id, mongo_id, parent_mongo_id, name, weight) VALUES (?, ?, ?, ?, ?)',
+              [conferenceId, mongoId, parentMongoId, name, weight]
+            );
+            summary.topics.new++;
+            topicSet.add(mongoId);
+          } else {
+            await mariadb.execute(
+              'UPDATE topics SET parent_mongo_id = ?, name = ?, weight = ? WHERE mongo_id = ?',
+              [parentMongoId, name, weight, mongoId]
+            );
+            summary.topics.updated++;
+          }
+        }
+      });
+    }
+
     // --- CLEANUP PHASE (Mirror Logic) ---
     if (shouldRunCleanup) {
       console.log('\n🧹 Starting cleanup of stale records...');
@@ -645,6 +715,19 @@ async function syncAll() {
           `, [conferenceId]);
           if (delTickets.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTickets.affectedRows} stale dinner tickets`);
       }
+
+      if (seenTopicMongoIds.size > 0) {
+          const mongoIds = Array.from(seenTopicMongoIds).map(id => `'${id}'`).join(',');
+          const [toArchive] = await mariadb.execute(`SELECT * FROM topics WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+          for (const row of toArchive) {
+              await mariadb.execute(
+                  'INSERT INTO sync_graveyard (entity_type, original_id, mongo_id, conference_id, data) VALUES (?, ?, ?, ?, ?)',
+                  ['topic', row.id, row.mongo_id, conferenceId, JSON.stringify(row)]
+              );
+          }
+          const [delTopics] = await mariadb.execute(`DELETE FROM topics WHERE conference_id = ? AND mongo_id NOT IN (${mongoIds})`, [conferenceId]);
+          if (delTopics.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTopics.affectedRows} stale topics`);
+      }
     }
     // ------------------------------------
 
@@ -693,6 +776,7 @@ function printSummary(acronym) {
   console.log(`🖼️  Posters: ${summary.posters.new} new, ${summary.posters.updated} updated`);
   console.log(`📅 Program: ${summary.sessions} sessions, ${summary.slots} slots`);
   console.log(`🎤 Orals Linked: ${summary.orals}`);
+  console.log(`📑 Topics: ${summary.topics.new} new, ${summary.topics.updated} updated`);
   console.log(`----------------------------------`);
 
   if (summary.errors.length > 0) {
