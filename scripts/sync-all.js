@@ -280,13 +280,20 @@ async function syncAll() {
             );
           }
 
+          const paystatus = record.paystatus || { total: 0, paid: 0, due: 0 };
+
           if (!registrationMap.has(participantId)) {
             const [regRes] = await mariadb.execute(
-              'INSERT INTO registrations (participant_id, conference_id, status) VALUES (?, ?, ?)', 
-              [participantId, conferenceId, 'Registered']
+              'INSERT INTO registrations (participant_id, conference_id, status, paystatus_total, paystatus_paid, paystatus_due) VALUES (?, ?, ?, ?, ?, ?)', 
+              [participantId, conferenceId, 'Registered', paystatus.total || 0, paystatus.paid || 0, paystatus.due || 0]
             );
             registrationMap.set(participantId, regRes.insertId);
             summary.registrations++;
+          } else {
+            await mariadb.execute(
+              'UPDATE registrations SET paystatus_total = ?, paystatus_paid = ?, paystatus_due = ? WHERE id = ?',
+              [paystatus.total || 0, paystatus.paid || 0, paystatus.due || 0, registrationMap.get(participantId)]
+            );
           }
           
           const regId = registrationMap.get(participantId);

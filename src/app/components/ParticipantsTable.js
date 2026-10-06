@@ -338,8 +338,9 @@ export default function ParticipantsTable({ participants, activeConfId, activeCo
                             <th>Conferences</th>
                             <th>
                                 <div className="flex gap-4">
-                                    <a href={getSortUrl('paid')} className="hover:text-indigo-600 flex items-center">Paid <SortIcon field="paid" /></a>
-                                    <a href={getSortUrl('debt')} className="hover:text-indigo-600 flex items-center text-red-500">Debt <SortIcon field="debt" /></a>
+                                    <span className="flex items-center text-slate-500 font-bold">Balance:</span>
+                                    <a href={getSortUrl('paid')} className="hover:text-emerald-600 flex items-center">Paid <SortIcon field="paid" /></a>
+                                    <a href={getSortUrl('debt')} className="hover:text-red-600 flex items-center text-red-500">Due <SortIcon field="debt" /></a>
                                 </div>
                             </th>
                             <th className="text-right"><a href={getSortUrl('created_at')} className="hover:text-indigo-600 flex items-center justify-end">Date <SortIcon field="created_at" /></a></th>

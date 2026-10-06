@@ -213,7 +213,7 @@ export async function validateTicket(token) {
     if (!session) throw new Error('Unauthorized');
 
     const [ticket] = await query(`
-        SELECT t.*, p.firstName, p.lastName, p.email, c.acronym as conference, pay.tickets_info, pay.status as payment_status
+        SELECT t.*, p.firstName, p.lastName, p.email, c.acronym as conference, pay.tickets_info, pay.status as payment_status, r.paystatus_due
         FROM social_dinner_tickets t
         JOIN registrations r ON t.registration_id = r.id
         JOIN participants p ON r.participant_id = p.id
@@ -224,13 +224,8 @@ export async function validateTicket(token) {
 
     if (!ticket) return { success: false, error: 'Invalid Token' };
 
-    // Check for pending balance for the WHOLE registration
-    const payments = await query('SELECT amount, balance, status FROM payments WHERE registration_id = ?', [ticket.registration_id]);
-    const totalDebt = payments.reduce((sum, pay) => {
-        if (pay.status?.toLowerCase() === 'paid') return sum;
-        const b = pay.balance !== null ? Number(pay.balance) : Number(pay.amount);
-        return sum + b;
-    }, 0);
+    // Check for pending balance using MongoDB paystatus
+    const totalDebt = Number(ticket.paystatus_due) || 0;
 
     if (totalDebt > 0) {
         return {

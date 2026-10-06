@@ -153,11 +153,9 @@ export default async function ParticipantsPage({ searchParams }) {
     const primaryReg = pRegs.find(r => r.conference_id === activeConfId) || pRegs[0];
 
     // Summary data for the row
-    const total_paid = pPayments.reduce((sum, pay) => pay.status === 'paid' ? sum + Number(pay.amount) : sum, 0);
-    const total_debt = pPayments.reduce((sum, pay) => {
-      const balance = pay.balance !== null ? Number(pay.balance) : (pay.status?.toLowerCase() !== 'paid' ? Number(pay.amount) : 0);
-      return sum + balance;
-    }, 0);
+    // Option B: Rely strictly on MongoDB paystatus for balance due/paid
+    const total_paid = primaryReg?.paystatus_paid ? Number(primaryReg.paystatus_paid) : 0;
+    const total_debt = primaryReg?.paystatus_due ? Number(primaryReg.paystatus_due) : 0;
     const payment_statuses = [...new Set(pPayments.map(pay => pay.status))].join(', ');
     const conference_tokens = pRegs.map(r => `${r.acronym}:${r.qr_token || ''}:${r.id}:${r.conference_id}`).join('|');
     

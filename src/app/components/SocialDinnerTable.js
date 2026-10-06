@@ -182,7 +182,7 @@ export default function SocialDinnerTable({ attendees, userRole, conferenceAcron
               className="cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => handleSort('dinner_debt')}
             >
-              Payment / Debt <SortIcon column="dinner_debt" />
+              Balance <SortIcon column="dinner_debt" />
             </th>
             <th 
               className="cursor-pointer hover:bg-slate-50 transition-colors"

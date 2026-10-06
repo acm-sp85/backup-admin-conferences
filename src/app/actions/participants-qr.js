@@ -87,7 +87,7 @@ export async function validateParticipantTicket(token) {
     if (!session) throw new Error('Unauthorized');
 
     const [ticket] = await query(`
-        SELECT t.*, p.firstName, p.lastName, p.email, c.name as conference_name, c.acronym as conference_acronym
+        SELECT t.*, p.firstName, p.lastName, p.email, c.name as conference_name, c.acronym as conference_acronym, r.paystatus_due
         FROM participant_qr_tokens t
         JOIN registrations r ON t.registration_id = r.id
         JOIN participants p ON r.participant_id = p.id
@@ -97,13 +97,8 @@ export async function validateParticipantTicket(token) {
 
     if (!ticket) return { success: false, error: 'Invalid Token' };
 
-    // Check for pending balance
-    const payments = await query('SELECT amount, balance, status FROM payments WHERE registration_id = ?', [ticket.registration_id]);
-    const totalDebt = payments.reduce((sum, pay) => {
-        if (pay.status?.toLowerCase() === 'paid') return sum;
-        const b = pay.balance !== null ? Number(pay.balance) : Number(pay.amount);
-        return sum + b;
-    }, 0);
+    // Check for pending balance using cached MongoDB paystatus
+    const totalDebt = Number(ticket.paystatus_due) || 0;
 
     if (totalDebt > 0) {
         // Automatically settle all pending payments for this registration
@@ -111,6 +106,11 @@ export async function validateParticipantTicket(token) {
             `UPDATE payments 
              SET balance = 0, status = 'Paid', payment_method = 'Cash at Door', is_manual = 1 
              WHERE registration_id = ? AND (balance > 0 OR (status IS NOT NULL AND LOWER(status) <> 'paid'))`,
+            [ticket.registration_id]
+        );
+        // Also clear the cached MongoDB paystatus_due so the UI immediately reflects the settlement
+        await query(
+            `UPDATE registrations SET paystatus_due = 0, paystatus_paid = paystatus_paid + paystatus_due WHERE id = ?`,
             [ticket.registration_id]
         );
         return {

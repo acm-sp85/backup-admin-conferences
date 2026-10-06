@@ -52,6 +52,8 @@ export default async function SocialDinnerPage({ searchParams }) {
       p.email_alias,
       r.id as registration_id,
       r.is_guest,
+      r.paystatus_due,
+      r.paystatus_paid,
       c.acronym as conference
     FROM participants p
     JOIN registrations r ON p.id = r.participant_id
@@ -152,10 +154,8 @@ export default async function SocialDinnerPage({ searchParams }) {
     // Only add row if they have at least one active ticket (or we are in showAll mode)
     if (ticket_count === 0 && !isShowAll) return;
 
-    const dinnerDebt = pPayments.reduce((sum, p) => {
-      const balance = p.balance !== null && p.balance !== undefined ? Number(p.balance) : (p.status?.toLowerCase() !== 'paid' ? Number(p.amount) : 0);
-      return sum + balance;
-    }, 0);
+    const dinnerDebt = Number(p.paystatus_due) || 0;
+    const amountPaid = Number(p.paystatus_paid) || 0;
 
     // Use the most common dietary preference, or list multiples
     const preferenceMap = {};
@@ -185,7 +185,7 @@ export default async function SocialDinnerPage({ searchParams }) {
       conference: p.conference,
       is_guest: !!p.is_guest,
       dietary_preference,
-      amount_paid: latestPayment?.amount || 0,
+      amount_paid: amountPaid,
       currency: latestCurrency,
       invoice_code: latestPayment?.invoice,
       purchase_date: latestPayment?.date,

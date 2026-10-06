@@ -158,24 +158,24 @@ export default function SocialDinnerRow({ person, selected, onSelect, userRole }
               </span>
             ) : (
               <>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit ${
-                  person.dinner_debt > 0 ? 'bg-[#ff3b30]/10 text-[#ff3b30]' :
-                  person.payment_status === 'paid' ? 'bg-[#34c759]/10 text-[#34c759]' :
-                  person.payment_status === 'pending' ? 'bg-[#ff9f0a]/10 text-[#ff9f0a]' :
-                  'bg-[#ff3b30]/10 text-[#ff3b30]'
-                }`}>
-                  {person.dinner_debt > 0 ? 'Unpaid' : person.payment_status || 'Unknown'}
-                </span>
-                {person.dinner_debt > 0 ? (
-                  <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
-                    <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                    Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
-                  </div>
-                ) : (
-                  <div className="text-[11px] font-bold text-[var(--foreground)]">
-                    {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.amount_paid)}
-                  </div>
-                )}
+                <div className="flex flex-col gap-1.5 flex-wrap">
+                  {person.amount_paid > 0 && (
+                    <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 w-fit font-bold shadow-sm">
+                      Paid: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.amount_paid)}
+                    </span>
+                  )}
+                  {person.dinner_debt > 0 && (
+                    <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200 w-fit font-bold flex items-center gap-1 shadow-sm">
+                      <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                      Due: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: person.currency || 'EUR' }).format(person.dinner_debt)}
+                    </span>
+                  )}
+                  {(!person.amount_paid && !person.dinner_debt) && (
+                    <span className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 w-fit font-medium">
+                      No Balance
+                    </span>
+                  )}
+                </div>
               </>
             )}
           </div>

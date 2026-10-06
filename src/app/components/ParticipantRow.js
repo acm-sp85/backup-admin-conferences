@@ -9,7 +9,6 @@ import { Mail, QrCode, CheckCircle2, Loader2, RefreshCw, Trash2, Forward, Award,
 import { sendParticipantCheckinQR, resetParticipantCheckin, manualCheckinParticipant, updateParticipantEmailAlias } from '../actions/participants-qr';
 import { sendCertificateEmail } from '../actions/certificates';
 import { updateParticipantType, toggleParticipantRemoved } from '../actions/participants';
-import { addManualPayment, updatePayment, deletePayment } from '../actions/payments';
 
 export default function ParticipantRow({ person, activeConfId, isCompleted, userRole, selected, onSelect, registrationTypes }) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -24,10 +23,6 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     const [isSavingType, setIsSavingType] = useState(false);
     const [isRemoving, setIsRemoving] = useState(false);
     const [showAllConfs, setShowAllConfs] = useState(false);
-    
-    const [editingPayment, setEditingPayment] = useState(null);
-    const [isSavingPayment, setIsSavingPayment] = useState(false);
-    const [isAddingPayment, setIsAddingPayment] = useState(false);
 
     const handleSendQR = async (e) => {
         e.stopPropagation();
@@ -107,17 +102,11 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
         }
     };
 
-    const statuses = person.payment_statuses ? person.payment_statuses.toLowerCase().split(', ') : [];
     // Parse all payments from the JSON array
     const payments = person.all_payments_json ? (typeof person.all_payments_json === 'string' ? JSON.parse(person.all_payments_json) : person.all_payments_json) : [];
     
-    // Calculate total debt: use balance if it exists, otherwise use amount if not paid
-    const totalDebt = Array.isArray(payments) ? payments.reduce((sum, pay) => {
-        if (!pay) return sum;
-        if (pay.status?.toLowerCase() === 'paid') return sum;
-        const balance = pay.balance !== null ? Number(pay.balance) : Number(pay.amount);
-        return sum + balance;
-    }, 0) : 0;
+    // Total debt passed down directly from MongoDB paystatus via page.js
+    const totalDebt = person.total_debt || 0;
 
     // Filter out nulls and sort by date latest first
     const validPayments = Array.isArray(payments) ? payments.filter(p => p !== null) : [];
@@ -126,10 +115,6 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
     // Get latest info for the summary display
     const latestPayment = sortedPayments[0] || null;
     const hasManualPayments = sortedPayments.some(p => p.is_manual === 1);
-
-    const isPaid = statuses.length > 0 && statuses.every(s => s === 'paid') && totalDebt <= 0;
-    const isPending = statuses.includes('pending') || totalDebt > 0;
-    const hasNoPayments = statuses.length === 0;
 
     const confTokens = person.conference_tokens ? person.conference_tokens.split('|').map(item => {
         const [acronym, token, registrationId, conferenceId] = item.split(':');
@@ -259,44 +244,34 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                     </div>
                 </td>
                 <td className="py-4">
-                    {hasNoPayments ? (
-                        <span className="text-[var(--muted)] text-xs">—</span>
-                    ) : (
-                        <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="badge" style={{
-                                    background: isPaid ? '#e8faf0' : isPending ? '#fff8e8' : '#f5f5f7',
-                                    color: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#86868b',
-                                    fontSize: '9px',
-                                    padding: '2px 6px'
-                                }}>
-                                    <span className="w-[4px] h-[4px] rounded-full" style={{ background: isPaid ? '#34c759' : isPending ? '#ff9f0a' : '#aeaeb2' }} />
-                                    {isPaid ? 'Paid' : isPending ? 'Pending' : 'Mixed'}
+                    <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-1.5 flex-wrap">
+                            {person.total_paid > 0 && (
+                                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 w-fit font-bold shadow-sm">
+                                    Paid: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(person.total_paid)}
                                 </span>
-                                {hasManualPayments && (
-                                    <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="Contains manually protected payments">
-                                        <Hand className="w-2.5 h-2.5"/> MANUAL
-                                    </span>
-                                )}
-                            </div>
-                        <div className="flex flex-col gap-1 mt-1">
-                            {totalDebt > 0 ? (
-                                <div className="text-[10px] text-red-600 font-bold flex items-center gap-1 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 w-fit">
-                                    <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                                    Debt: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(totalDebt)}
-                                </div>
-                            ) : (
-                                <div className="text-[11px] font-bold text-[var(--foreground)]">
-                                    {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(person.total_paid)}
-                                </div>
                             )}
-                            
-                            {latestPayment?.invoice && (
-                                <span className="text-[9px] text-[var(--muted)] font-mono">{latestPayment.invoice}</span>
+                            {totalDebt > 0 && (
+                                <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200 w-fit font-bold flex items-center gap-1 shadow-sm">
+                                    <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                                    Due: {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(totalDebt)}
+                                </span>
+                            )}
+                            {(!person.total_paid && !totalDebt) && (
+                                <span className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 w-fit font-medium">
+                                    No Balance
+                                </span>
+                            )}
+                            {hasManualPayments && (
+                                <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold w-fit" title="Contains manually protected payments">
+                                    <Hand className="w-2 h-2"/> MANUAL
+                                </span>
                             )}
                         </div>
+                        {latestPayment?.invoice && (
+                            <span className="text-[9px] text-[var(--muted)] font-mono">{latestPayment.invoice}</span>
+                        )}
                     </div>
-                    )}
                 </td>
                 <td className="text-right py-4" onClick={(e) => e.stopPropagation()}>
                     <ParticipantVoterToggle 
@@ -571,117 +546,8 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                                             Payment History & Tickets
                                         </h4>
-                                        {(hasAdminAccess(userRole)) && !isAddingPayment && !editingPayment && (
-                                            <button 
-                                                onClick={() => { setIsAddingPayment(true); setEditingPayment({ amount: 0, balance: 0, status: 'Pending', method: 'Manual' }); }}
-                                                className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[9px] font-bold hover:bg-indigo-100 flex items-center gap-1 transition-colors"
-                                            >
-                                                <Plus className="w-3 h-3" /> Add Record
-                                            </button>
-                                        )}
                                     </div>
                                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
-                                        {(isAddingPayment || editingPayment) && (
-                                            <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-100 mb-3 animate-in fade-in slide-in-from-top-2">
-                                                <div className="text-[10px] font-bold text-indigo-800 mb-2">{isAddingPayment ? 'Add Manual Record' : 'Edit Payment'}</div>
-                                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                                    <div>
-                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Amount</label>
-                                                        <input type="number" step="0.01" value={editingPayment.amount !== undefined ? editingPayment.amount : ''} onChange={e => setEditingPayment({...editingPayment, amount: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Unpaid Balance (Debt)</label>
-                                                        <input type="number" step="0.01" value={editingPayment.balance !== undefined && editingPayment.balance !== null ? editingPayment.balance : ''} onChange={e => setEditingPayment({...editingPayment, balance: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Status</label>
-                                                        <select value={editingPayment.status || 'Pending'} onChange={e => setEditingPayment({...editingPayment, status: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400">
-                                                            <option value="Paid">Paid</option>
-                                                            <option value="Pending">Pending</option>
-                                                            <option value="Cancelled">Cancelled</option>
-                                                        </select>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[9px] uppercase text-indigo-600 font-bold mb-1">Method</label>
-                                                        <input type="text" value={editingPayment.method || ''} onChange={e => setEditingPayment({...editingPayment, method: e.target.value})} className="w-full px-2 py-1 rounded border border-indigo-200 focus:outline-none focus:ring-1 focus:ring-indigo-400" placeholder="e.g. Bank Transfer" />
-                                                    </div>
-                                                    {!isAddingPayment && (
-                                                        <div className="col-span-2 mt-1">
-                                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    checked={editingPayment.is_manual === 0 || editingPayment.is_manual === false} 
-                                                                    onChange={e => setEditingPayment({...editingPayment, is_manual: e.target.checked ? 0 : 1})}
-                                                                    className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
-                                                                />
-                                                                <span className="text-[10px] text-[var(--muted)] font-medium">Allow SCITO sync to overwrite these manual edits (Unprotect)</span>
-                                                            </label>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex justify-end items-center gap-3 mt-4">
-                                                    {!isAddingPayment && (
-                                                        <button 
-                                                            disabled={isSavingPayment}
-                                                            onClick={async () => {
-                                                                if (!confirm('Are you sure you want to delete this payment record?')) return;
-                                                                setIsSavingPayment(true);
-                                                                try {
-                                                                    await deletePayment(editingPayment.id);
-                                                                    setIsAddingPayment(false);
-                                                                    setEditingPayment(null);
-                                                                } catch (err) {
-                                                                    alert('Error deleting payment: ' + err.message);
-                                                                } finally {
-                                                                    setIsSavingPayment(false);
-                                                                }
-                                                            }}
-                                                            className="text-red-500 hover:text-red-700 text-[10px] font-bold flex items-center gap-1 mr-auto disabled:opacity-50"
-                                                        >
-                                                            <Trash2 className="w-3 h-3"/> Delete
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        disabled={isSavingPayment}
-                                                        onClick={() => { setIsAddingPayment(false); setEditingPayment(null); }}
-                                                        className="px-2 py-1 text-slate-500 hover:text-slate-700 text-[10px] font-bold flex items-center gap-1"
-                                                    ><X className="w-3 h-3"/> Cancel</button>
-                                                    <button 
-                                                        disabled={isSavingPayment}
-                                                        onClick={async () => {
-                                                            setIsSavingPayment(true);
-                                                            try {
-                                                                if (isAddingPayment) {
-                                                                    await addManualPayment(person.primary_registration_id, {
-                                                                        amount: editingPayment.amount,
-                                                                        balance: editingPayment.balance,
-                                                                        status: editingPayment.status,
-                                                                        payment_method: editingPayment.method
-                                                                    });
-                                                                } else {
-                                                                    await updatePayment(editingPayment.id, {
-                                                                        amount: editingPayment.amount,
-                                                                        balance: editingPayment.balance,
-                                                                        status: editingPayment.status,
-                                                                        payment_method: editingPayment.method,
-                                                                        is_manual: editingPayment.is_manual !== undefined ? (editingPayment.is_manual ? 1 : 0) : 1
-                                                                    });
-                                                                }
-                                                                setIsAddingPayment(false);
-                                                                setEditingPayment(null);
-                                                            } catch (err) {
-                                                                alert('Error saving payment: ' + err.message);
-                                                            } finally {
-                                                                setIsSavingPayment(false);
-                                                            }
-                                                        }}
-                                                        className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1"
-                                                    >
-                                                        {isSavingPayment ? <Loader2 className="w-3 h-3 animate-spin"/> : <Save className="w-3 h-3"/>} Save
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                         {sortedPayments.length > 0 ? sortedPayments.map((pay, pIdx) => {
                                             const tickets = pay.tickets ? (typeof pay.tickets === 'string' ? JSON.parse(pay.tickets) : pay.tickets) : [];
                                             const pStatus = pay.status?.toLowerCase();
@@ -696,15 +562,6 @@ export default function ParticipantRow({ person, activeConfId, isCompleted, user
                                                             {pay.is_manual ? <span className="flex items-center gap-1 text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="Protected from SCITO sync"><Hand className="w-2.5 h-2.5"/> MANUAL</span> : null}
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            {(hasAdminAccess(userRole)) && !editingPayment && !isAddingPayment && (
-                                                                <button 
-                                                                    onClick={() => { setIsAddingPayment(false); setEditingPayment({...pay, method: pay.payment_method || pay.method, is_manual: 1}); }} 
-                                                                    className="text-slate-400 hover:text-indigo-600 p-0.5 transition-colors" 
-                                                                    title="Edit Payment"
-                                                                >
-                                                                    <Pencil className="w-3 h-3"/>
-                                                                </button>
-                                                            )}
                                                             <span className="badge" style={{
                                                                 background: pIsPaid ? '#e8faf0' : pIsPending ? '#fff8e8' : '#fef2f2',
                                                                 color: pIsPaid ? '#34c759' : pIsPending ? '#ff9f0a' : '#ef4444',
