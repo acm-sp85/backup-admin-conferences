@@ -101,18 +101,7 @@ export async function validateParticipantTicket(token) {
     const totalDebt = Number(ticket.paystatus_due) || 0;
 
     if (totalDebt > 0) {
-        // Automatically settle all pending payments for this registration
-        await query(
-            `UPDATE payments 
-             SET balance = 0, status = 'Paid', payment_method = 'Cash at Door', is_manual = 1 
-             WHERE registration_id = ? AND (balance > 0 OR (status IS NOT NULL AND LOWER(status) <> 'paid'))`,
-            [ticket.registration_id]
-        );
-        // Also clear the cached MongoDB paystatus_due so the UI immediately reflects the settlement
-        await query(
-            `UPDATE registrations SET paystatus_due = 0, paystatus_paid = paystatus_paid + paystatus_due WHERE id = ?`,
-            [ticket.registration_id]
-        );
+        // We do NOT modify the database here. We just reject the scan.
         return {
             success: false,
             hasDebt: true,
