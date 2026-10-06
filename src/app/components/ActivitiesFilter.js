@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTransition, useState } from 'react';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function ActivitiesFilter({ conferences }) {
   const router = useRouter();
@@ -38,9 +39,7 @@ export default function ActivitiesFilter({ conferences }) {
             disabled={isPending}
             >
             <option value="">Select a Conference...</option>
-            {conferences.map(conf => (
-                <option key={conf.acronym} value={conf.acronym}>{conf.acronym}</option>
-            ))}
+            <ConferenceGroupedOptions conferences={conferences} renderOption={conf => (<option key={conf.acronym} value={conf.acronym}>{conf.acronym}</option>)} />
             </select>
             {isPending && (
                 <div className="absolute right-8 top-1/2 -translate-y-1/2">

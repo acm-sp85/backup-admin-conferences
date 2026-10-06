@@ -18,7 +18,7 @@ export default async function ParticipantsPage({ searchParams }) {
   }
 
   const { search, conference, status, show_removed, sortBy = 'created_at', order = 'desc' } = await searchParams;
-  const conferences = await query('SELECT id, acronym, start_date, end_date FROM conferences ORDER BY acronym ASC');
+  const conferences = await query('SELECT * FROM conferences ORDER BY acronym ASC');
 
   // Persistence: If no conference in URL, check cookie
   if (!conference && conferences.length > 0) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { searchConferenceParticipants, getVotersForConference, updateParticipantClusters, removeVoter, sendVoterInvite } from '../actions/participantVoting';
 import { resetParticipantVotes } from '../actions/posters';
 import ParticipantClusterSelect from './ParticipantClusterSelect';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function ParticipantVotingManager({ conferences, allClusters, userRole, selectedConference, onConferenceChange }) {
     const [search, setSearch] = useState('');
@@ -128,9 +129,7 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                             onChange={(e) => onConferenceChange(e.target.value)}
                             className="input-base w-full font-semibold"
                         >
-                            {conferences.map(c => (
-                                <option key={c.id} value={c.id}>{c.acronym}</option>
-                            ))}
+                            <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.acronym}</option>)} />
                         </select>
                     </div>
                     <div className="flex-1 w-full relative">

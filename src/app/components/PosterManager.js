@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getPostersForConference, getClustersForConference, updatePosterCluster, bulkUpdatePosterClusters } from '../actions/posters';
 import ClusterManager from './ClusterManager';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function PosterManager({ conferences, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
@@ -124,9 +125,7 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                         onChange={(e) => onConferenceChange(e.target.value)}
                         className="input-base font-semibold"
                     >
-                        {conferences.map(c => (
-                            <option key={c.id} value={c.id}>{c.acronym}</option>
-                        ))}
+                        <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.acronym}</option>)} />
                     </select>
                     <input 
                         type="text"

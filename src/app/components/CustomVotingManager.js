@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 import {
     getCustomVotingGroups,
     createCustomVotingGroup,
@@ -331,9 +332,7 @@ export default function CustomVotingManager({ conferences, userRole, selectedCon
                         onChange={(e) => onConferenceChange(e.target.value)}
                         className="input-base font-semibold w-full sm:w-auto"
                     >
-                        {conferences.map(c => (
-                            <option key={c.id} value={c.id}>{c.acronym}</option>
-                        ))}
+                        <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.acronym}</option>)} />
                     </select>
                 </div>
             </div>

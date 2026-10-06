@@ -13,7 +13,7 @@ export default async function StatsPage({ searchParams }) {
   }
 
   const { conference } = await searchParams;
-  const conferences = await query('SELECT id, acronym FROM conferences ORDER BY acronym ASC');
+  const conferences = await query('SELECT * FROM conferences ORDER BY acronym ASC');
 
   if (!conference && conferences.length > 0) {
     const cookieStore = await cookies();

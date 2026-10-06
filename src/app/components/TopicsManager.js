@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getTopics } from '../actions/program';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function TopicsManager({ conferences }) {
     const [selectedConfId, setSelectedConfId] = useState(() => {
@@ -64,9 +65,7 @@ export default function TopicsManager({ conferences }) {
                     value={selectedConfId}
                     onChange={(e) => handleConferenceChange(e.target.value)}
                 >
-                    {conferences.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>
-                    ))}
+                    <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>)} />
                 </select>
                 {!loading && (
                     <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">

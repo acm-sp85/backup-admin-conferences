@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { checkEmailForCertificates, sendPublicCertificateEmail, sendAdminCertificatesEmail } from '../actions/publicCertificates';
 import { Mail, ArrowRight, Award, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function PublicCertificatesPage() {
     const [email, setEmail] = useState('');

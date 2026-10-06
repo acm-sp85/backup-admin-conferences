@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useTransition, useState, useEffect } from 'react';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function SocialDinnerFilter({ conferences, attendees }) {
   const router = useRouter();
@@ -98,9 +99,7 @@ export default function SocialDinnerFilter({ conferences, attendees }) {
           className="input-base w-full h-9 text-xs font-medium"
         >
           <option value="">All Conferences</option>
-          {conferences.map(conf => (
-            <option key={conf.acronym} value={conf.acronym}>{conf.acronym}</option>
-          ))}
+          <ConferenceGroupedOptions conferences={conferences} renderOption={conf => (<option key={conf.acronym} value={conf.acronym}>{conf.acronym}</option>)} />
         </select>
       </div>
 

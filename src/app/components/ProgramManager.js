@@ -2,6 +2,7 @@
 import { hasAdminAccess } from '@/lib/roles';
 
 import { useState, useEffect } from 'react';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 import { getProgram, getConferenceConfig, updateDoorSignConfig, toggleSessionVisibility, updateSessionData, updateSlotData, deleteSlotData, createSessionData, createSlotData, deleteSessionData } from '../actions/program';
 
 const formatName = (name) => {
@@ -524,9 +525,10 @@ export default function ProgramManager({ conferences, userRole }) {
                         value={selectedConfId}
                         onChange={(e) => handleConferenceChange(e.target.value)}
                     >
-                        {conferences.map(c => (
-                            <option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>
-                        ))}
+                        <ConferenceGroupedOptions 
+                            conferences={conferences} 
+                            renderOption={c => <option key={c.id} value={c.id}>{c.name} ({c.acronym})</option>} 
+                        />
                     </select>
                     {!loading && (
                         <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">

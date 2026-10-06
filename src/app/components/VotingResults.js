@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getPostersForConference, resetVotingResults } from '../actions/posters';
 import VoteDetailsModal from './VoteDetailsModal';
 import VoterStatusModal from './VoterStatusModal';
+import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
 export default function VotingResults({ conferences, userRole, selectedConference, onConferenceChange }) {
     const [posters, setPosters] = useState([]);
@@ -83,9 +84,7 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                         onChange={(e) => onConferenceChange(e.target.value)}
                         className="input-base font-semibold"
                     >
-                        {conferences.map(c => (
-                            <option key={c.id} value={c.id}>{c.acronym}</option>
-                        ))}
+                        <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.acronym}</option>)} />
                     </select>
                 </div>
                 <div className="flex items-center gap-3">
