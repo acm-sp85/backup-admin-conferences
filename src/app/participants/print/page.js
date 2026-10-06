@@ -2,7 +2,7 @@ import { query } from '@/lib/db';
 import { getBadgeConfig } from '@/app/actions/participants-qr';
 
 export default async function PrintBadgesPage({ searchParams }) {
-    const { registrationIds, conferenceId } = await searchParams;
+    const { registrationIds, conferenceId, dos_caras } = await searchParams;
     
     if (!registrationIds || !conferenceId) return <div className="p-10 text-center">Missing parameters (registrationIds, conferenceId)</div>;
     
@@ -40,6 +40,15 @@ export default async function PrintBadgesPage({ searchParams }) {
             LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
             WHERE r.id IN (${ids.map(() => '?').join(',')})
         `, ids);
+    }
+
+    if (dos_caras === '1') {
+        const doubled = [];
+        participants.forEach(p => {
+            doubled.push(p);
+            doubled.push({ ...p, registrationId: p.registrationId + '_copy' });
+        });
+        participants = doubled;
     }
 
     const { config, bgUrl } = await getBadgeConfig(conferenceId);
@@ -300,9 +309,19 @@ export default async function PrintBadgesPage({ searchParams }) {
                         <label htmlFor="toggle-print-trim-lines" style={{ margin: 0, cursor: 'pointer', fontWeight: 'bold', color: '#e2e8f0', whiteSpace: 'nowrap' }}>Print Trim Lines</label>
                     </div>
                 </div>
-                <button className="print-btn" id="print-button-trigger">
-                    Print Badges
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        className="print-btn" 
+                        id="dos-caras-btn" 
+                        style={{ background: '#3b82f6', color: 'white', opacity: dos_caras === '1' ? 0.7 : 1 }}
+                        title="Print 2 copies of each badge"
+                    >
+                        {dos_caras === '1' ? '✓ Dos Caras (Active)' : 'Dos Caras'}
+                    </button>
+                    <button className="print-btn" id="print-button-trigger">
+                        Print Badges
+                    </button>
+                </div>
             </div>
             
             {(() => {
@@ -458,6 +477,16 @@ export default async function PrintBadgesPage({ searchParams }) {
             <script dangerouslySetInnerHTML={{ __html: `
                 document.getElementById('print-button-trigger').addEventListener('click', function() {
                     window.print();
+                });
+
+                document.getElementById('dos-caras-btn').addEventListener('click', function() {
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.get('dos_caras') === '1') {
+                        url.searchParams.delete('dos_caras');
+                    } else {
+                        url.searchParams.set('dos_caras', '1');
+                    }
+                    window.location.href = url.toString();
                 });
 
                 const toggleTrimCheckbox = document.getElementById('toggle-print-trim-lines');

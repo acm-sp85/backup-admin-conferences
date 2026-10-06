@@ -59,18 +59,16 @@ export default async function StatsPage({ searchParams }) {
 
   // 3. Total Revenue
   const [{ total_revenue }] = await query(`
-    SELECT SUM(amount) as total_revenue
-    FROM payments p
-    JOIN registrations r ON p.registration_id = r.id
-    WHERE r.conference_id = ? AND p.status = 'paid'
+    SELECT SUM(paystatus_paid) as total_revenue
+    FROM registrations
+    WHERE conference_id = ?
   `, [activeConfId]);
 
   // 3.6 Pending Revenue
   const [{ total_pending }] = await query(`
-    SELECT SUM(amount) as total_pending
-    FROM payments p
-    JOIN registrations r ON p.registration_id = r.id
-    WHERE r.conference_id = ? AND p.status != 'paid'
+    SELECT SUM(paystatus_due) as total_pending
+    FROM registrations
+    WHERE conference_id = ?
   `, [activeConfId]);
 
   // 3.5 Total Inferred Countries
