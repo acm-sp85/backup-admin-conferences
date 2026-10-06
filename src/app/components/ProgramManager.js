@@ -861,6 +861,20 @@ export default function ProgramManager({ conferences, userRole }) {
                                         onChange={(e) => setConfig({ ...config, config: { ...config.config, padding: e.target.value } })}
                                     />
                                 </div>
+                                <div className="space-y-2 col-span-2 pt-2">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                        <div className="relative">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer"
+                                                checked={config.config.showTopicsInDoorSigns !== false}
+                                                onChange={(e) => setConfig({ ...config, config: { ...config.config, showTopicsInDoorSigns: e.target.checked } })}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-700">Show Topic / Cluster Badges in PDF</span>
+                                    </label>
+                                </div>
                             </div>
                         </form>
                         <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">

@@ -61,9 +61,14 @@ export default async function ProgramPrintAllPage({ searchParams }) {
 
     // Fetch all slots for all sessions at once
     const allSlots = await query(`
-        SELECT * FROM program_slots 
-        WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)
-        ORDER BY start_time ASC
+        SELECT s.*, 
+               t.name as topic_name, 
+               p.name as parent_topic_name
+        FROM program_slots s
+        LEFT JOIN topics t ON s.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+        LEFT JOIN topics p ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = p.mongo_id COLLATE utf8mb4_unicode_ci
+        WHERE s.session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)
+        ORDER BY s.start_time ASC
     `, [conferenceId]);
 
     // Fetch conference config
@@ -195,6 +200,20 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                             return `${fmt(session.start_time)} - ${fmt(session.end_time)}`;
                                         })()}
                                     </div>
+                                    {(() => {
+                                        if (config.showTopicsInDoorSigns === false) return null;
+                                        const sessionTopicSlot = group.slots.find(s => s.topic_name);
+                                        if (!sessionTopicSlot) return null;
+                                        const topicText = sessionTopicSlot.parent_topic_name 
+                                            ? `${sessionTopicSlot.parent_topic_name} > ${sessionTopicSlot.topic_name}` 
+                                            : sessionTopicSlot.topic_name;
+                                        return (
+                                            <div className="text-white px-4 py-1 font-medium text-lg border-l-2 border-white/20"
+                                                 style={{ backgroundColor: config.titleColor, opacity: 0.9 }}>
+                                                {topicText}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
