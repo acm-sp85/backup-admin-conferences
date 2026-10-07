@@ -443,6 +443,114 @@ export default function ProgramManager({ conferences, userRole }) {
         downloadAnchorNode.remove();
     };
 
+    const handleDownloadInvitedSpeakersCSV = () => {
+        const conf = conferences.find(c => c.id == selectedConfId);
+        let csvData = "Session Name,Role,Name,Slot Title,Start Time,End Time,Entity,Country\n";
+
+        const escapeCSV = (str) => {
+            if (!str) return '';
+            return `"${str.toString().replace(/"/g, '""')}"`;
+        };
+
+        const formatNameForCSV = (nameStr) => {
+            if (!nameStr) return '';
+            if (nameStr.includes(',')) {
+                const parts = nameStr.split(',');
+                nameStr = parts[1].trim() + ' ' + parts[0].trim();
+            }
+            return nameStr
+                .toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        };
+
+        program.forEach(session => {
+            let cleanSessionName = session.full_session_name || '';
+            const chairMatch = cleanSessionName.match(/\(Chair:\s*(.*?)\)/);
+            if (chairMatch) {
+                cleanSessionName = cleanSessionName.replace(/\(Chair:.*?\)/, '').trim();
+            }
+            
+            const slots = session.slots || [];
+            slots.forEach(slot => {
+                let role = slot.type;
+                if (role && role.toLowerCase() === 'invited speaker') {
+                    const presenterName = formatNameForCSV(slot.presenter_name);
+                    csvData += `${escapeCSV(cleanSessionName)},Invited Speaker,${escapeCSV(presenterName)},${escapeCSV(slot.title)},${escapeCSV(slot.start_time)},${escapeCSV(slot.end_time || '')},${escapeCSV(slot.presenter_entity)},${escapeCSV(slot.presenter_country)}\n`;
+                }
+            });
+        });
+
+        const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvData);
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `invited-speakers-${conf?.acronym || 'program'}.csv`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
+    const handleDownloadFullProgramCSV = () => {
+        const conf = conferences.find(c => c.id == selectedConfId);
+        let csvData = "Session Name,Role,Name,Slot Title,Start Time,End Time,Entity,Country\n";
+
+        const escapeCSV = (str) => {
+            if (!str) return '';
+            return `"${str.toString().replace(/"/g, '""')}"`;
+        };
+
+        const formatNameForCSV = (nameStr) => {
+            if (!nameStr) return '';
+            if (nameStr.includes(',')) {
+                const parts = nameStr.split(',');
+                nameStr = parts[1].trim() + ' ' + parts[0].trim();
+            }
+            return nameStr
+                .toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        };
+
+        program.forEach(session => {
+            let cleanSessionName = session.full_session_name || '';
+            const chairMatch = cleanSessionName.match(/\(Chair:\s*(.*?)\)/);
+            if (chairMatch) {
+                const chairName = formatNameForCSV(chairMatch[1]);
+                cleanSessionName = cleanSessionName.replace(/\(Chair:.*?\)/, '').trim();
+                // Add Chair row
+                csvData += `${escapeCSV(cleanSessionName)},Chair,${escapeCSV(chairName)},,${escapeCSV(session.start_time)},${escapeCSV(session.end_time || '')},,\n`;
+            } else {
+                cleanSessionName = cleanSessionName.trim();
+            }
+            
+            const slots = session.slots || [];
+            slots.forEach(slot => {
+                let role = slot.type;
+                if (role && role.toLowerCase() === 'invited speaker') {
+                    role = 'Invited Speaker';
+                } else if (role && role.toLowerCase() === 'oral') {
+                    role = 'Speaker';
+                } else if (!role) {
+                    role = '';
+                }
+                
+                const presenterName = formatNameForCSV(slot.presenter_name);
+                
+                csvData += `${escapeCSV(cleanSessionName)},${escapeCSV(role)},${escapeCSV(presenterName)},${escapeCSV(slot.title)},${escapeCSV(slot.start_time)},${escapeCSV(slot.end_time || '')},${escapeCSV(slot.presenter_entity)},${escapeCSV(slot.presenter_country)}\n`;
+            });
+        });
+
+        const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvData);
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `full-program-${conf?.acronym || 'program'}.csv`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
     const isCipie = Number(selectedConfId) === 11;
 
     // Group sessions by day
@@ -592,6 +700,20 @@ export default function ProgramManager({ conferences, userRole }) {
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 JSON (Parallel)
+                            </button>
+                            <button 
+                                onClick={handleDownloadInvitedSpeakersCSV}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                CSV (Invited Speakers)
+                            </button>
+                            <button 
+                                onClick={handleDownloadFullProgramCSV}
+                                className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                CSV (Full Program)
                             </button>
                         </>
                     )}
