@@ -132,7 +132,8 @@ export async function getParticipantByToken(token) {
             c.email as conference_email,
             c.voting_window_open,
             c.voting_validation_enabled,
-            c.voting_instructions
+            c.voting_instructions,
+            c.poster_voting_mode
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id

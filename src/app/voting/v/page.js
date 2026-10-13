@@ -42,37 +42,74 @@ export default async function ParticipantVotingPortal({ searchParams }) {
         );
     }
 
+    const isTopicMode = participant.poster_voting_mode === 'topics';
     const clustersIds = participant.cluster_for_review || [];
     if (clustersIds.length === 0) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
                 <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl border border-slate-200">
-                    <h2 className="text-2xl font-bold text-slate-900 mb-4">No Clusters Assigned</h2>
-                    <p className="text-slate-500">You haven't been assigned to any poster clusters for review yet.</p>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-4">{isTopicMode ? 'No Symposia Assigned' : 'No Clusters Assigned'}</h2>
+                    <p className="text-slate-500">You haven't been assigned to any poster {isTopicMode ? 'symposia' : 'clusters'} for review yet.</p>
                 </div>
             </div>
         );
     }
 
-    // Fetch active clusters for this participant
-    const clustersIdsString = clustersIds.join(',');
-    const activeClusters = await query(`
-        SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id 
-        FROM clusters c 
-        JOIN conferences conf ON c.conference_id = conf.id 
-        WHERE c.id IN (${clustersIdsString}) AND c.conference_id = ?
-    `, [participant.conference_id]);
+    let activeClusters = [];
+    let posters = [];
 
-    // Fetch posters for the conference
-    const posters = await query(`
-        SELECT p.*, conf.base_url,
-               t.name as topic_name, parent.name as parent_topic_name
-        FROM posters p
-        JOIN conferences conf ON p.conference_id = conf.id
-        LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
-        LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
-        WHERE p.conference_id = ?
-    `, [participant.conference_id]);
+    if (isTopicMode) {
+        const placeholders = clustersIds.map(() => '?').join(',');
+        
+        // Fetch active symposia/topics assigned to participant
+        const topicRows = await query(`
+            SELECT mongo_id as id, name, ? as conference_acronym, ? as conference_id 
+            FROM topics 
+            WHERE mongo_id IN (${placeholders})
+            ORDER BY name ASC
+        `, [participant.conference_acronym, participant.conference_id, ...clustersIds]);
+
+        activeClusters = topicRows.map(t => ({
+            ...t,
+            name: (t.name || '').replace(/\s+/g, ' ').trim()
+        }));
+
+        // Fetch posters matching assigned symposia/topics
+        posters = await query(`
+            SELECT p.*, conf.base_url,
+                   t.name as topic_name, parent.name as parent_topic_name,
+                   COALESCE(parent.mongo_id, t.mongo_id) as symposium_mongo_id
+            FROM posters p
+            JOIN conferences conf ON p.conference_id = conf.id
+            LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
+            WHERE p.conference_id = ?
+              AND (
+                p.topic_mongo_id IN (${placeholders})
+                OR t.parent_mongo_id IN (${placeholders})
+              )
+        `, [participant.conference_id, ...clustersIds, ...clustersIds]);
+    } else {
+        // Fetch active clusters for this participant
+        const clustersIdsString = clustersIds.map(Number).filter(n => !isNaN(n)).join(',');
+        activeClusters = await query(`
+            SELECT c.id, c.name, conf.acronym as conference_acronym, conf.id as conference_id 
+            FROM clusters c 
+            JOIN conferences conf ON c.conference_id = conf.id 
+            WHERE c.id IN (${clustersIdsString || '0'}) AND c.conference_id = ?
+        `, [participant.conference_id]);
+
+        // Fetch posters for the conference
+        posters = await query(`
+            SELECT p.*, conf.base_url,
+                   t.name as topic_name, parent.name as parent_topic_name
+            FROM posters p
+            JOIN conferences conf ON p.conference_id = conf.id
+            LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
+            WHERE p.conference_id = ?
+        `, [participant.conference_id]);
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-12">
@@ -120,6 +157,7 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                         isParticipant={true}
                         hasVoted={participant.has_voted}
                         votingValidationEnabled={!!participant.voting_validation_enabled}
+                        isTopicMode={isTopicMode}
                     />
                 </div>
                 

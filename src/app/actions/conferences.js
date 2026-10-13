@@ -34,6 +34,7 @@ export async function createConference(formData) {
     const registration_notes = formData.get('registration_notes') || null;
     const registration_maps_url = formData.get('registration_maps_url') || null;
     const email_from_domain = formData.get('email_from_domain') || '@scitoevents.com';
+    const poster_voting_mode = formData.get('poster_voting_mode') || 'clusters';
 
     if (!name || !acronym || !start_date || !end_date) {
         return { error: 'Name, Acronym, Start Date, and End Date are required' };
@@ -41,7 +42,7 @@ export async function createConference(formData) {
 
     try {
         await query(
-            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, email_certificate_body, certificate_orientation, certificate_background_image, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url, email_from_domain) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO conferences (name, acronym, email, logo_url, banner_url, accent_color, email_magic_link_body, email_poster_voting_invite_body, email_social_dinner_tickets_body, email_checkin_body, email_certificate_body, certificate_orientation, certificate_background_image, voting_validation_enabled, voting_instructions, emails_enabled, badge_bg, badge_config, sponsor_list, conference_address, signature_image, text_under_signature, conference_full_name, start_date, end_date, social_dinner_date, social_dinner_location, social_dinner_time, social_dinner_timezone, social_dinner_maps_url, registration_venue, registration_starts_at, registration_notes, registration_maps_url, email_from_domain, poster_voting_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
               name,
               acronym,
@@ -77,7 +78,8 @@ export async function createConference(formData) {
               registration_starts_at,
               registration_notes,
               registration_maps_url,
-              email_from_domain
+              email_from_domain,
+              poster_voting_mode
             ]
           );
         await logAction('CREATE', 'CONFERENCE', null, { acronym, name });
@@ -176,13 +178,15 @@ export async function updateConference(id, formData) {
     const registration_maps_url = formData.get('registration_maps_url') || null;
     const email_from_domain = formData.get('email_from_domain') || '@scitoevents.com';
 
+    const poster_voting_mode = formData.get('poster_voting_mode') || 'clusters';
+
     if (!name || !acronym || !start_date || !end_date) {
         return { error: 'Name, Acronym, Start Date, and End Date are required' };
     }
 
     try {
         await query(
-            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, email_certificate_body = ?, certificate_orientation = ?, certificate_background_image = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ?, email_from_domain = ? WHERE id = ?',
+            'UPDATE conferences SET name = ?, acronym = ?, email = ?, logo_url = ?, banner_url = ?, accent_color = ?, email_magic_link_body = ?, email_poster_voting_invite_body = ?, email_social_dinner_tickets_body = ?, email_checkin_body = ?, email_certificate_body = ?, certificate_orientation = ?, certificate_background_image = ?, voting_validation_enabled = ?, voting_instructions = ?, emails_enabled = ?, badge_bg = ?, badge_config = ?, sponsor_list = ?, conference_address = ?, signature_image = ?, text_under_signature = ?, conference_full_name = ?, start_date = ?, end_date = ?, social_dinner_date = ?, social_dinner_location = ?, social_dinner_time = ?, social_dinner_timezone = ?, social_dinner_maps_url = ?, registration_venue = ?, registration_starts_at = ?, registration_notes = ?, registration_maps_url = ?, email_from_domain = ?, poster_voting_mode = ? WHERE id = ?',
             [
               name,
               acronym,
@@ -219,6 +223,7 @@ export async function updateConference(id, formData) {
               registration_notes,
               registration_maps_url,
               email_from_domain,
+              poster_voting_mode,
               id
             ]
           );
@@ -228,6 +233,75 @@ export async function updateConference(id, formData) {
     } catch (error) {
         console.error('Update conference error:', error);
         return { error: 'Failed to update conference. Acronym might be a duplicate.' };
+    }
+}
+
+export async function getConferenceTopics(conferenceId) {
+    if (!conferenceId) return [];
+
+    try {
+        const rows = await query(`
+            SELECT mongo_id, name FROM topics WHERE conference_id = ? AND parent_mongo_id IS NULL
+            UNION
+            SELECT DISTINCT
+                COALESCE(parent.mongo_id, t.mongo_id) as mongo_id,
+                COALESCE(parent.name, t.name) as name
+            FROM posters p
+            JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
+            WHERE p.conference_id = ? AND p.topic_mongo_id IS NOT NULL
+        `, [conferenceId, conferenceId]);
+
+        // Get poster counts per symposium for helpful UI badges
+        const countRows = await query(`
+            SELECT 
+                COALESCE(parent.mongo_id, t.mongo_id) as symposium_mongo_id,
+                COUNT(p.id) as poster_count
+            FROM posters p
+            JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+            LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
+            WHERE p.conference_id = ? AND p.topic_mongo_id IS NOT NULL
+            GROUP BY symposium_mongo_id
+        `, [conferenceId]);
+
+        const countsMap = new Map();
+        countRows.forEach(c => {
+            if (c.symposium_mongo_id) {
+                countsMap.set(c.symposium_mongo_id, Number(c.poster_count) || 0);
+            }
+        });
+
+        // Format and categorize topics
+        const formatted = rows.map(r => {
+            const cleanName = (r.name || '').replace(/\s+/g, ' ').trim();
+            // Extract code like "A1", "B2", "E4", "C3"
+            const codeMatch = cleanName.match(/^([A-Za-z]\d+)/);
+            const code = codeMatch ? codeMatch[1].toUpperCase() : null;
+            const track = code ? `Track ${code[0]}` : 'Other';
+
+            return {
+                mongo_id: r.mongo_id,
+                name: cleanName,
+                code: code || cleanName.substring(0, 10),
+                track: track,
+                poster_count: countsMap.get(r.mongo_id) || 0
+            };
+        });
+
+        // Sort by code / name
+        formatted.sort((a, b) => {
+            if (a.track !== b.track) {
+                if (a.track === 'Other') return 1;
+                if (b.track === 'Other') return -1;
+                return a.track.localeCompare(b.track);
+            }
+            return (a.code || a.name).localeCompare(b.code || b.name, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+        return formatted;
+    } catch (error) {
+        console.error('getConferenceTopics error:', error);
+        return [];
     }
 }
 

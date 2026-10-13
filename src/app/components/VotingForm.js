@@ -3,16 +3,17 @@
 import { useState, useTransition, useEffect } from 'react';
 import { submitVotes } from '../actions/voting';
 
-export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false, votingValidationEnabled = true }) {
+export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false, votingValidationEnabled = true, isTopicMode = false }) {
   const [votes, setVotes] = useState(initialVotes || {});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Group posters by cluster
+  // Group posters by cluster or symposium
   const postersByCluster = posters.reduce((acc, poster) => {
-    if (!acc[poster.cluster_id]) acc[poster.cluster_id] = [];
-    acc[poster.cluster_id].push(poster);
+    const key = isTopicMode ? (poster.symposium_mongo_id || poster.topic_mongo_id) : poster.cluster_id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(poster);
     return acc;
   }, {});
 

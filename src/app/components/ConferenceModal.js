@@ -71,6 +71,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
 
     const [certificateOrientation, setCertificateOrientation] = useState(conference?.certificate_orientation || 'portrait');
     const [certificateBackgroundImage, setCertificateBackgroundImage] = useState(conference?.certificate_background_image || '');
+    const [posterVotingMode, setPosterVotingMode] = useState(conference?.poster_voting_mode || 'clusters');
 
     const [activeTab, setActiveTab] = useState(initialTab); // 'general' | 'badge_voting' | 'emails' | 'sponsors' | 'certificate'
     const isEdit = !!conference;
@@ -232,6 +233,7 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
             setRegistrationMapsUrl(conference?.registration_maps_url || '');
             setCertificateOrientation(conference?.certificate_orientation || 'portrait');
             setCertificateBackgroundImage(conference?.certificate_background_image || '');
+            setPosterVotingMode(conference?.poster_voting_mode || 'clusters');
             
             const confDomain = conference?.email_from_domain || '@scitoevents.com';
             setEmailDomain(confDomain);
@@ -729,6 +731,53 @@ export default function ConferenceModal({ isOpen, onClose, conference = null, in
                             {/* Voting Settings Group */}
                             <CollapsibleSection title="Voting Settings" unfilledCount={unfilledCounts.voting} defaultOpen={true}>
                                 
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Poster Voting Assignment Mode</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                            posterVotingMode === 'clusters' 
+                                                ? 'border-blue-500 bg-blue-50/50 shadow-sm ring-1 ring-blue-500/20' 
+                                                : 'border-slate-150 bg-white hover:bg-slate-50'
+                                        }`}>
+                                            <input 
+                                                type="radio" 
+                                                name="poster_voting_mode" 
+                                                value="clusters"
+                                                checked={posterVotingMode === 'clusters'}
+                                                onChange={() => setPosterVotingMode('clusters')}
+                                                className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-800">Cluster-Based (Default)</div>
+                                                <div className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                                                    Voters evaluate entire poster clusters / groups.
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                                            posterVotingMode === 'topics' 
+                                                ? 'border-blue-500 bg-blue-50/50 shadow-sm ring-1 ring-blue-500/20' 
+                                                : 'border-slate-150 bg-white hover:bg-slate-50'
+                                        }`}>
+                                            <input 
+                                                type="radio" 
+                                                name="poster_voting_mode" 
+                                                value="topics"
+                                                checked={posterVotingMode === 'topics'}
+                                                onChange={() => setPosterVotingMode('topics')}
+                                                className="mt-0.5 w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-800">Topic / Symposium-Based</div>
+                                                <div className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                                                    Voters evaluate specific symposia (e.g. A2-A6) with multi-track selectors.
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div className="flex items-center gap-3 p-3.5 bg-white border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
                                     <input 
                                         id="voting_validation_enabled"

@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   '/login',
   '/setup-password',
   '/api/auth/callback',
+  '/voting/v',
   '/participants/checkin',
   '/social-dinner/checkin',
   '/visualizacion-streaming-cipie-2026',

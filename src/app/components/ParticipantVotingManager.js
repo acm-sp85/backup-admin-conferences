@@ -3,13 +3,27 @@
 import { useState, useEffect } from 'react';
 import { searchConferenceParticipants, getVotersForConference, updateParticipantClusters, removeVoter, sendVoterInvite } from '../actions/participantVoting';
 import { resetParticipantVotes } from '../actions/posters';
+import { getConferenceTopics } from '../actions/conferences';
 import ParticipantClusterSelect from './ParticipantClusterSelect';
+import ParticipantTopicSelect from './ParticipantTopicSelect';
 import ConferenceGroupedOptions from '@/app/components/ConferenceGroupedOptions';
 
-export default function ParticipantVotingManager({ conferences, allClusters, userRole, selectedConference, onConferenceChange }) {
+export default function ParticipantVotingManager({ conferences = [], allClusters = [], userRole, selectedConference, onConferenceChange }) {
+    const [internalConf, setInternalConf] = useState(selectedConference || conferences[0]?.id || '');
+    const activeConferenceId = selectedConference || internalConf;
+
+    const handleConfChange = (newId) => {
+        setInternalConf(newId);
+        if (onConferenceChange) onConferenceChange(newId);
+    };
+
+    const activeConf = conferences.find(c => String(c.id) === String(activeConferenceId));
+    const isTopicMode = activeConf?.poster_voting_mode === 'topics';
+
     const [search, setSearch] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [voters, setVoters] = useState([]);
+    const [conferenceTopics, setConferenceTopics] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const [inviteSending, setInviteSending] = useState(null);
@@ -18,27 +32,34 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
     const [resettingId, setResettingId] = useState(null);
 
     const fetchVoters = async () => {
-        if (!selectedConference) return;
-        const data = await getVotersForConference(selectedConference);
+        if (!activeConferenceId) return;
+        const data = await getVotersForConference(activeConferenceId);
         setVoters(data);
         setSelectedIds(new Set());
     };
 
-    useEffect(() => { fetchVoters(); }, [selectedConference]);
+    useEffect(() => { 
+        fetchVoters();
+        if (activeConferenceId) {
+            getConferenceTopics(activeConferenceId).then(data => {
+                setConferenceTopics(data || []);
+            });
+        }
+    }, [activeConferenceId]);
 
     useEffect(() => {
         const performSearch = async () => {
-            if (search.length < 2) { setSearchResults([]); return; }
-            const data = await searchConferenceParticipants(selectedConference, search);
+            if (search.length < 2 || !activeConferenceId) { setSearchResults([]); return; }
+            const data = await searchConferenceParticipants(activeConferenceId, search);
             setSearchResults(data);
         };
         const timer = setTimeout(performSearch, 300);
         return () => clearTimeout(timer);
-    }, [search, selectedConference]);
+    }, [search, activeConferenceId]);
 
     const addAsVoter = async (participantId) => {
         setLoading(true);
-        await updateParticipantClusters(participantId, [], selectedConference);
+        await updateParticipantClusters(participantId, [], activeConferenceId);
         setSearch(''); setSearchResults([]);
         await fetchVoters();
         setLoading(false);
@@ -47,14 +68,14 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
     const handleRemoveVoter = async (participantId) => {
         if (!confirm('Remove this voter?')) return;
         setLoading(true);
-        await removeVoter(participantId, selectedConference);
+        await removeVoter(participantId, activeConferenceId);
         await fetchVoters();
         setLoading(false);
     };
 
     const handleSendInvite = async (participantId) => {
         setInviteSending(participantId);
-        const res = await sendVoterInvite(participantId, selectedConference);
+        const res = await sendVoterInvite(participantId, activeConferenceId);
         if (res.success) {
             alert('Invitation sent successfully!');
         } else {
@@ -115,18 +136,18 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
         setSelectedIds(new Set());
     };
 
-    const filteredClusters = allClusters.filter(c => c.conference_id == selectedConference);
+    const filteredClusters = allClusters.filter(c => c.conference_id == activeConferenceId);
 
     return (
         <div className="space-y-4">
             {/* Search & Add */}
             <div className="card p-4">
                 <div className="flex flex-col md:flex-row gap-3 items-end">
-                    <div className="w-full md:w-48">
+                    <div className="w-full md:w-56">
                         <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Conference</label>
                         <select 
-                            value={selectedConference}
-                            onChange={(e) => onConferenceChange(e.target.value)}
+                            value={activeConferenceId}
+                            onChange={(e) => handleConfChange(e.target.value)}
                             className="input-base w-full font-semibold"
                         >
                             <ConferenceGroupedOptions conferences={conferences} renderOption={c => (<option key={c.id} value={c.id}>{c.acronym}</option>)} />
@@ -179,11 +200,18 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                 <div className="bg-[#fafafa] border-b border-[var(--border)] px-3 py-2 flex justify-between items-center h-12">
                     <div className="flex items-center gap-3">
                         <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Authorized Voters</span>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                            isTopicMode 
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm' 
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}>
+                            {isTopicMode ? '⚡ Topic / Symposium Mode' : '📦 Cluster Mode'}
+                        </span>
                         {selectedIds.size > 0 && (
                             <button 
                                 onClick={handleBulkInvite}
                                 disabled={isSendingBulk}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-indigo-100 transition-all disabled:opacity-50 animate-in fade-in zoom-in duration-200 cursor-pointer"
                             >
                                 {isSendingBulk ? (
                                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -211,13 +239,13 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                             </th>
                             <th>Participant</th>
                             <th>Status</th>
-                            <th>Clusters</th>
+                            <th>{isTopicMode ? 'Symposia / Topics' : 'Clusters'}</th>
                             <th className="text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {voters.length === 0 ? (
-                            <tr><td colSpan="4" className="text-center text-[var(--muted)] py-10 text-xs">No voters yet. Search and add above.</td></tr>
+                            <tr><td colSpan="5" className="text-center text-[var(--muted)] py-10 text-xs">No voters yet. Search and add above.</td></tr>
                         ) : (
                             voters.map(p => (
                                 <tr key={p.id}>
@@ -251,13 +279,23 @@ export default function ParticipantVotingManager({ conferences, allClusters, use
                                         </span>
                                     </td>
                                     <td>
-                                        <ParticipantClusterSelect 
-                                            participantId={p.id} 
-                                            conferenceId={selectedConference}
-                                            currentClusters={p.cluster_for_review} 
-                                            allClusters={filteredClusters} 
-                                            onUpdate={fetchVoters}
-                                        />
+                                        {isTopicMode ? (
+                                            <ParticipantTopicSelect 
+                                                participantId={p.id}
+                                                conferenceId={activeConferenceId}
+                                                currentTopics={p.cluster_for_review}
+                                                allTopics={conferenceTopics}
+                                                onUpdate={fetchVoters}
+                                            />
+                                        ) : (
+                                            <ParticipantClusterSelect 
+                                                participantId={p.id} 
+                                                conferenceId={activeConferenceId}
+                                                currentClusters={p.cluster_for_review} 
+                                                allClusters={filteredClusters} 
+                                                onUpdate={fetchVoters}
+                                            />
+                                        )}
                                     </td>
                                     <td className="text-right">
                                         <div className="flex justify-end items-center gap-1">
