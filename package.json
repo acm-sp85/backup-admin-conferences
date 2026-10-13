@@ -13,7 +13,9 @@
     "sync:safe": "node scripts/sync-all.js --safe",
     "sync-attendance": "node scripts/sync-checkins-to-mongo.js",
     "sync-conference-info": "node scripts/sync-conference-info.js",
-    "sync-calendar": "node scripts/sync-conferences-calendar.js"
+    "sync-calendar": "node scripts/sync-conferences-calendar.js",
+    "duplicate-conf": "node scripts/duplicate-conference.js",
+    "delete-test-conf": "node scripts/delete-test-conference.js"
   },
   "dependencies": {
     "autoprefixer": "^10.5.0",
