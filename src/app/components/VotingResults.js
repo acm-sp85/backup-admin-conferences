@@ -165,10 +165,15 @@ export default function VotingResults({ conferences, userRole, selectedConferenc
                                         </td>
                                         <td className="px-4 py-2">
                                             <div className="font-medium text-[var(--foreground)] leading-tight">{poster.title}</div>
-                                            <div className="flex gap-2 mt-1">
+                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                 <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                                                     {poster.cluster_name || 'Unassigned'}
                                                 </span>
+                                                {poster.topic_name && (
+                                                    <span className="text-[9px] font-medium text-slate-600 bg-slate-100 border border-slate-200/60 px-1.5 py-0.5 rounded">
+                                                        {poster.parent_topic_name ? `${poster.parent_topic_name} > ${poster.topic_name}` : poster.topic_name}
+                                                    </span>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="text-center">

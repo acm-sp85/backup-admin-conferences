@@ -130,6 +130,13 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                           ? authorArray.map(a => [a.firstName, a.lastName].filter(Boolean).join(' ') || a.name || a.author_name).filter(Boolean).join(', ') 
                           : poster.authors}
                       </p>
+                      {poster.topic_name && (
+                        <div className="mb-2">
+                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200/70 px-2 py-0.5 rounded-md inline-block max-w-full truncate" title={poster.parent_topic_name ? `${poster.parent_topic_name} > ${poster.topic_name}` : poster.topic_name}>
+                            {poster.parent_topic_name ? `${poster.parent_topic_name} > ${poster.topic_name}` : poster.topic_name}
+                          </span>
+                        </div>
+                      )}
                       <div className="text-[10px] font-bold text-[var(--accent)] uppercase tracking-widest opacity-60 text-center">
                         — tap for details —
                       </div>
@@ -210,6 +217,14 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
                     </div>
                     
                     <div className="space-y-4">
+                        {selectedPoster.topic_name && (
+                            <div className="inline-flex flex-col gap-0.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs font-semibold">
+                                {selectedPoster.parent_topic_name && (
+                                    <span className="text-[10px] text-blue-500 font-normal">{selectedPoster.parent_topic_name} &gt;</span>
+                                )}
+                                <span>{selectedPoster.topic_name}</span>
+                            </div>
+                        )}
                         <div className="flex flex-wrap gap-1.5">
                             {(() => {
                                 try {

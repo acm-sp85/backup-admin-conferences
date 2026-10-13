@@ -65,9 +65,12 @@ export default async function ParticipantVotingPortal({ searchParams }) {
 
     // Fetch posters for the conference
     const posters = await query(`
-        SELECT p.*, conf.base_url 
+        SELECT p.*, conf.base_url,
+               t.name as topic_name, parent.name as parent_topic_name
         FROM posters p
         JOIN conferences conf ON p.conference_id = conf.id
+        LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+        LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
         WHERE p.conference_id = ?
     `, [participant.conference_id]);
 

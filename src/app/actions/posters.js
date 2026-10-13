@@ -12,9 +12,12 @@ export async function getPostersForConference(conferenceId) {
     }
 
     return await query(`
-        SELECT p.*, c.name as cluster_name, c.color as cluster_color, conf.base_url
+        SELECT p.*, c.name as cluster_name, c.color as cluster_color, conf.base_url,
+               t.name as topic_name, parent.name as parent_topic_name
         FROM posters p 
         LEFT JOIN clusters c ON p.cluster_id = c.id 
+        LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
+        LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
         JOIN conferences conf ON p.conference_id = conf.id
         WHERE p.conference_id = ? 
         ORDER BY p.code ASC, p.title ASC

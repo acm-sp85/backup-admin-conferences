@@ -59,12 +59,12 @@ const summary = {
 async function syncAll() {
   const args = process.argv.slice(2);
   const isSafeMode = args.includes('--safe');
-  const onlyParticipants = args.includes('--only-participants');
-  const onlyPayments = args.includes('--only-payments');
-  const onlyPosters = args.includes('--only-posters');
-  const onlyProgram = args.includes('--only-program');
-  const onlyOrals = args.includes('--only-orals');
-  const onlyTopics = args.includes('--only-topics');
+  const onlyParticipants = args.includes('--only-participants') || args.includes('--participants');
+  const onlyPayments = args.includes('--only-payments') || args.includes('--payments');
+  const onlyPosters = args.includes('--only-posters') || args.includes('--posters');
+  const onlyProgram = args.includes('--only-program') || args.includes('--program');
+  const onlyOrals = args.includes('--only-orals') || args.includes('--orals');
+  const onlyTopics = args.includes('--only-topics') || args.includes('--topics');
   
   const hasSpecificFlag = onlyParticipants || onlyPayments || onlyPosters || onlyProgram || onlyOrals || onlyTopics;
   
@@ -416,17 +416,37 @@ async function syncAll() {
         for (const record of records) {
           const mongoId = record._id.toString();
           seenPosterMongoIds.add(mongoId);
+
+          let topicMongoId = null;
+          if (record.topic) {
+            if (typeof record.topic === 'object') {
+              if (record.topic._id) {
+                topicMongoId = typeof record.topic._id === 'object' && record.topic._id.$oid 
+                    ? record.topic._id.$oid 
+                    : record.topic._id.toString();
+              } else if (record.topic.$id) {
+                topicMongoId = record.topic.$id.toString();
+              } else if (record.topic.$oid) {
+                topicMongoId = record.topic.$oid;
+              } else if (record.topic.toString() !== '[object Object]') {
+                topicMongoId = record.topic.toString();
+              }
+            } else {
+              topicMongoId = String(record.topic);
+            }
+          }
+
           if (!posterSet.has(mongoId)) {
             await mariadb.execute(
-              'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content, toc) VALUES (?, ?, ?, ?, ?, ?, ?)',
-              [conferenceId, mongoId, record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null]
+              'INSERT INTO posters (conference_id, mongo_id, title, code, authors, content, toc, topic_mongo_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+              [conferenceId, mongoId, record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null, topicMongoId]
             );
             summary.posters.new++;
             posterSet.add(mongoId);
           } else {
             await mariadb.execute(
-              'UPDATE posters SET title = ?, code = ?, authors = ?, content = ?, toc = ? WHERE mongo_id = ?',
-              [record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null, mongoId]
+              'UPDATE posters SET title = ?, code = ?, authors = ?, content = ?, toc = ?, topic_mongo_id = ? WHERE mongo_id = ?',
+              [record.title || 'Untitled', record.code || null, JSON.stringify(record.authors || []), record.content || null, record.toc || null, topicMongoId, mongoId]
             );
             summary.posters.updated++;
           }

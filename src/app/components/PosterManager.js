@@ -14,6 +14,7 @@ export default function PosterManager({ conferences, selectedConference, onConfe
     const [bulkClusterId, setBulkClusterId] = useState('');
     const [isBulkUpdating, setIsBulkUpdating] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'code', direction: 'asc' });
+    const [selectedTopic, setSelectedTopic] = useState('');
 
     const [selectedPoster, setSelectedPoster] = useState(null);
     const [isTocExpanded, setIsTocExpanded] = useState(false);
@@ -35,7 +36,10 @@ export default function PosterManager({ conferences, selectedConference, onConfe
         setLoading(false);
     };
 
-    useEffect(() => { fetchData(); }, [selectedConference]);
+    useEffect(() => { 
+        setSelectedTopic('');
+        fetchData(); 
+    }, [selectedConference]);
 
     const handleSort = (key) => {
         setSortConfig(prev => ({
@@ -91,10 +95,20 @@ export default function PosterManager({ conferences, selectedConference, onConfe
         }
     };
 
-    const filteredPosters = posters.filter(p => 
-        p.title.toLowerCase().includes(search.toLowerCase()) || 
-        (p.code && p.code.toLowerCase().includes(search.toLowerCase()))
-    );
+    const availableTopics = Array.from(
+        new Set(posters.map(p => p.topic_name).filter(Boolean))
+    ).sort();
+
+    const filteredPosters = posters.filter(p => {
+        const matchesSearch = 
+            p.title.toLowerCase().includes(search.toLowerCase()) || 
+            (p.code && p.code.toLowerCase().includes(search.toLowerCase())) ||
+            (p.topic_name && p.topic_name.toLowerCase().includes(search.toLowerCase())) ||
+            (p.parent_topic_name && p.parent_topic_name.toLowerCase().includes(search.toLowerCase()));
+
+        const matchesTopic = !selectedTopic || p.topic_name === selectedTopic;
+        return matchesSearch && matchesTopic;
+    });
 
     const sortedPosters = [...filteredPosters].sort((a, b) => {
         let aVal = a[sortConfig.key] || '';
@@ -103,6 +117,9 @@ export default function PosterManager({ conferences, selectedConference, onConfe
         if (sortConfig.key === 'cluster_name') {
             aVal = clusters.find(c => c.id == a.cluster_id)?.name || '';
             bVal = clusters.find(c => c.id == b.cluster_id)?.name || '';
+        } else if (sortConfig.key === 'topic_name') {
+            aVal = a.topic_name || '';
+            bVal = b.topic_name || '';
         }
 
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -129,11 +146,28 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                     </select>
                     <input 
                         type="text"
-                        placeholder="Search posters..."
+                        placeholder="Search posters or topics..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="input-base flex-1 min-w-[200px]"
                     />
+                    {availableTopics.length > 0 && (
+                        <select
+                            value={selectedTopic}
+                            onChange={(e) => setSelectedTopic(e.target.value)}
+                            className="input-base text-xs font-semibold max-w-[240px]"
+                        >
+                            <option value="">All Topics ({posters.length})</option>
+                            {availableTopics.map(t => {
+                                const count = posters.filter(p => p.topic_name === t).length;
+                                return (
+                                    <option key={t} value={t}>
+                                        {t.length > 38 ? t.substring(0, 38) + '...' : t} ({count})
+                                    </option>
+                                );
+                            })}
+                        </select>
+                    )}
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="text-xs bg-[var(--accent)]/10 px-3 py-1.5 rounded-full text-[var(--muted)]">
@@ -170,6 +204,13 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                                 Poster Details <SortIcon column="title" />
                             </th>
                             <th 
+                                style={{width: 220}}
+                                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                                onClick={() => handleSort('topic_name')}
+                            >
+                                Topic / Symposium <SortIcon column="topic_name" />
+                            </th>
+                            <th 
                                 style={{width:160}}
                                 className="cursor-pointer hover:bg-slate-50 transition-colors"
                                 onClick={() => handleSort('cluster_name')}
@@ -180,9 +221,9 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="4" className="text-center text-[var(--muted)] py-8 text-xs">Loading...</td></tr>
+                            <tr><td colSpan="5" className="text-center text-[var(--muted)] py-8 text-xs">Loading...</td></tr>
                         ) : sortedPosters.length === 0 ? (
-                            <tr><td colSpan="4" className="text-center text-[var(--muted)] py-8 text-xs">No posters found.</td></tr>
+                            <tr><td colSpan="5" className="text-center text-[var(--muted)] py-8 text-xs">No posters found.</td></tr>
                         ) : (
                             sortedPosters.map(poster => (
                                 <tr key={poster.id} className={selectedPosterIds.includes(poster.id) ? 'bg-blue-50/30' : ''}>
@@ -206,6 +247,20 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                                             <div className="text-[9px] text-slate-400 mt-1 line-clamp-1 italic">
                                                 {poster.content.replace(/<[^>]*>?/gm, '').substring(0, 100)}...
                                             </div>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {poster.topic_name ? (
+                                            <div className="text-[11px] font-medium text-blue-700 bg-blue-50/70 border border-blue-100 rounded-lg p-2 leading-snug" title={poster.parent_topic_name ? `${poster.parent_topic_name} > ${poster.topic_name}` : poster.topic_name}>
+                                                {poster.parent_topic_name && (
+                                                    <span className="text-[9px] text-blue-400 font-semibold block uppercase tracking-wider mb-0.5">
+                                                        {poster.parent_topic_name}
+                                                    </span>
+                                                )}
+                                                <span className="line-clamp-2">{poster.topic_name}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] text-slate-400 italic">No topic</span>
                                         )}
                                     </td>
                                     <td>
@@ -306,6 +361,18 @@ export default function PosterManager({ conferences, selectedConference, onConfe
                                     {selectedPoster.title}
                                 </h2>
                             </div>
+
+                            {selectedPoster.topic_name && (
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[var(--muted)] uppercase tracking-widest mb-1.5">Topic / Symposium</label>
+                                    <div className="inline-flex flex-col gap-0.5 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs font-semibold">
+                                        {selectedPoster.parent_topic_name && (
+                                            <span className="text-[10px] text-blue-500 font-normal">{selectedPoster.parent_topic_name} &gt;</span>
+                                        )}
+                                        <span>{selectedPoster.topic_name}</span>
+                                    </div>
+                                </div>
+                            )}
 
                             {selectedPoster.authors && (
                                 <div>

@@ -164,8 +164,8 @@ async function duplicateConference() {
       }
 
       await conn.execute(
-        `INSERT INTO posters (conference_id, mongo_id, title, authors, content, toc, points, votes_received, code, cluster_id)
-         VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)`,
+        `INSERT INTO posters (conference_id, mongo_id, title, authors, content, toc, points, votes_received, code, cluster_id, topic_mongo_id)
+         VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)`,
         [
           targetConfId,
           p.mongo_id || `test-mongo-${i}`,
@@ -174,7 +174,8 @@ async function duplicateConference() {
           p.content || null,
           p.toc || null,
           p.code || null,
-          assignedClusterId
+          assignedClusterId,
+          p.topic_mongo_id || null
         ]
       );
     }
