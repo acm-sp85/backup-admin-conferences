@@ -186,7 +186,108 @@ async function duplicateConference() {
       console.log(`   - Remaining ${sourcePosters.length - postersAssignedToA - postersAssignedToB} posters available in cluster pool.`);
     }
 
-    // 6. Register any requested test voter emails
+    // 6. Duplicate program sessions & slots (needed for Custom / Oral Presentation Voting)
+    const [sourceSessions] = await conn.execute(
+      'SELECT * FROM program_sessions WHERE conference_id = ? ORDER BY id ASC',
+      [source.id]
+    );
+
+    if (sourceSessions.length > 0) {
+      console.log(`\n📅 Copying ${sourceSessions.length} program sessions for Custom Voting...`);
+      const sessionIdMap = new Map();
+      for (const s of sourceSessions) {
+        const testMongoId = s.mongo_id ? `${s.mongo_id}-test` : null;
+        const [sRes] = await conn.execute(
+          `INSERT INTO program_sessions (conference_id, session_name, full_session_name, start_time, end_time, mongo_id, is_hidden, is_manual)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [targetConfId, s.session_name, s.full_session_name, s.start_time, s.end_time, testMongoId, s.is_hidden || 0, s.is_manual || 0]
+        );
+        sessionIdMap.set(s.id, sRes.insertId);
+      }
+
+      const [sourceSlots] = await conn.execute(
+        'SELECT * FROM program_slots WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)',
+        [source.id]
+      );
+      console.log(`🎤 Copying ${sourceSlots.length} program slots/presentations...`);
+      for (const slot of sourceSlots) {
+        const newSessionId = sessionIdMap.get(slot.session_id);
+        if (!newSessionId) continue;
+        const testSlotMongoId = slot.mongo_id ? `${slot.mongo_id}-test` : null;
+        await conn.execute(
+          `INSERT INTO program_slots (session_id, type, title, presenter_name, presenter_entity, presenter_country, start_time, end_time, mongo_id, authors, content, code, toc, is_manual, topic_mongo_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            newSessionId, slot.type, slot.title, slot.presenter_name, slot.presenter_entity, slot.presenter_country,
+            slot.start_time, slot.end_time, testSlotMongoId,
+            typeof slot.authors === 'object' ? JSON.stringify(slot.authors) : slot.authors,
+            slot.content, slot.code, slot.toc,
+            slot.is_manual || 0, slot.topic_mongo_id
+          ]
+        );
+      }
+      console.log(`✅ Program slots copied successfully.`);
+
+      // Pre-create 1 sample Custom Voting Group for fast testing
+      console.log(`⭐ Creating starter Custom Voting Group ("Best Oral Presentation Award")...`);
+      const [cvgRes] = await conn.execute(
+        'INSERT INTO custom_voting_groups (conference_id, name, color) VALUES (?, ?, ?)',
+        [targetConfId, 'Best Oral Presentation Award', '#ff9500']
+      );
+      const newGroupId = cvgRes.insertId;
+
+      const [sampleSlots] = await conn.execute(
+        `SELECT id FROM program_slots 
+         WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?) 
+         AND (type LIKE '%oral%' OR type LIKE '%talk%' OR type LIKE '%plenary%' OR type LIKE '%invited%') 
+         LIMIT 3`,
+        [targetConfId]
+      );
+
+      for (const ts of sampleSlots) {
+        await conn.execute(
+          'INSERT INTO custom_voting_items (group_id, slot_id) VALUES (?, ?)',
+          [newGroupId, ts.id]
+        );
+      }
+      console.log(`✅ Sample Custom Voting Group ready with ${sampleSlots.length} oral presentations.`);
+    }
+
+    // 7. Copy staff & office team members (@scito.org, @nanoge.org) from source conference
+    console.log(`\n👥 Copying staff & office team participants (@scito.org, @nanoge.org)...`);
+    const [teamParticipants] = await conn.execute(`
+      SELECT p.id, p.firstName, p.lastName, p.email, p.email_alias
+      FROM participants p
+      JOIN registrations r ON p.id = r.participant_id
+      WHERE r.conference_id = ?
+        AND (p.email LIKE "%@scito.org" OR p.email LIKE "%@nanoge.org" OR p.email_alias LIKE "%@scito.org" OR p.email_alias LIKE "%@nanoge.org")
+    `, [source.id]);
+
+    for (const p of teamParticipants) {
+      const [regRes] = await conn.execute(`
+        INSERT INTO registrations (participant_id, conference_id, status, is_manual, has_voted, has_custom_voted)
+        VALUES (?, ?, "Registered", 1, 0, 0)
+      `, [p.id, targetConfId]);
+      const regId = regRes.insertId;
+
+      const token = crypto.randomBytes(24).toString("hex");
+      await conn.execute(`
+        INSERT INTO participant_qr_tokens (registration_id, token)
+        VALUES (?, ?)
+      `, [regId, token]);
+
+      const [existingUser] = await conn.execute("SELECT id FROM users WHERE email = ?", [p.email]);
+      if (!existingUser.length) {
+        await conn.execute(`
+          INSERT INTO users (email, role, firstName, lastName)
+          VALUES (?, "user", ?, ?)
+        `, [p.email, p.firstName, p.lastName]);
+      }
+      console.log(`   ✓ Copied team member: ${p.firstName} ${p.lastName} (${p.email})`);
+    }
+    console.log(`✅ ${teamParticipants.length} team members registered into '${targetAcronym}'.`);
+
+    // 8. Register any additional requested test voter emails from CLI
     if (testEmails.length > 0) {
       console.log(`\n👥 Registering test voters...`);
       for (const email of testEmails) {

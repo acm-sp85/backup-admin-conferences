@@ -88,7 +88,31 @@ async function deleteTestConference() {
       console.log(`   ✓ Deleted ${regRes.affectedRows} registrations`);
     }
 
-    // 2. Program slots and sessions
+    // 2. Custom voting items and groups (must be deleted before program_slots due to foreign keys)
+    try {
+      const [cvgRows] = await conn.execute(
+        'SELECT id FROM custom_voting_groups WHERE conference_id = ?',
+        [conf.id]
+      );
+      if (cvgRows.length > 0) {
+        const cvgIds = cvgRows.map(g => g.id);
+        const cvgPlaceholders = cvgIds.map(() => '?').join(', ');
+        const [cviRes] = await conn.execute(
+          `DELETE FROM custom_voting_items WHERE group_id IN (${cvgPlaceholders})`,
+          cvgIds
+        );
+        console.log(`   ✓ Deleted ${cviRes.affectedRows} custom voting items`);
+      }
+      const [cvgRes] = await conn.execute(
+        'DELETE FROM custom_voting_groups WHERE conference_id = ?',
+        [conf.id]
+      );
+      console.log(`   ✓ Deleted ${cvgRes.affectedRows} custom voting groups`);
+    } catch (e) {
+      console.warn('   ⚠️ Custom voting cleanup notice:', e.message);
+    }
+
+    // 3. Program slots and sessions
     const [sess] = await conn.execute(
       'SELECT id FROM program_sessions WHERE conference_id = ?',
       [conf.id]
@@ -107,27 +131,19 @@ async function deleteTestConference() {
       console.log(`   ✓ Deleted ${sessRes.affectedRows} program sessions`);
     }
 
-    // 3. Delete posters
+    // 4. Delete posters
     const [posterRes] = await conn.execute(
       'DELETE FROM posters WHERE conference_id = ?',
       [conf.id]
     );
     console.log(`   ✓ Deleted ${posterRes.affectedRows} posters`);
 
-    // 4. Delete clusters
+    // 5. Delete clusters
     const [clusterRes] = await conn.execute(
       'DELETE FROM clusters WHERE conference_id = ?',
       [conf.id]
     );
     console.log(`   ✓ Deleted ${clusterRes.affectedRows} clusters`);
-
-    // 5. Delete custom voting groups and custom votes if any
-    try {
-      await conn.execute('DELETE FROM custom_votes WHERE conference_id = ?', [conf.id]);
-      await conn.execute('DELETE FROM custom_voting_groups WHERE conference_id = ?', [conf.id]);
-    } catch (e) {
-      // Table or column might not exist or differ
-    }
 
     // 6. Delete topics, extra activities, global calendar if any
     try {
