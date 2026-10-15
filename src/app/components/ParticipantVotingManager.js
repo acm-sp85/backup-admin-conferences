@@ -282,6 +282,7 @@ export default function ParticipantVotingManager({ conferences = [], allClusters
                                         {isTopicMode ? (
                                             <ParticipantTopicSelect 
                                                 participantId={p.id}
+                                                participantName={p.name}
                                                 conferenceId={activeConferenceId}
                                                 currentTopics={p.cluster_for_review}
                                                 allTopics={conferenceTopics}

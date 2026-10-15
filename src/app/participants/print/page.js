@@ -2,56 +2,102 @@ import { query } from '@/lib/db';
 import { getBadgeConfig } from '@/app/actions/participants-qr';
 
 export default async function PrintBadgesPage({ searchParams }) {
-    const { registrationIds, conferenceId, dos_caras } = await searchParams;
+    const { registrationIds, conferenceId, dos_caras, empty, bgIndex, bg } = await searchParams;
+    const isEmptyMode = empty === '1' || empty === 'true';
     
-    if (!registrationIds || !conferenceId) return <div className="p-10 text-center">Missing parameters (registrationIds, conferenceId)</div>;
+    if (!conferenceId) return <div className="p-10 text-center">Missing parameter: conferenceId</div>;
+    if (!isEmptyMode && !registrationIds) return <div className="p-10 text-center">Missing parameter: registrationIds</div>;
     
-    const ids = registrationIds.split(',');
-    
-    // Try fetching with badge_adjustments if column exists
-    let participants = [];
-    try {
-        participants = await query(`
-            SELECT 
-                p.*, 
-                CONCAT(p.firstName, ' ', p.lastName) as name,
-                r.id as registrationId, 
-                r.badge_adjustments,
-                t.token, 
-                c.acronym
-            FROM participants p
-            JOIN registrations r ON p.id = r.participant_id
-            JOIN conferences c ON r.conference_id = c.id
-            LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
-            WHERE r.id IN (${ids.map(() => '?').join(',')})
-        `, ids);
-    } catch (e) {
-        // Fallback if column doesn't exist yet
-        participants = await query(`
-            SELECT 
-                p.*, 
-                CONCAT(p.firstName, ' ', p.lastName) as name,
-                r.id as registrationId, 
-                t.token, 
-                c.acronym
-            FROM participants p
-            JOIN registrations r ON p.id = r.participant_id
-            JOIN conferences c ON r.conference_id = c.id
-            LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
-            WHERE r.id IN (${ids.map(() => '?').join(',')})
-        `, ids);
-    }
-
-    if (dos_caras === '1') {
-        const doubled = [];
-        participants.forEach(p => {
-            doubled.push(p);
-            doubled.push({ ...p, registrationId: p.registrationId + '_copy' });
-        });
-        participants = doubled;
-    }
-
     const { config, bgUrl } = await getBadgeConfig(conferenceId);
+
+    let participants = [];
+    let emptyBadges = [];
+
+    if (isEmptyMode) {
+        const customBackgrounds = config.customBackgrounds || [];
+        if (bg === 'default') {
+            if (bgUrl) emptyBadges.push({ id: 'empty_default', bgUrl, label: 'Default Background' });
+        } else if (bgIndex !== undefined && bgIndex !== null) {
+            const idx = parseInt(bgIndex, 10);
+            if (customBackgrounds[idx]?.url) {
+                emptyBadges.push({ 
+                    id: `empty_custom_${idx}`, 
+                    bgUrl: customBackgrounds[idx].url, 
+                    label: `Custom Background ${idx + 1}` + (customBackgrounds[idx].userTypes?.length ? ` (${customBackgrounds[idx].userTypes.join(', ')})` : '') 
+                });
+            }
+        } else {
+            if (bgUrl) {
+                emptyBadges.push({ id: 'empty_default', bgUrl, label: 'Default Background' });
+            }
+            customBackgrounds.forEach((cb, idx) => {
+                if (cb.url) {
+                    emptyBadges.push({ 
+                        id: `empty_custom_${idx}`, 
+                        bgUrl: cb.url, 
+                        label: `Custom Background ${idx + 1}` + (cb.userTypes?.length ? ` (${cb.userTypes.join(', ')})` : '') 
+                    });
+                }
+            });
+        }
+
+        if (emptyBadges.length === 0) {
+            emptyBadges.push({ id: 'empty_blank', bgUrl: null, label: 'Blank Badge' });
+        }
+
+        if (dos_caras === '1') {
+            const doubled = [];
+            emptyBadges.forEach(item => {
+                doubled.push(item);
+                doubled.push({ ...item, id: item.id + '_copy' });
+            });
+            emptyBadges = doubled;
+        }
+    } else {
+        const ids = registrationIds.split(',');
+        
+        // Try fetching with badge_adjustments if column exists
+        try {
+            participants = await query(`
+                SELECT 
+                    p.*, 
+                    CONCAT(p.firstName, ' ', p.lastName) as name,
+                    r.id as registrationId, 
+                    r.badge_adjustments,
+                    t.token, 
+                    c.acronym
+                FROM participants p
+                JOIN registrations r ON p.id = r.participant_id
+                JOIN conferences c ON r.conference_id = c.id
+                LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
+                WHERE r.id IN (${ids.map(() => '?').join(',')})
+            `, ids);
+        } catch (e) {
+            // Fallback if column doesn't exist yet
+            participants = await query(`
+                SELECT 
+                    p.*, 
+                    CONCAT(p.firstName, ' ', p.lastName) as name,
+                    r.id as registrationId, 
+                    t.token, 
+                    c.acronym
+                FROM participants p
+                JOIN registrations r ON p.id = r.participant_id
+                JOIN conferences c ON r.conference_id = c.id
+                LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
+                WHERE r.id IN (${ids.map(() => '?').join(',')})
+            `, ids);
+        }
+
+        if (dos_caras === '1') {
+            const doubled = [];
+            participants.forEach(p => {
+                doubled.push(p);
+                doubled.push({ ...p, registrationId: p.registrationId + '_copy' });
+            });
+            participants = doubled;
+        }
+    }
 
     // Extract base values and unit (supporting mm, cm, px, etc.)
     const parseDim = (val, defaultVal) => {
@@ -294,9 +340,13 @@ export default async function PrintBadgesPage({ searchParams }) {
             <div className="print-controls">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '16px' }}>✏️</span>
+                        <span style={{ fontSize: '16px' }}>{isEmptyMode ? '📄' : '✏️'}</span>
                         <div>
-                            <strong style={{ color: '#818cf8' }}>Edit Mode Active:</strong> Click directly on any participant name or institution to customize before printing. Changes are temporary.
+                            {isEmptyMode ? (
+                                <span><strong style={{ color: '#818cf8' }}>Empty Badges Mode:</strong> Printing {emptyBadges.length} blank badge background{emptyBadges.length > 1 ? 's' : ''} with exact dimensions and trim margins.</span>
+                            ) : (
+                                <span><strong style={{ color: '#818cf8' }}>Edit Mode Active:</strong> Click directly on any participant name or institution to customize before printing. Changes are temporary.</span>
+                            )}
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1e293b', padding: '6px 12px', borderRadius: '8px', border: '1px solid #334155' }}>
@@ -310,6 +360,16 @@ export default async function PrintBadgesPage({ searchParams }) {
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
+                    {isEmptyMode && (
+                        <a 
+                            href={`/api/conferences/${conferenceId}/empty-badges/pdf${bgIndex !== undefined && bgIndex !== null ? `?bgIndex=${bgIndex}` : bg === 'default' ? '?bg=default' : ''}`}
+                            download
+                            className="print-btn"
+                            style={{ background: '#10b981', color: 'white', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            Download PDF
+                        </a>
+                    )}
                     <button 
                         className="print-btn" 
                         id="dos-caras-btn" 
@@ -324,7 +384,24 @@ export default async function PrintBadgesPage({ searchParams }) {
                 </div>
             </div>
             
-            {(() => {
+            {isEmptyMode ? (
+                emptyBadges.map((item) => (
+                    <div 
+                        key={item.id} 
+                        className="badge-wrapper"
+                        data-empty="true"
+                    >
+                        <div 
+                            className="badge" 
+                            style={{ 
+                                backgroundImage: item.bgUrl ? `url("${item.bgUrl}")` : 'none',
+                            }}
+                        >
+                            <div className="trim-line" />
+                        </div>
+                    </div>
+                ))
+            ) : (() => {
                 const formatBadgeName = (fullName, forceSingle) => {
                     if (!fullName) return '';
                     let name = fullName;
@@ -499,11 +576,13 @@ export default async function PrintBadgesPage({ searchParams }) {
                 });
 
                 document.querySelectorAll('.badge-wrapper').forEach(function(wrapper) {
+                    if (wrapper.dataset.empty === 'true') return;
                     const badge = wrapper.querySelector('.badge');
-                    const nameEl = badge.querySelector('.name');
-                    const instEl = badge.querySelector('.institution');
+                    const nameEl = badge ? badge.querySelector('.name') : null;
+                    const instEl = badge ? badge.querySelector('.institution') : null;
                     const regId = wrapper.dataset.regId;
                     const rawName = wrapper.dataset.rawName;
+                    if (!nameEl || !regId) return;
                     
                     let saveTimeout;
                     function saveAdjustment(updates) {

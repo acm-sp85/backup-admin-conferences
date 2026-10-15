@@ -5,21 +5,27 @@ import DashboardLayout from '@/app/components/DashboardLayout';
 import { hasAdminAccess } from '@/lib/roles';
 import { 
     Mail, Users, Award, FileText, Calendar, MapPin, 
-    Globe, Ticket, Clock, AlignLeft, Info
+    Globe, Ticket, Clock, AlignLeft, Info, Download, Printer
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatSocialDinnerDate, formatRegistrationDate } from '@/lib/date-formatter';
 
 function Section({ title, icon: Icon, children, className = "", href }) {
-    const Content = (
-        <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6 ${className} ${href ? 'hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group' : ''}`}>
-            <div className={`flex items-center justify-between px-6 py-4 bg-slate-50/50 border-b border-slate-100 ${href ? 'group-hover:bg-indigo-50/50' : ''}`}>
+    return (
+        <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6 ${className}`}>
+            <div className="flex items-center justify-between px-6 py-4 bg-slate-50/50 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                     <Icon className="w-5 h-5 text-indigo-500" />
                     <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{title}</h2>
                 </div>
                 {href && (
-                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                    <Link 
+                        href={href} 
+                        className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 uppercase tracking-widest px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1"
+                    >
+                        Edit
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </Link>
                 )}
             </div>
             <div className="p-6">
@@ -27,11 +33,6 @@ function Section({ title, icon: Icon, children, className = "", href }) {
             </div>
         </div>
     );
-
-    if (href) {
-        return <Link href={href} className="block">{Content}</Link>;
-    }
-    return Content;
 }
 
 function Field({ label, value, isHtml = false, isCode = false }) {
@@ -299,7 +300,28 @@ export default async function PreConferenceReportPage({ params }) {
                                             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col items-center text-center">
                                                 <p className="text-[10px] font-bold text-slate-500 uppercase mb-3">Default Background</p>
                                                 <img src={conference.badge_bg} alt="Default Badge BG" className="w-32 object-contain rounded-lg border border-slate-200 shadow-sm mb-3 bg-white" />
-                                                <p className="text-xs text-slate-600">All other user types</p>
+                                                <p className="text-xs text-slate-600 mb-3">All other user types</p>
+                                                <div className="mt-auto pt-3 border-t border-slate-200/60 w-full flex items-center justify-center gap-2">
+                                                    <a 
+                                                        href={`/api/conferences/${conference.id}/empty-badges/pdf?bg=default`}
+                                                        download
+                                                        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 px-2.5 py-1 rounded-lg border border-indigo-100 transition-colors"
+                                                        title="Download blank default badge PDF"
+                                                    >
+                                                        <Download className="w-3 h-3" />
+                                                        Blank PDF
+                                                    </a>
+                                                    <a 
+                                                        href={`/participants/print?conferenceId=${conference.id}&empty=1&bg=default`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
+                                                        title="Print blank default badge"
+                                                    >
+                                                        <Printer className="w-3 h-3 text-slate-400" />
+                                                        Print
+                                                    </a>
+                                                </div>
                                             </div>
                                         )}
                                         {customBackgrounds.map((bg, index) => (
@@ -310,7 +332,7 @@ export default async function PreConferenceReportPage({ params }) {
                                                 ) : (
                                                     <div className="w-32 h-44 bg-slate-100 rounded-lg border border-slate-200 shadow-sm mb-3 flex items-center justify-center text-slate-400 text-xs">No Image</div>
                                                 )}
-                                                <div className="flex flex-wrap justify-center gap-1">
+                                                <div className="flex flex-wrap justify-center gap-1 mb-3">
                                                     {bg.userTypes && bg.userTypes.length > 0 ? (
                                                         bg.userTypes.map((type, tIdx) => (
                                                             <span key={tIdx} className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -321,8 +343,67 @@ export default async function PreConferenceReportPage({ params }) {
                                                         <span className="text-xs text-slate-400 italic">No user types assigned</span>
                                                     )}
                                                 </div>
+                                                {bg.url && (
+                                                    <div className="mt-auto pt-3 border-t border-slate-200/60 w-full flex items-center justify-center gap-2">
+                                                        <a 
+                                                            href={`/api/conferences/${conference.id}/empty-badges/pdf?bgIndex=${index}`}
+                                                            download
+                                                            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 px-2.5 py-1 rounded-lg border border-indigo-100 transition-colors"
+                                                            title={`Download blank PDF for Custom Background ${index + 1}`}
+                                                        >
+                                                            <Download className="w-3 h-3" />
+                                                            Blank PDF
+                                                        </a>
+                                                        <a 
+                                                            href={`/participants/print?conferenceId=${conference.id}&empty=1&bgIndex=${index}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
+                                                            title={`Print blank badge for Custom Background ${index + 1}`}
+                                                        >
+                                                            <Printer className="w-3 h-3 text-slate-400" />
+                                                            Print
+                                                        </a>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
+                                    </div>
+
+                                    {/* Action Bar at Bottom of Badge Setup */}
+                                    <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50/60 p-4 rounded-xl border border-slate-100/80">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                                                <span>Empty Badges</span>
+                                                <span className="text-[10px] font-normal text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                    {badgeConfig.width || '80mm'} × {badgeConfig.height || '98mm'} (+{badgeConfig.bleed || '3mm'} bleed)
+                                                </span>
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                                Download or print blank backgrounds with exact margins for on-site registration and walk-ins.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                                            <a 
+                                                href={`/participants/print?conferenceId=${conference.id}&empty=1`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-all hover:border-slate-300"
+                                                title="Open interactive print view for empty badges"
+                                            >
+                                                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                                                Print Empty Badges
+                                            </a>
+                                            <a 
+                                                href={`/api/conferences/${conference.id}/empty-badges/pdf`}
+                                                download
+                                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm hover:shadow transition-all"
+                                                title="Download PDF containing empty badges"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                Download Empty Badges
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             );
