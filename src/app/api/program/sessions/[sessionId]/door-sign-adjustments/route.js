@@ -2,6 +2,7 @@ import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 import { hasAdminAccess } from '@/lib/roles';
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(req, { params }) {
     try {
@@ -42,6 +43,11 @@ export async function POST(req, { params }) {
             'UPDATE program_sessions SET door_sign_adjustments = ? WHERE id = ?',
             [JSON.stringify(currentAdjs), sessionId]
         );
+
+        try {
+            revalidatePath('/program/print/all');
+            revalidatePath(`/program/print/${sessionId}`);
+        } catch (e) {}
 
         return NextResponse.json({ success: true, adjustments: currentAdjs });
     } catch (error) {

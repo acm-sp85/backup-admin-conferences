@@ -239,5 +239,10 @@ export async function saveDoorSignAdjustment(sessionId, updates, pageIndex = 0) 
         [JSON.stringify(currentAdjs), sessionId]
     );
 
+    try {
+        revalidatePath('/program/print/all');
+        revalidatePath(`/program/print/${sessionId}`);
+    } catch (e) {}
+
     return { success: true, adjustments: currentAdjs };
 }

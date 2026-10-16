@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { query } from '@/lib/db';
 import { getConferenceConfig } from '@/app/actions/program';
 import { League_Spartan } from 'next/font/google';
@@ -320,30 +323,43 @@ export default async function ProgramPrintPage({ params }) {
             );
         })}
 
-            {/* Print Utility: Forces a print dialog and handles scaling */}
+            {/* Print Utility: Forces a print dialog and handles scaling & persistent adjustments */}
             <script dangerouslySetInnerHTML={{ __html: `
-                window.onload = () => {
-                    const pages = document.querySelectorAll('.session-page');
-                    const printBtn = document.getElementById('print-btn');
+                (function() {
+                    const saveTimeouts = {};
+                    const pendingSaves = {};
 
-                    if (printBtn) {
-                        printBtn.addEventListener('click', () => window.print());
+                    function flushSave(key) {
+                        const pending = pendingSaves[key];
+                        if (!pending) return;
+                        delete pendingSaves[key];
+                        clearTimeout(saveTimeouts[key]);
+
+                        fetch('/api/program/sessions/' + pending.sId + '/door-sign-adjustments', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pageIndex: pending.pIdx, updates: pending.updates }),
+                            keepalive: true
+                        }).catch(e => console.error('Error saving door sign adjustments:', e));
                     }
 
-                    const saveTimeouts = {};
+                    function flushAllPending() {
+                        Object.keys(pendingSaves).forEach(key => flushSave(key));
+                    }
+
                     function savePageAdjustment(sId, pIdx, updates) {
                         const key = sId + '_' + pIdx;
+                        if (!pendingSaves[key]) pendingSaves[key] = { sId, pIdx, updates: {} };
+                        Object.assign(pendingSaves[key].updates, updates);
+
                         clearTimeout(saveTimeouts[key]);
                         saveTimeouts[key] = setTimeout(() => {
-                            fetch('/api/program/sessions/' + sId + '/door-sign-adjustments', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ pageIndex: pIdx, updates })
-                            }).catch(e => console.error('Error saving door sign adjustments:', e));
-                        }, 500);
+                            flushSave(key);
+                        }, 400);
                     }
-                    
+
                     const tryScaleAll = () => {
+                        const pages = document.querySelectorAll('.session-page');
                         pages.forEach(container => {
                             const content = container.querySelector('.adjustable-content');
                             if (!content) return;
@@ -357,11 +373,19 @@ export default async function ProgramPrintPage({ params }) {
                             const hasSavedZoom = container.dataset.savedZoom !== '';
                             const hasSavedY = container.dataset.savedY !== '';
 
-                            let currentScale = 1;
+                            if (!container.dataset.initialized) {
+                                container.dataset.initialized = 'true';
+                                if (hasSavedZoom) {
+                                    sliderZoom.value = parseInt(container.dataset.savedZoom, 10);
+                                }
+                                if (hasSavedY) {
+                                    sliderY.value = parseInt(container.dataset.savedY, 10);
+                                }
+                            }
 
+                            let currentScale = 1;
                             if (hasSavedZoom) {
                                 currentScale = parseInt(container.dataset.savedZoom, 10) / 100;
-                                sliderZoom.value = parseInt(container.dataset.savedZoom, 10);
                             } else {
                                 const style = window.getComputedStyle(container);
                                 const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
@@ -369,7 +393,6 @@ export default async function ProgramPrintPage({ params }) {
                                 const availableHeight = container.offsetHeight - paddingY;
                                 const availableWidth = container.offsetWidth - paddingX;
                                 
-                                // Reset scale to measure real content size
                                 content.style.transform = 'none';
                                 content.style.width = '100%';
                                 
@@ -387,43 +410,63 @@ export default async function ProgramPrintPage({ params }) {
                                 sliderZoom.value = Math.round(currentScale * 100);
                             }
 
-                            if (hasSavedY) {
-                                sliderY.value = parseInt(container.dataset.savedY, 10);
-                            }
-
                             const updateTransform = () => {
                                 const scale = sliderZoom.value / 100;
                                 const yOffset = sliderY.value;
                                 
-                                zoomVal.textContent = sliderZoom.value + '%';
-                                yVal.textContent = yOffset + 'px';
+                                if (zoomVal) zoomVal.textContent = sliderZoom.value + '%';
+                                if (yVal) yVal.textContent = yOffset + 'px';
                                 
-                                content.style.transform = \`translateY(\${yOffset}px) scale(\${scale})\`;
+                                content.style.transform = 'translateY(' + yOffset + 'px) scale(' + scale + ')';
                             };
 
                             if (!container.dataset.listenersBound) {
                                 container.dataset.listenersBound = 'true';
-                                sliderY.addEventListener('input', () => {
+                                const onYChange = () => {
                                     updateTransform();
                                     container.dataset.savedY = sliderY.value;
                                     savePageAdjustment(sessionId, pageIndex, { y: parseInt(sliderY.value, 10) });
-                                });
-                                sliderZoom.addEventListener('input', () => {
+                                };
+                                const onZoomChange = () => {
                                     updateTransform();
                                     container.dataset.savedZoom = sliderZoom.value;
                                     savePageAdjustment(sessionId, pageIndex, { zoom: parseInt(sliderZoom.value, 10) });
-                                });
+                                };
+
+                                sliderY.addEventListener('input', onYChange);
+                                sliderY.addEventListener('change', onYChange);
+                                sliderZoom.addEventListener('input', onZoomChange);
+                                sliderZoom.addEventListener('change', onZoomChange);
                             }
 
                             updateTransform();
                         });
                     };
 
-                    tryScaleAll();
-                    setTimeout(() => {
-                        tryScaleAll(); 
-                    }, 500);
-                }
+                    function init() {
+                        const printBtn = document.getElementById('print-btn');
+                        if (printBtn && !printBtn.dataset.bound) {
+                            printBtn.dataset.bound = 'true';
+                            printBtn.addEventListener('click', () => {
+                                flushAllPending();
+                                window.print();
+                            });
+                        }
+
+                        window.addEventListener('beforeunload', flushAllPending);
+                        window.addEventListener('beforeprint', flushAllPending);
+
+                        tryScaleAll();
+                        setTimeout(tryScaleAll, 400);
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', init);
+                    } else {
+                        init();
+                    }
+                    window.addEventListener('load', tryScaleAll);
+                })();
             ` }} />
 
             <style dangerouslySetInnerHTML={{ __html: `
