@@ -313,6 +313,13 @@ export default async function MigratePage() {
         results.push(`ℹ️ participants.entity_country: ${e.message}`);
     }
 
+    try {
+        await query(`ALTER TABLE program_sessions ADD COLUMN door_sign_adjustments JSON DEFAULT NULL`);
+        results.push('✅ Added door_sign_adjustments to program_sessions');
+    } catch (e) {
+        results.push(`ℹ️ program_sessions.door_sign_adjustments: ${e.message}`);
+    }
+
     return (
         <div className="p-10 font-mono text-sm">
             <h1 className="text-xl font-bold mb-4">Database Migration</h1>

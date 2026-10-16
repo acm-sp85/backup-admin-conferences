@@ -120,42 +120,82 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                     slotGroups = [{ id: 'all', label: null, slots: sessionSlots }];
                 }
 
-                return slotGroups.map((group, gIdx) => (
-                    <div 
-                        key={`${session.id}-${gIdx}`}
-                        className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
-                        style={{ 
-                            width: '210mm',
-                            height: '297mm',
-                            backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            padding: config.padding || '30px 15px 120px 15px', 
-                            position: 'relative',
-                            boxSizing: 'border-box',
-                            breakAfter: 'page'
-                        }}
-                    >
-                        {/* Interactive Controls (Hidden on Print) */}
-                        <div className="print:hidden absolute top-4 right-[-140px] bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-32 flex flex-col gap-3 z-10" style={{ transform: 'translateX(100%)' }}>
-                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjust Page</div>
-                            <div>
-                                <label className="text-[10px] font-medium text-slate-500 flex justify-between">
-                                    <span>Y-Offset</span>
-                                    <span className="y-val" suppressHydrationWarning>0px</span>
-                                </label>
-                                <input type="range" min="-200" max="200" defaultValue="0" className="slider-y w-full accent-blue-600" suppressHydrationWarning />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-medium text-slate-500 flex justify-between">
-                                    <span>Zoom</span>
-                                    <span className="zoom-val" suppressHydrationWarning>100%</span>
-                                </label>
-                                <input type="range" min="50" max="150" defaultValue="100" className="slider-zoom w-full accent-blue-600" suppressHydrationWarning />
-                            </div>
-                        </div>
+                return slotGroups.map((group, gIdx) => {
+                    let adjs = {};
+                    if (session.door_sign_adjustments) {
+                        try {
+                            adjs = typeof session.door_sign_adjustments === 'string'
+                                ? JSON.parse(session.door_sign_adjustments)
+                                : session.door_sign_adjustments;
+                        } catch(e) {}
+                    }
+                    const pageAdj = adjs[gIdx] || (gIdx === 0 && adjs.y !== undefined ? adjs : null);
+                    const savedY = pageAdj?.y !== undefined ? pageAdj.y : null;
+                    const savedZoom = pageAdj?.zoom !== undefined ? pageAdj.zoom : null;
 
-                        <div className="adjustable-content print-content flex flex-col h-full mt-6" style={{ transformOrigin: 'top center' }} suppressHydrationWarning>
+                    return (
+                        <div 
+                            key={`${session.id}-${gIdx}`}
+                            className={`bg-white text-black shadow-2xl print:shadow-none print:m-0 mb-10 print:mb-0 session-page ${leagueSpartan.className}`}
+                            data-session-id={session.id}
+                            data-page-index={gIdx}
+                            data-saved-y={savedY !== null ? savedY : ''}
+                            data-saved-zoom={savedZoom !== null ? savedZoom : ''}
+                            style={{ 
+                                width: '210mm',
+                                height: '297mm',
+                                backgroundImage: bgUrl ? `url(${bgUrl})` : 'none',
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                padding: config.padding || '30px 15px 120px 15px', 
+                                position: 'relative',
+                                boxSizing: 'border-box',
+                                breakAfter: 'page'
+                            }}
+                        >
+                            {/* Interactive Controls (Hidden on Print) */}
+                            <div className="print:hidden absolute top-4 right-[-140px] bg-white border border-slate-200 rounded-lg shadow-lg p-3 w-32 flex flex-col gap-3 z-10" style={{ transform: 'translateX(100%)' }}>
+                                <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Adjust Page</div>
+                                <div>
+                                    <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                        <span>Y-Offset</span>
+                                        <span className="y-val" suppressHydrationWarning>{savedY !== null ? `${savedY}px` : '0px'}</span>
+                                    </label>
+                                    <input 
+                                        type="range" 
+                                        min="-200" 
+                                        max="200" 
+                                        defaultValue={savedY !== null ? savedY : 0} 
+                                        className="slider-y w-full accent-blue-600" 
+                                        suppressHydrationWarning 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-medium text-slate-500 flex justify-between">
+                                        <span>Zoom</span>
+                                        <span className="zoom-val" suppressHydrationWarning>{savedZoom !== null ? `${savedZoom}%` : '100%'}</span>
+                                    </label>
+                                    <input 
+                                        type="range" 
+                                        min="50" 
+                                        max="150" 
+                                        defaultValue={savedZoom !== null ? savedZoom : 100} 
+                                        className="slider-zoom w-full accent-blue-600" 
+                                        suppressHydrationWarning 
+                                    />
+                                </div>
+                            </div>
+
+                            <div 
+                                className="adjustable-content print-content flex flex-col h-full mt-6" 
+                                style={{ 
+                                    transformOrigin: 'top center',
+                                    ...(savedY !== null || savedZoom !== null ? {
+                                        transform: `translateY(${savedY !== null ? savedY : 0}px) scale(${(savedZoom !== null ? savedZoom : 100) / 100})`
+                                    } : {})
+                                }} 
+                                suppressHydrationWarning
+                            >
                             {/* Header Section */}
                             <div className="mb-12">
                                 <div 
@@ -281,7 +321,8 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             </div>
                         </div>
                     </div>
-                ));
+                );
+            });
             })}
 
             {/* Print Utility: Forces a print dialog and handles scaling */}
@@ -293,6 +334,19 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                     if (printBtn) {
                         printBtn.addEventListener('click', () => window.print());
                     }
+
+                    const saveTimeouts = {};
+                    function savePageAdjustment(sId, pIdx, updates) {
+                        const key = sId + '_' + pIdx;
+                        clearTimeout(saveTimeouts[key]);
+                        saveTimeouts[key] = setTimeout(() => {
+                            fetch('/api/program/sessions/' + sId + '/door-sign-adjustments', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ pageIndex: pIdx, updates })
+                            }).catch(e => console.error('Error saving door sign adjustments:', e));
+                        }, 500);
+                    }
                     
                     const tryScaleAll = () => {
                         pages.forEach(container => {
@@ -303,31 +357,44 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                             const sliderZoom = container.querySelector('.slider-zoom');
                             const yVal = container.querySelector('.y-val');
                             const zoomVal = container.querySelector('.zoom-val');
+                            const sessionId = container.dataset.sessionId;
+                            const pageIndex = container.dataset.pageIndex || '0';
+                            const hasSavedZoom = container.dataset.savedZoom !== '';
+                            const hasSavedY = container.dataset.savedY !== '';
 
                             let currentScale = 1;
-                            
-                            const style = window.getComputedStyle(container);
-                            const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-                            const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-                            const availableHeight = container.offsetHeight - paddingY;
-                            const availableWidth = container.offsetWidth - paddingX;
-                            
-                            // Reset scale to measure real content size
-                            content.style.transform = 'none';
-                            content.style.width = '100%';
-                            
-                            const contentHeight = content.scrollHeight;
-                            const contentWidth = content.scrollWidth;
-                            
-                            if (contentHeight > availableHeight || contentWidth > availableWidth) {
-                                const scaleH = availableHeight / contentHeight;
-                                const scaleW = availableWidth / contentWidth;
-                                currentScale = Math.min(scaleH, scaleW) - 0.01;
+
+                            if (hasSavedZoom) {
+                                currentScale = parseInt(container.dataset.savedZoom, 10) / 100;
+                                sliderZoom.value = parseInt(container.dataset.savedZoom, 10);
                             } else {
-                                currentScale = 1;
+                                const style = window.getComputedStyle(container);
+                                const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+                                const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+                                const availableHeight = container.offsetHeight - paddingY;
+                                const availableWidth = container.offsetWidth - paddingX;
+                                
+                                // Reset scale to measure real content size
+                                content.style.transform = 'none';
+                                content.style.width = '100%';
+                                
+                                const contentHeight = content.scrollHeight;
+                                const contentWidth = content.scrollWidth;
+                                
+                                if (contentHeight > availableHeight || contentWidth > availableWidth) {
+                                    const scaleH = availableHeight / contentHeight;
+                                    const scaleW = availableWidth / contentWidth;
+                                    currentScale = Math.min(scaleH, scaleW) - 0.01;
+                                } else {
+                                    currentScale = 1;
+                                }
+                                
+                                sliderZoom.value = Math.round(currentScale * 100);
                             }
-                            
-                            sliderZoom.value = Math.round(currentScale * 100);
+
+                            if (hasSavedY) {
+                                sliderY.value = parseInt(container.dataset.savedY, 10);
+                            }
 
                             const updateTransform = () => {
                                 const scale = sliderZoom.value / 100;
@@ -339,8 +406,19 @@ export default async function ProgramPrintAllPage({ searchParams }) {
                                 content.style.transform = \`translateY(\${yOffset}px) scale(\${scale})\`;
                             };
 
-                            sliderY.addEventListener('input', updateTransform);
-                            sliderZoom.addEventListener('input', updateTransform);
+                            if (!container.dataset.listenersBound) {
+                                container.dataset.listenersBound = 'true';
+                                sliderY.addEventListener('input', () => {
+                                    updateTransform();
+                                    container.dataset.savedY = sliderY.value;
+                                    savePageAdjustment(sessionId, pageIndex, { y: parseInt(sliderY.value, 10) });
+                                });
+                                sliderZoom.addEventListener('input', () => {
+                                    updateTransform();
+                                    container.dataset.savedZoom = sliderZoom.value;
+                                    savePageAdjustment(sessionId, pageIndex, { zoom: parseInt(sliderZoom.value, 10) });
+                                });
+                            }
 
                             updateTransform();
                         });

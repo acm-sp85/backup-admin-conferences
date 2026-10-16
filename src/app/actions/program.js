@@ -207,3 +207,37 @@ export async function deleteSlotData(slotId) {
     revalidatePath('/program');
     return { success: true };
 }
+
+export async function saveDoorSignAdjustment(sessionId, updates, pageIndex = 0) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) {
+        throw new Error('Unauthorized');
+    }
+
+    const pIdx = String(pageIndex);
+    const [sessionData] = await query(
+        `SELECT door_sign_adjustments FROM program_sessions WHERE id = ?`, 
+        [sessionId]
+    );
+
+    if (!sessionData) return { success: false, error: 'Session not found' };
+
+    let currentAdjs = {};
+    if (sessionData.door_sign_adjustments) {
+        try {
+            currentAdjs = typeof sessionData.door_sign_adjustments === 'string'
+                ? JSON.parse(sessionData.door_sign_adjustments)
+                : sessionData.door_sign_adjustments;
+        } catch (e) {}
+    }
+
+    const currentPageAdjs = currentAdjs[pIdx] || {};
+    currentAdjs[pIdx] = { ...currentPageAdjs, ...updates };
+
+    await query(
+        'UPDATE program_sessions SET door_sign_adjustments = ? WHERE id = ?',
+        [JSON.stringify(currentAdjs), sessionId]
+    );
+
+    return { success: true, adjustments: currentAdjs };
+}
