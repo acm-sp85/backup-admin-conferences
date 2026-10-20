@@ -68,7 +68,7 @@ export default async function ParticipantsPage({ searchParams }) {
       SELECT participant_id FROM registrations r2 
       JOIN conferences c2 ON r2.conference_id = c2.id 
       WHERE c2.acronym = ? AND r2.is_guest = 0 
-        ${show_removed === 'true' ? '' : 'AND (r2.is_removed = 0 OR r2.is_removed IS NULL)'}
+        ${show_removed === 'true' ? 'AND r2.is_removed = 1' : 'AND (r2.is_removed = 0 OR r2.is_removed IS NULL)'}
         ${show_manual === 'true' ? 'AND r2.is_manual = 1' : ''}
     )`;
     params.push(conference);
@@ -77,7 +77,11 @@ export default async function ParticipantsPage({ searchParams }) {
     sql += ` AND p.id NOT IN (
       SELECT DISTINCT participant_id FROM registrations WHERE is_guest = 1
     )`;
-    if (show_removed !== 'true') {
+    if (show_removed === 'true') {
+      sql += ` AND p.id IN (
+        SELECT DISTINCT participant_id FROM registrations WHERE is_guest = 0 AND is_removed = 1
+      )`;
+    } else {
       sql += ` AND p.id NOT IN (
         SELECT DISTINCT participant_id FROM registrations WHERE is_removed = 1
       )`;

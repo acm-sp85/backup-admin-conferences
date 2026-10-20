@@ -17,9 +17,14 @@ export async function GET(request) {
   const payload = await decrypt(token);
   console.log("🔍 AuthCallback decrypted token payload:", payload);
 
-  if (!payload || payload.type !== 'magic-link') {
+  if (!payload || (payload.type !== 'magic-link' && payload.type !== 'password-reset')) {
     console.log("🔍 AuthCallback: Redirecting to login due to invalid token payload");
     redirect('/login?error=invalid_token');
+  }
+
+  if (payload.type === 'password-reset' || searchParams.get('action') === 'reset' || searchParams.get('reset') === 'true') {
+    console.log("🔍 AuthCallback: Redirecting to setup-password for password reset");
+    redirect(`/setup-password?token=${token}&reset=true`);
   }
 
   if (hasAdminAccess(payload.role)) {

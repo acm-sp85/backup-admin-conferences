@@ -147,6 +147,105 @@ export async function requestMagicLink(prevState, formData) {
   }
 }
 
+export async function requestPasswordReset(prevState, formData) {
+  const headerList = await headers();
+  const ip = headerList.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
+  // Rate limiting (5 attempts per 15 minutes)
+  const { success, resetAt } = await checkRateLimit(ip, 'password-reset', 5, 900);
+
+  if (!success) {
+    return {
+      message: `Too many requests. Please try again after ${resetAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+    };
+  }
+
+  const email = formData.get('email')?.toString().toLowerCase().trim();
+
+  if (!email || !z.string().email().safeParse(email).success) {
+    return { errors: { email: 'Please enter a valid email address.' } };
+  }
+
+  try {
+    // 1. Check if user exists (by primary email)
+    const users = await query('SELECT id, email, role, password FROM users WHERE email = ?', [email]);
+    let user = users[0];
+
+    // 1b. If not found by primary email, check if this is a participant's email_alias
+    if (!user) {
+      const [participant] = await query(
+        'SELECT p.email FROM participants p WHERE p.email_alias = ?',
+        [email]
+      );
+      if (participant) {
+        const [aliasUser] = await query('SELECT id, email, role, password FROM users WHERE email = ?', [participant.email]);
+        if (aliasUser) {
+          user = aliasUser;
+        }
+      }
+    }
+
+    // 2. Resolve effective delivery address
+    let deliveryEmail = email;
+    if (user) {
+      const [participant] = await query(
+        'SELECT email, email_alias FROM participants WHERE email = ?',
+        [user.email]
+      );
+      if (participant) {
+        deliveryEmail = resolveEmail(participant);
+      }
+    }
+
+    if (user) {
+      if (!hasAdminAccess(user.role)) {
+        return {
+          message: 'Password reset is only for admin accounts. Voters sign in using the Magic Link on the login page.',
+        };
+      }
+
+      // 3. Generate short-lived reset token (15 mins)
+      const token = await encrypt({ 
+        userId: user.id, 
+        role: user.role, 
+        type: 'password-reset' 
+      }, '15m');
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                      (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' : 
+                       process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                       'http://localhost:3000');
+      const resetLink = `${baseUrl}/setup-password?token=${token}&reset=true`;
+
+      console.log(`📧 Attempting to send password reset email to: ${deliveryEmail}`);
+
+      const { subject, html } = emailTemplates.passwordReset({ resetLink });
+
+      const { data, error } = await resend.emails.send({
+        from: EMAIL_CONFIG.from,
+        to: deliveryEmail,
+        subject,
+        html,
+      });
+
+      if (error) {
+        console.error('❌ Resend Password Reset Error:', JSON.stringify(error, null, 2));
+        return { message: 'Failed to send email. Please try again later.' };
+      }
+      console.log('✅ Resend Password Reset Success:', data);
+    }
+
+    return { 
+      success: true, 
+      message: 'If an admin account exists for this email, you will receive a password reset link shortly.' 
+    };
+
+  } catch (error) {
+    console.error('Password Reset Error:', error);
+    return { message: 'Something went wrong. Please try again later.' };
+  }
+}
+
 export async function logout() {
   await deleteSession();
   redirect('/');
@@ -164,7 +263,7 @@ export async function setupAdminPassword(token, formData) {
   }
 
   const payload = await decrypt(token);
-  if (!payload || payload.type !== 'magic-link' || (payload.role !== 'admin' && payload.role !== 'superadmin')) {
+  if (!payload || (payload.type !== 'magic-link' && payload.type !== 'password-reset') || !hasAdminAccess(payload.role)) {
     return { error: 'Invalid or expired token.' };
   }
 

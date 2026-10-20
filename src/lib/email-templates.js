@@ -97,7 +97,31 @@ export const emailTemplates = {
             `,
         };
     },
-    
+    /**
+     * Password Reset Email
+     */
+    passwordReset: ({ resetLink, conference }) => {
+        const brand = getBranding(conference);
+        return {
+            subject: `Reset your admin password – ${brand.name}`,
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 440px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                ${renderHeader(brand)}
+                <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #1e293b;">Reset Your Admin Password</h2>
+                <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 24px;">
+                  We received a request to reset the password for your <strong>${brand.name}</strong> admin account. Click the button below to choose a new password.
+                </p>
+                <div style="text-align: center; margin-bottom: 24px;">
+                  <a href="${resetLink}" style="display: inline-block; background: ${brand.accentColor}; color: white; text-align: center; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Reset Password</a>
+                </div>
+                <p style="font-size: 12px; color: #94a3b8; line-height: 1.4; text-align: center; margin: 0;">
+                  This link will expire in 15 minutes. If you did not request a password reset, you can safely ignore this email.
+                </p>
+              </div>
+            `,
+        };
+    },
+
     /**
      * Admin/Staff Invitation Email
      */
