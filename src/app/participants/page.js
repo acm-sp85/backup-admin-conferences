@@ -17,7 +17,7 @@ export default async function ParticipantsPage({ searchParams }) {
     redirect(session ? '/voting' : '/login');
   }
 
-  const { search, conference, status, show_removed, sortBy = 'created_at', order = 'desc' } = await searchParams;
+  const { search, conference, status, show_removed, show_manual, sortBy = 'created_at', order = 'desc' } = await searchParams;
   const conferences = await query('SELECT * FROM conferences ORDER BY acronym ASC');
 
   // Persistence: If no conference in URL, check cookie
@@ -67,7 +67,9 @@ export default async function ParticipantsPage({ searchParams }) {
     sql += ` AND p.id IN (
       SELECT participant_id FROM registrations r2 
       JOIN conferences c2 ON r2.conference_id = c2.id 
-      WHERE c2.acronym = ? AND r2.is_guest = 0 ${show_removed === 'true' ? '' : 'AND (r2.is_removed = 0 OR r2.is_removed IS NULL)'}
+      WHERE c2.acronym = ? AND r2.is_guest = 0 
+        ${show_removed === 'true' ? '' : 'AND (r2.is_removed = 0 OR r2.is_removed IS NULL)'}
+        ${show_manual === 'true' ? 'AND r2.is_manual = 1' : ''}
     )`;
     params.push(conference);
   } else {
@@ -78,6 +80,11 @@ export default async function ParticipantsPage({ searchParams }) {
     if (show_removed !== 'true') {
       sql += ` AND p.id NOT IN (
         SELECT DISTINCT participant_id FROM registrations WHERE is_removed = 1
+      )`;
+    }
+    if (show_manual === 'true') {
+      sql += ` AND p.id IN (
+        SELECT DISTINCT participant_id FROM registrations WHERE is_guest = 0 AND is_manual = 1
       )`;
     }
   }
@@ -196,6 +203,7 @@ export default async function ParticipantsPage({ searchParams }) {
       cert_sent_at: primaryReg?.cert_sent_at,
       cluster_for_review: primaryReg?.cluster_for_review,
       is_removed: primaryReg?.is_removed,
+      is_manual: primaryReg?.is_manual !== undefined ? primaryReg.is_manual : p.is_manual,
       all_payments_json: JSON.stringify(pPayments),
       presentations_summary: presentations.join(' | ')
     };
@@ -294,7 +302,7 @@ export default async function ParticipantsPage({ searchParams }) {
               userRole={session.role}
               sortBy={sortBy}
               order={order}
-              searchParams={{ search, conference, status, show_removed }}
+              searchParams={{ search, conference, status, show_removed, show_manual }}
               registrationTypes={union}
             />
           );

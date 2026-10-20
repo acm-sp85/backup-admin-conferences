@@ -14,15 +14,23 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
   const [conference, setConference] = useState(searchParams.get('conference') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
   const [showRemoved, setShowRemoved] = useState(searchParams.get('show_removed') === 'true');
+  const [showManual, setShowManual] = useState(searchParams.get('show_manual') === 'true');
+
+  useEffect(() => {
+    setShowRemoved(searchParams.get('show_removed') === 'true');
+    setShowManual(searchParams.get('show_manual') === 'true');
+    setConference(searchParams.get('conference') || '');
+    setStatus(searchParams.get('status') || '');
+  }, [searchParams]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateFilters(search, conference, status, showRemoved);
+      updateFilters(search, conference, status, showRemoved, showManual);
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const updateFilters = (s, c, st, sr) => {
+  const updateFilters = (s, c, st, sr, sm) => {
     const params = new URLSearchParams(searchParams);
     if (s) params.set('search', s); else params.delete('search');
     if (c) {
@@ -34,6 +42,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
     }
     if (st) params.set('status', st); else params.delete('status');
     if (sr) params.set('show_removed', 'true'); else params.delete('show_removed');
+    if (sm) params.set('show_manual', 'true'); else params.delete('show_manual');
 
     startTransition(() => {
       router.push(`${pathname}?${params.toString()}`);
@@ -66,7 +75,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
         <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Conference</label>
         <select
           value={conference}
-          onChange={(e) => { setConference(e.target.value); updateFilters(search, e.target.value, status, showRemoved); }}
+          onChange={(e) => { setConference(e.target.value); updateFilters(search, e.target.value, status, showRemoved, showManual); }}
           className="input-base w-full"
         >
           <option value="">All</option>
@@ -79,7 +88,7 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
           <label className="block text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider mb-1.5">Payment</label>
           <select
             value={status}
-            onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value, showRemoved); }}
+            onChange={(e) => { setStatus(e.target.value); updateFilters(search, conference, e.target.value, showRemoved, showManual); }}
             className="input-base w-full"
           >
             <option value="">Any</option>
@@ -90,22 +99,37 @@ export default function ParticipantsFilter({ conferences, hideSearch = false, hi
         </div>
       )}
 
-      <div className="flex items-center gap-2 pb-[7px]">
-        <input 
-          type="checkbox" 
-          id="showRemoved" 
-          checked={showRemoved} 
-          onChange={(e) => { setShowRemoved(e.target.checked); updateFilters(search, conference, status, e.target.checked); }}
-          className="rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)]"
-        />
-        <label htmlFor="showRemoved" className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider cursor-pointer">
-          Show removed
-        </label>
+      <div className="flex flex-col gap-1.5 pb-[5px]">
+        <div className="flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            id="showManual" 
+            checked={showManual} 
+            onChange={(e) => { setShowManual(e.target.checked); updateFilters(search, conference, status, showRemoved, e.target.checked); }}
+            className="rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
+          />
+          <label htmlFor="showManual" className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider cursor-pointer whitespace-nowrap">
+            Added manually
+          </label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            id="showRemoved" 
+            checked={showRemoved} 
+            onChange={(e) => { setShowRemoved(e.target.checked); updateFilters(search, conference, status, e.target.checked, showManual); }}
+            className="rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
+          />
+          <label htmlFor="showRemoved" className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider cursor-pointer whitespace-nowrap">
+            Show removed
+          </label>
+        </div>
       </div>
 
-      {(search || conference || status || showRemoved) && (
+      {(search || conference || status || showRemoved || showManual) && (
         <button
-          onClick={() => { setSearch(''); setConference(''); setStatus(''); setShowRemoved(false); updateFilters('', '', '', false); }}
+          onClick={() => { setSearch(''); setConference(''); setStatus(''); setShowRemoved(false); setShowManual(false); updateFilters('', '', '', false, false); }}
           className="text-[10px] font-semibold text-[#ff3b30] hover:underline pb-[7px]"
         >
           Clear
