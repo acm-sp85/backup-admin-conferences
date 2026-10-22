@@ -133,7 +133,8 @@ export async function getParticipantByToken(token) {
             c.voting_window_open,
             c.voting_validation_enabled,
             c.voting_instructions,
-            c.poster_voting_mode
+            c.poster_voting_mode,
+            c.active_voting_cluster_id
         FROM participants p
         JOIN registrations r ON p.id = r.participant_id
         JOIN conferences c ON r.conference_id = c.id
@@ -221,8 +222,11 @@ export async function sendVoterInvite(participantId, conferenceId) {
                         (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' || 'https://smart-conference.org' : 
                          process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
                          'http://localhost:3000');
-        const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
-
+        let dayName = null;
+        if (participant.active_voting_cluster_id) {
+            const [cl] = await query('SELECT name FROM clusters WHERE id = ?', [participant.active_voting_cluster_id]);
+            if (cl) dayName = cl.name;
+        }
 
         const sendTo = resolveEmail({
             email: participant.participant_email,
@@ -231,7 +235,10 @@ export async function sendVoterInvite(participantId, conferenceId) {
         console.log(`📧 Sending Voting Invite to ${sendTo} from ${EMAIL_CONFIG.fromVoting}`);
         const { subject, html, from } = await getEmailTemplate(conferenceId, 'posterVotingInvite', {
             name: participant.firstName,
-            magicLink
+            magicLink,
+            dayName,
+            day_name: dayName,
+            daySuffix: dayName ? ` (${dayName})` : ''
         });
 
         const { data, error } = await resend.emails.send({

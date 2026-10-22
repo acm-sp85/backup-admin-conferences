@@ -1,37 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PosterManager from './PosterManager';
 import ParticipantVotingManager from './ParticipantVotingManager';
 import VotingResults from './VotingResults';
 import CustomVotingManager from './CustomVotingManager';
+import ActiveVotingDaySelector from './ActiveVotingDaySelector';
 
 export default function UnifiedPostersView({ conferences, allClusters, userRole }) {
+    const [conferencesList, setConferencesList] = useState(conferences);
     const [activeTab, setActiveTab] = useState('posters');
     
-    // Initialize from cookie if available
-    const [selectedConference, setSelectedConference] = useState(() => {
+    // Initialize cleanly without SSR hydration mismatch
+    const [selectedConference, setSelectedConference] = useState(conferences[0]?.id || '');
+
+    useEffect(() => {
         if (typeof document !== 'undefined') {
             const match = document.cookie.match(/(?:^|; )last_conference=([^;]*)/);
             const acronym = match ? decodeURIComponent(match[1]) : null;
             if (acronym) {
                 const found = conferences.find(c => c.acronym === acronym);
-                if (found) return found.id;
+                if (found) setSelectedConference(found.id);
             }
         }
-        return conferences[0]?.id || '';
-    });
+    }, [conferences]);
 
     const handleConferenceChange = (id) => {
         setSelectedConference(id);
-        const acronym = conferences.find(c => c.id == id)?.acronym;
+        const acronym = conferencesList.find(c => c.id == id)?.acronym;
         if (acronym) {
             document.cookie = `last_conference=${acronym}; path=/; max-age=31536000`;
         }
     };
 
+    const handleConferenceUpdate = (updatedConf) => {
+        setConferencesList(prev => prev.map(c => c.id === updatedConf.id ? { ...c, ...updatedConf } : c));
+    };
+
+    const currentConference = conferencesList.find(c => String(c.id) === String(selectedConference));
+    const currentClusters = allClusters.filter(c => String(c.conference_id) === String(selectedConference));
+
     return (
         <div className="space-y-6">
+            {/* Flashy Active Voting Day Selector */}
+            <ActiveVotingDaySelector 
+                conference={currentConference} 
+                clusters={currentClusters} 
+                onUpdate={handleConferenceUpdate} 
+            />
+
             <div className="flex border-b border-[var(--border)] mb-4">
                 <button
                     onClick={() => setActiveTab('posters')}

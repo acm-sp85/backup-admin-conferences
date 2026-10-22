@@ -186,17 +186,18 @@ export const emailTemplates = {
     /**
      * Poster Voting Invitation
      */
-    posterVotingInvite: ({ name, magicLink, conference }) => {
+    posterVotingInvite: ({ name, magicLink, conference, dayName }) => {
         const brand = getBranding(conference);
+        const daySuffix = dayName ? ` (${dayName})` : '';
         return {
-            subject: `${brand.name} - Invitation to Poster Voting`,
+            subject: `${brand.name} - Invitation to Poster Voting${daySuffix}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     ${renderHeader(brand)}
-                    <h2 style="color: #1e293b; margin-bottom: 20px;">Poster Voting Invitation</h2>
+                    <h2 style="color: #1e293b; margin-bottom: 20px;">Poster Voting Invitation${daySuffix}</h2>
                     <p style="color: #475569; line-height: 1.6; margin-bottom: 20px;">
                         Hello ${name || 'Voter'},<br><br>
-                        You have been invited to participate in the poster voting process for <strong>${brand.name}</strong>. 
+                        You have been invited to participate in the poster voting process for <strong>${brand.name}</strong>${dayName ? ` for <strong>${dayName}</strong>` : ''}. 
                         Please use the link below to access your assigned posters and cast your votes.
                     </p>
                     <div style="margin: 30px 0;">

@@ -320,6 +320,13 @@ export default async function MigratePage() {
         results.push(`ℹ️ program_sessions.door_sign_adjustments: ${e.message}`);
     }
 
+    try {
+        await query(`ALTER TABLE conferences ADD COLUMN active_voting_cluster_id INT NULL DEFAULT NULL`);
+        results.push('✅ Added active_voting_cluster_id to conferences');
+    } catch (e) {
+        results.push(`ℹ️ conferences.active_voting_cluster_id: ${e.message}`);
+    }
+
     return (
         <div className="p-10 font-mono text-sm">
             <h1 className="text-xl font-bold mb-4">Database Migration</h1>

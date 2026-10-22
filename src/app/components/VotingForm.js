@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from 'react';
 import { submitVotes } from '../actions/voting';
 
-export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false, votingValidationEnabled = true, isTopicMode = false }) {
+export default function VotingForm({ activeClusters, posters, initialVotes, userId, conferenceId, conferenceEmail, isParticipant = false, hasVoted = false, votingValidationEnabled = true, isTopicMode = false, activeDayName = null }) {
   const [votes, setVotes] = useState(initialVotes || {});
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
@@ -26,7 +26,6 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
   }, [selectedPoster]);
 
   const handleVoteChange = (posterId, value) => {
-    if (hasVoted) return; // Prevent changes if already voted
     setVotes(prev => ({
       ...prev,
       [posterId]: parseInt(value)
@@ -39,13 +38,12 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (hasVoted) return;
     setError('');
     setSuccess('');
     setMissingPosterIds([]);
 
-    // Only validate that all posters are rated if the conference requires it
-    if (votingValidationEnabled) {
+    // Only validate that all visible posters are rated if conference strictly enforces it AND we are not on a split day
+    if (votingValidationEnabled && !activeDayName) {
         const missing = posters.filter(p => !votes[p.id]).map(p => p.id);
         if (missing.length > 0) {
             setMissingPosterIds(missing);
@@ -61,7 +59,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
         setError(res.error);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setSuccess('Votes submitted successfully!');
+        setSuccess('Votes saved successfully! You can modify your scores anytime while voting remains open.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
@@ -69,21 +67,34 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {activeDayName && (
+        <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl shadow-sm text-blue-900">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+            📅
+          </div>
+          <div className="flex-1">
+            <div className="text-[12px] font-black uppercase tracking-wider text-blue-950">Active Voting Day</div>
+            <div className="text-xs text-blue-800 font-semibold">
+              Currently evaluating posters for: <span className="underline decoration-blue-400 font-bold">{activeDayName}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && <div className="p-3 bg-[#fff5f5] text-[#ff3b30] text-xs font-semibold rounded-xl border border-[#ff3b30]/10">{error}</div>}
       {success && <div className="p-3 bg-[#e8faf0] text-[#34c759] text-xs font-semibold rounded-xl border border-[#34c759]/10">{success}</div>}
 
       {!!hasVoted && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col items-center text-center gap-2 mt-4">
-          <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center">
-             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl flex items-center gap-3 shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+            ✓
           </div>
-          <div className="text-[13px] font-bold text-amber-900">Votes Locked</div>
-          <p className="text-[11px] text-amber-700 max-w-[280px]">
-            Your submission is final. If you need to make amendments, please contact the organizers at:
-            <a href={`mailto:${conferenceEmail}`} className="block mt-1 font-bold text-amber-900 underline underline-offset-2">
-              {conferenceEmail}
-            </a>
-          </p>
+          <div className="text-left flex-1">
+            <div className="text-[12px] font-bold text-emerald-900">Votes Recorded</div>
+            <p className="text-[11px] text-emerald-700 leading-snug">
+              Your votes are saved. You can adjust your ratings or return to vote on other days anytime while the voting window is open.
+            </p>
+          </div>
         </div>
       )}
 
@@ -181,19 +192,17 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
         );
       })}
 
-      {!hasVoted && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-[var(--border)] z-40">
-          <div className="max-w-[500px] mx-auto">
-              <button 
-                  type="submit" 
-                  disabled={isPending}
-                  className="w-full bg-[var(--accent)] text-white h-12 rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
-              >
-                  {isPending ? 'Saving...' : 'Submit All Votes'}
-              </button>
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-[var(--border)] z-40">
+        <div className="max-w-[500px] mx-auto">
+            <button 
+                type="submit" 
+                disabled={isPending}
+                className="w-full bg-[var(--accent)] text-white h-12 rounded-xl font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+                {isPending ? 'Saving Votes...' : (hasVoted ? 'Update Saved Votes' : 'Save & Submit Votes')}
+            </button>
         </div>
-      )}
+      </div>
 
       {/* Details Modal */}
       {selectedPoster && (

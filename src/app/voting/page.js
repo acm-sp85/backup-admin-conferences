@@ -34,6 +34,7 @@ export default async function VotingPage() {
       conf.voting_validation_enabled, 
       conf.poster_voting_mode,
       conf.voting_window_open,
+      conf.active_voting_cluster_id,
       r.cluster_for_review as reg_review
     FROM registrations r
     JOIN participants part ON r.participant_id = part.id
@@ -46,6 +47,12 @@ export default async function VotingPage() {
   let activeClusters = [];
   let posters = [];
   let isTopicMode = false;
+  let activeDayName = null;
+
+  if (activeRegConf?.active_voting_cluster_id) {
+    const [cl] = await query('SELECT name FROM clusters WHERE id = ?', [activeRegConf.active_voting_cluster_id]);
+    if (cl) activeDayName = cl.name;
+  }
 
   const effectiveMode = activeRegConf?.poster_voting_mode || 
     (clustersIds.some(id => typeof id === 'string' && id.length > 10) ? 'topics' : 'clusters');
@@ -71,7 +78,7 @@ export default async function VotingPage() {
       }));
 
       if (activeClusters.length > 0) {
-        posters = await query(`
+        let posterSql = `
           SELECT p.*, conf.base_url,
                  t.name as topic_name, parent.name as parent_topic_name,
                  COALESCE(parent.mongo_id, t.mongo_id) as symposium_mongo_id
@@ -84,7 +91,19 @@ export default async function VotingPage() {
               p.topic_mongo_id IN (${placeholders})
               OR t.parent_mongo_id IN (${placeholders})
             )
-        `, [activeRegConf.conference_id, ...topicIds, ...topicIds]);
+        `;
+        const posterParams = [activeRegConf.conference_id, ...topicIds, ...topicIds];
+
+        if (activeRegConf.active_voting_cluster_id) {
+          posterSql += ` AND p.cluster_id = ?`;
+          posterParams.push(activeRegConf.active_voting_cluster_id);
+        }
+
+        posters = await query(posterSql, posterParams);
+
+        // Filter activeClusters to only those with visible posters for this day
+        const visibleSymposia = new Set(posters.map(p => p.symposium_mongo_id || p.topic_mongo_id));
+        activeClusters = activeClusters.filter(c => visibleSymposia.has(c.id));
       }
     }
   } else if (hasAssignedClusters) {
@@ -100,7 +119,7 @@ export default async function VotingPage() {
       `);
 
       if (activeClusters.length > 0) {
-        posters = await query(`
+        let posterSql = `
           SELECT p.*, conf.base_url,
                  t.name as topic_name, parent.name as parent_topic_name
           FROM posters p
@@ -108,7 +127,16 @@ export default async function VotingPage() {
           LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
           LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
           WHERE p.cluster_id IN (${clustersIdsString})
-        `);
+        `;
+        const posterParams = [];
+        if (activeRegConf?.active_voting_cluster_id) {
+          posterSql += ` AND p.cluster_id = ?`;
+          posterParams.push(activeRegConf.active_voting_cluster_id);
+        }
+        posters = await query(posterSql, posterParams);
+
+        const visibleClusters = new Set(posters.map(p => p.cluster_id));
+        activeClusters = activeClusters.filter(c => visibleClusters.has(c.id));
       }
     }
   }
@@ -184,9 +212,19 @@ export default async function VotingPage() {
     return (
       <DashboardLayout>
         {votingHeader}
-        <div className="max-w-md mx-auto mt-20 text-center">
-          <h2 className="text-lg font-semibold">Voting Closed</h2>
-          <p className="text-[var(--muted)] text-xs mt-1">No active voting windows for your assigned {isTopicMode ? 'symposia' : 'clusters'}.</p>
+        <div className="max-w-md mx-auto mt-20 text-center card p-8 bg-white border border-slate-200/80 rounded-3xl shadow-sm">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+            📅
+          </div>
+          <h2 className="text-lg font-bold text-slate-800">
+            {activeDayName ? `No Posters for ${activeDayName}` : 'Voting Closed'}
+          </h2>
+          <p className="text-[var(--muted)] text-xs mt-1.5 leading-relaxed">
+            {activeDayName 
+              ? `None of your assigned ${isTopicMode ? 'symposia' : 'clusters'} have posters scheduled for ${activeDayName}. Please check back on the other voting day!`
+              : `No active voting windows for your assigned ${isTopicMode ? 'symposia' : 'clusters'}.`
+            }
+          </p>
         </div>
       </DashboardLayout>
     );
@@ -195,21 +233,6 @@ export default async function VotingPage() {
   return (
     <DashboardLayout>
       {votingHeader}
-
-      {!!user.has_voted && (
-        <div className="card p-4 mb-4 border-amber-200 bg-amber-50">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-amber-600">✓</span>
-            <span className="text-xs font-bold text-amber-900 uppercase tracking-tight">Your votes have been recorded successfully</span>
-          </div>
-          <p className="text-[10px] text-amber-700">
-            If you need to make any amendments, please contact the organizers at: 
-            <a href={`mailto:${activeClusters[0]?.conference_email}`} className="font-bold underline ml-1 text-amber-900">
-              {activeClusters[0]?.conference_email}
-            </a>
-          </p>
-        </div>
-      )}
 
       <VotingForm 
         activeClusters={activeClusters} 
@@ -221,6 +244,7 @@ export default async function VotingPage() {
         hasVoted={!!user.has_voted}
         votingValidationEnabled={!!activeClusters[0]?.voting_validation_enabled}
         isTopicMode={isTopicMode}
+        activeDayName={activeDayName}
       />
     </DashboardLayout>
   );

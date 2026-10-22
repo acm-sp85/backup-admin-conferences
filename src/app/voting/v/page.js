@@ -57,6 +57,12 @@ export default async function ParticipantVotingPortal({ searchParams }) {
 
     let activeClusters = [];
     let posters = [];
+    let activeDayName = null;
+
+    if (participant.active_voting_cluster_id) {
+        const [cl] = await query('SELECT name FROM clusters WHERE id = ?', [participant.active_voting_cluster_id]);
+        if (cl) activeDayName = cl.name;
+    }
 
     if (isTopicMode) {
         const placeholders = clustersIds.map(() => '?').join(',');
@@ -74,8 +80,8 @@ export default async function ParticipantVotingPortal({ searchParams }) {
             name: (t.name || '').replace(/\s+/g, ' ').trim()
         }));
 
-        // Fetch posters matching assigned symposia/topics
-        posters = await query(`
+        // Fetch posters matching assigned symposia/topics, filtered by active day if set
+        let posterSql = `
             SELECT p.*, conf.base_url,
                    t.name as topic_name, parent.name as parent_topic_name,
                    COALESCE(parent.mongo_id, t.mongo_id) as symposium_mongo_id
@@ -88,7 +94,19 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                 p.topic_mongo_id IN (${placeholders})
                 OR t.parent_mongo_id IN (${placeholders})
               )
-        `, [participant.conference_id, ...clustersIds, ...clustersIds]);
+        `;
+        const posterParams = [participant.conference_id, ...clustersIds, ...clustersIds];
+
+        if (participant.active_voting_cluster_id) {
+            posterSql += ` AND p.cluster_id = ?`;
+            posterParams.push(participant.active_voting_cluster_id);
+        }
+
+        posters = await query(posterSql, posterParams);
+
+        // Filter activeClusters to only those with visible posters for this day
+        const visibleSymposia = new Set(posters.map(p => p.symposium_mongo_id || p.topic_mongo_id));
+        activeClusters = activeClusters.filter(c => visibleSymposia.has(c.id));
     } else {
         // Fetch active clusters for this participant
         const clustersIdsString = clustersIds.map(Number).filter(n => !isNaN(n)).join(',');
@@ -99,8 +117,7 @@ export default async function ParticipantVotingPortal({ searchParams }) {
             WHERE c.id IN (${clustersIdsString || '0'}) AND c.conference_id = ?
         `, [participant.conference_id]);
 
-        // Fetch posters for the conference
-        posters = await query(`
+        let posterSql = `
             SELECT p.*, conf.base_url,
                    t.name as topic_name, parent.name as parent_topic_name
             FROM posters p
@@ -108,7 +125,39 @@ export default async function ParticipantVotingPortal({ searchParams }) {
             LEFT JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
             LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
             WHERE p.conference_id = ?
-        `, [participant.conference_id]);
+        `;
+        const posterParams = [participant.conference_id];
+
+        if (participant.active_voting_cluster_id) {
+            posterSql += ` AND p.cluster_id = ?`;
+            posterParams.push(participant.active_voting_cluster_id);
+        }
+
+        posters = await query(posterSql, posterParams);
+
+        const visibleClusters = new Set(posters.map(p => p.cluster_id));
+        activeClusters = activeClusters.filter(c => visibleClusters.has(c.id));
+    }
+
+    if (activeClusters.length === 0) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+                <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl border border-slate-200">
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                        📅
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                        {activeDayName ? `No Posters for ${activeDayName}` : 'No Active Posters'}
+                    </h2>
+                    <p className="text-slate-500 leading-relaxed text-sm">
+                        {activeDayName 
+                            ? `None of your assigned ${isTopicMode ? 'symposia' : 'clusters'} have posters scheduled for ${activeDayName}. Please check back on the other voting day!`
+                            : `There are currently no active posters to evaluate for your assigned ${isTopicMode ? 'symposia' : 'clusters'}.`
+                        }
+                    </p>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -132,20 +181,6 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                     </form>
                 </header>
 
-                {participant.has_voted ? (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-8 rounded-3xl mb-10 shadow-sm">
-                        <div className="flex items-start gap-4">
-                            <div className="bg-emerald-500 text-white p-2 rounded-full mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-xl mb-1">Your votes are in!</h3>
-                                <p className="opacity-90 leading-relaxed">Thank you for participating in the voting process. You can see your current rankings below and update them if you've changed your mind.</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : null}
-
                 <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200/60 border border-slate-200/50 overflow-hidden">
                     <VotingForm 
                         activeClusters={activeClusters} 
@@ -158,6 +193,7 @@ export default async function ParticipantVotingPortal({ searchParams }) {
                         hasVoted={participant.has_voted}
                         votingValidationEnabled={!!participant.voting_validation_enabled}
                         isTopicMode={isTopicMode}
+                        activeDayName={activeDayName}
                     />
                 </div>
                 

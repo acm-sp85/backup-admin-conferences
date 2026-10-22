@@ -4,6 +4,7 @@ import { query } from '@/lib/db';
 import { verifySession } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { logAction } from '@/lib/logger';
+import { hasAdminAccess } from '@/lib/roles';
 
 export async function createConference(formData) {
     const session = await verifySession();
@@ -125,6 +126,28 @@ export async function toggleVotingWindow(conferenceId, currentStatus) {
     } catch (error) {
         console.error('Toggle voting error:', error);
         return { error: 'Failed to update voting window' };
+    }
+}
+
+export async function updateActiveVotingCluster(conferenceId, clusterId) {
+    const session = await verifySession();
+    if (!session || (!hasAdminAccess(session.role))) {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        const targetClusterId = clusterId ? Number(clusterId) : null;
+        await query(
+            'UPDATE conferences SET active_voting_cluster_id = ? WHERE id = ?',
+            [targetClusterId, conferenceId]
+        );
+        revalidatePath('/posters');
+        revalidatePath('/voting');
+        revalidatePath('/');
+        return { success: true, activeClusterId: targetClusterId };
+    } catch (error) {
+        console.error('Update active voting cluster error:', error);
+        return { error: 'Failed to update active voting day' };
     }
 }
 

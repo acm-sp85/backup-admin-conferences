@@ -83,6 +83,11 @@ export async function getEmailTemplate(conferenceId, type, placeholders = {}) {
     'brand.email': brand.email,
     'brand.accentColor': brand.accentColor,
     'renderHeader(brand)': renderHeader(brand), // Support the exact string the user tried
+    dayName: placeholders.dayName || '',
+    day_name: placeholders.day_name || placeholders.dayName || '',
+    daySuffix: placeholders.daySuffix || (placeholders.dayName ? ` (${placeholders.dayName})` : ''),
+    'dayName': placeholders.dayName || '',
+    'day_name': placeholders.day_name || placeholders.dayName || '',
     
     // Social Dinner Placeholders
     social_dinner_date: formatSocialDinnerDate(
