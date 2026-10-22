@@ -66,12 +66,21 @@ export async function submitVotes(userId, newVotes, isParticipant = false, confe
                 [JSON.stringify(combinedVotes), userId]
             );
             if (participantEmail) {
-                await query(`
-                    UPDATE registrations r 
-                    JOIN participants p ON r.participant_id = p.id 
-                    SET r.votes = ?, r.has_voted = 1 
-                    WHERE p.email = ?
-                `, [JSON.stringify(combinedVotes), participantEmail]);
+                if (conferenceId) {
+                    await query(`
+                        UPDATE registrations r 
+                        JOIN participants p ON r.participant_id = p.id 
+                        SET r.votes = ?, r.has_voted = 1 
+                        WHERE p.email = ? AND r.conference_id = ?
+                    `, [JSON.stringify(combinedVotes), participantEmail, conferenceId]);
+                } else {
+                    await query(`
+                        UPDATE registrations r 
+                        JOIN participants p ON r.participant_id = p.id 
+                        SET r.votes = ?, r.has_voted = 1 
+                        WHERE p.email = ?
+                    `, [JSON.stringify(combinedVotes), participantEmail]);
+                }
             }
         }
 
