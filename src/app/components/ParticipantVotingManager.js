@@ -87,7 +87,7 @@ export default function ParticipantVotingManager({ conferences = [], allClusters
     const handleResetVotes = async (participantId) => {
         if (!confirm('RESET votes for this user? This will remove their points from all posters and allow them to vote again.')) return;
         setResettingId(participantId);
-        const res = await resetParticipantVotes(participantId, selectedConference);
+        const res = await resetParticipantVotes(participantId, activeConferenceId);
         if (res.success) {
             alert('Votes reset successfully!');
             await fetchVoters();
@@ -122,7 +122,7 @@ export default function ParticipantVotingManager({ conferences = [], allClusters
 
         for (const id of selectedIds) {
             try {
-                const res = await sendVoterInvite(id, selectedConference);
+                const res = await sendVoterInvite(id, activeConferenceId);
                 if (res.success) success++; else fail++;
                 // Pace emails: wait 500ms
                 await new Promise(r => setTimeout(r, 500));

@@ -222,6 +222,7 @@ export async function sendVoterInvite(participantId, conferenceId) {
                         (process.env.VERCEL_ENV === 'production' ? 'https://www.smart-conference.org' || 'https://smart-conference.org' : 
                          process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
                          'http://localhost:3000');
+        const magicLink = `${baseUrl}/api/auth/callback?token=${token}`;
         let dayName = null;
         if (participant.active_voting_cluster_id) {
             const [cl] = await query('SELECT name FROM clusters WHERE id = ?', [participant.active_voting_cluster_id]);
