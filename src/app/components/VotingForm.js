@@ -84,7 +84,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
       {error && <div className="p-3 bg-[#fff5f5] text-[#ff3b30] text-xs font-semibold rounded-xl border border-[#ff3b30]/10">{error}</div>}
       {success && <div className="p-3 bg-[#e8faf0] text-[#34c759] text-xs font-semibold rounded-xl border border-[#34c759]/10">{success}</div>}
 
-      {!!hasVoted && (
+      {/* {!!hasVoted && (
         <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl flex items-center gap-3 shadow-sm">
           <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
             ✓
@@ -96,7 +96,7 @@ export default function VotingForm({ activeClusters, posters, initialVotes, user
             </p>
           </div>
         </div>
-      )}
+      )} */}
 
       {activeClusters.map(cluster => {
         const clusterPosters = postersByCluster[cluster.id] || [];
