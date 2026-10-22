@@ -84,7 +84,7 @@ async function duplicateConference() {
       'social_dinner_time', 'social_dinner_timezone', 'social_dinner_maps_url',
       'registration_venue', 'registration_starts_at', 'registration_notes',
       'registration_maps_url', 'certificate_orientation', 'certificate_background_image',
-      'email_from_domain', 'notes', 'book_of_abstracts_state'
+      'email_from_domain', 'notes', 'book_of_abstracts_state', 'poster_voting_mode'
     ];
 
     const confValues = confFields.map(field => {
@@ -134,6 +134,32 @@ async function duplicateConference() {
       );
       clusterIdMap.set('defaultA', clA.insertId);
       clusterIdMap.set('defaultB', clB.insertId);
+    }
+
+    // 4.1 Remap active voting cluster ID if set on source
+    if (source.active_voting_cluster_id && clusterIdMap.has(source.active_voting_cluster_id)) {
+      const newActiveClusterId = clusterIdMap.get(source.active_voting_cluster_id);
+      await conn.execute(
+        'UPDATE conferences SET active_voting_cluster_id = ? WHERE id = ?',
+        [newActiveClusterId, targetConfId]
+      );
+      console.log(`✅ Set active_voting_cluster_id to ${newActiveClusterId} (mapped from source)`);
+    }
+
+    // 4.2 Copy topics from source conference (essential for Topic/Symposium mode)
+    const [sourceTopics] = await conn.execute(
+      'SELECT mongo_id, parent_mongo_id, name, weight FROM topics WHERE conference_id = ?',
+      [source.id]
+    );
+    if (sourceTopics.length > 0) {
+      console.log(`📚 Copying ${sourceTopics.length} topics from source conference...`);
+      for (const t of sourceTopics) {
+        await conn.execute(
+          'INSERT INTO topics (conference_id, mongo_id, parent_mongo_id, name, weight) VALUES (?, ?, ?, ?, ?)',
+          [targetConfId, t.mongo_id, t.parent_mongo_id, t.name, t.weight || 0]
+        );
+      }
+      console.log(`✅ Successfully copied ${sourceTopics.length} topics.`);
     }
 
     // 5. Duplicate all posters
@@ -257,7 +283,7 @@ async function duplicateConference() {
     // 7. Copy staff & office team members (@scito.org, @nanoge.org) from source conference
     console.log(`\n👥 Copying staff & office team participants (@scito.org, @nanoge.org)...`);
     const [teamParticipants] = await conn.execute(`
-      SELECT p.id, p.firstName, p.lastName, p.email, p.email_alias
+      SELECT p.id, p.firstName, p.lastName, p.email, p.email_alias, r.cluster_for_review
       FROM participants p
       JOIN registrations r ON p.id = r.participant_id
       WHERE r.conference_id = ?
@@ -265,10 +291,21 @@ async function duplicateConference() {
     `, [source.id]);
 
     for (const p of teamParticipants) {
+      let targetClusterReview = p.cluster_for_review;
+      if (source.poster_voting_mode !== 'topics' && targetClusterReview) {
+        try {
+          const parsed = JSON.parse(targetClusterReview);
+          if (Array.isArray(parsed)) {
+            const remapped = parsed.map(cid => clusterIdMap.get(Number(cid)) || cid);
+            targetClusterReview = JSON.stringify(remapped);
+          }
+        } catch (e) {}
+      }
+
       const [regRes] = await conn.execute(`
-        INSERT INTO registrations (participant_id, conference_id, status, is_manual, has_voted, has_custom_voted)
-        VALUES (?, ?, "Registered", 1, 0, 0)
-      `, [p.id, targetConfId]);
+        INSERT INTO registrations (participant_id, conference_id, status, is_manual, has_voted, has_custom_voted, cluster_for_review)
+        VALUES (?, ?, "Registered", 1, 0, 0, ?)
+      `, [p.id, targetConfId, targetClusterReview]);
       const regId = regRes.insertId;
 
       const token = crypto.randomBytes(24).toString("hex");
