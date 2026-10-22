@@ -264,7 +264,17 @@ export async function getConferenceTopics(conferenceId) {
 
     try {
         const rows = await query(`
-            SELECT mongo_id, name FROM topics WHERE conference_id = ? AND parent_mongo_id IS NULL
+            SELECT mongo_id, name FROM topics 
+            WHERE (
+                conference_id = ? 
+                OR conference_id IN (
+                    SELECT DISTINCT t.conference_id 
+                    FROM posters p 
+                    JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci 
+                    WHERE p.conference_id = ?
+                )
+            )
+            AND parent_mongo_id IS NULL
             UNION
             SELECT DISTINCT
                 COALESCE(parent.mongo_id, t.mongo_id) as mongo_id,
@@ -273,7 +283,7 @@ export async function getConferenceTopics(conferenceId) {
             JOIN topics t ON p.topic_mongo_id COLLATE utf8mb4_unicode_ci = t.mongo_id COLLATE utf8mb4_unicode_ci
             LEFT JOIN topics parent ON t.parent_mongo_id COLLATE utf8mb4_unicode_ci = parent.mongo_id COLLATE utf8mb4_unicode_ci
             WHERE p.conference_id = ? AND p.topic_mongo_id IS NOT NULL
-        `, [conferenceId, conferenceId]);
+        `, [conferenceId, conferenceId, conferenceId]);
 
         // Get poster counts per symposium for helpful UI badges
         const countRows = await query(`

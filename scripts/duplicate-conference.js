@@ -146,21 +146,9 @@ async function duplicateConference() {
       console.log(`✅ Set active_voting_cluster_id to ${newActiveClusterId} (mapped from source)`);
     }
 
-    // 4.2 Copy topics from source conference (essential for Topic/Symposium mode)
-    const [sourceTopics] = await conn.execute(
-      'SELECT mongo_id, parent_mongo_id, name, weight FROM topics WHERE conference_id = ?',
-      [source.id]
-    );
-    if (sourceTopics.length > 0) {
-      console.log(`📚 Copying ${sourceTopics.length} topics from source conference...`);
-      for (const t of sourceTopics) {
-        await conn.execute(
-          'INSERT INTO topics (conference_id, mongo_id, parent_mongo_id, name, weight) VALUES (?, ?, ?, ?, ?)',
-          [targetConfId, t.mongo_id, t.parent_mongo_id, t.name, t.weight || 0]
-        );
-      }
-      console.log(`✅ Successfully copied ${sourceTopics.length} topics.`);
-    }
+    // 4.2 Topics are globally unique in the database (keyed by mongo_id) and shared across conferences.
+    // The cloned posters maintain their topic_mongo_id references, which link directly to the global topics.
+    console.log(`📚 Topics are linked globally via posters' topic_mongo_id references.`);
 
     // 5. Duplicate all posters
     const [sourcePosters] = await conn.execute(
