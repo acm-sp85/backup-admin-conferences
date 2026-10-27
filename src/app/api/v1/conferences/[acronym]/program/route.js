@@ -48,8 +48,11 @@ export async function GET(request, { params }) {
   }
 
   try {
-    // 2. Extract conference acronym (Promise in Next.js 16)
+    // 2. Extract conference acronym and query options
     const { acronym } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const rawAbstracts = searchParams.get('abstracts') ?? searchParams.get('include_abstracts');
+    const includeAbstracts = rawAbstracts === 'true' || rawAbstracts === '1';
 
     // 3. Look up conference by acronym
     const conferences = await query(
@@ -116,7 +119,7 @@ export async function GET(request, { params }) {
     // 5. Batch query 2: All slots with resolved topics for these sessions
     const slots = await query(
       `SELECT s.id, s.session_id, s.type, s.title, s.presenter_name, s.presenter_entity, 
-              s.presenter_country, s.start_time, s.end_time, s.authors, s.content, s.code,
+              s.presenter_country, s.start_time, s.end_time, s.authors, ${includeAbstracts ? 's.content,' : ''} s.code,
               t.name as topic_name, p.name as parent_topic_name
        FROM program_slots s
        JOIN program_sessions ps ON s.session_id = ps.id
@@ -156,7 +159,7 @@ export async function GET(request, { params }) {
           country: slot.presenter_country || null,
         },
         authors: parsedAuthors,
-        abstract: slot.content || null,
+        ...(includeAbstracts ? { abstract: slot.content || null } : {}),
         topic: slot.topic_name || null,
         parent_topic: slot.parent_topic_name || null,
       });
