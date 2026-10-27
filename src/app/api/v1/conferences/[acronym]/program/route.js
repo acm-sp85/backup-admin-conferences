@@ -78,6 +78,41 @@ export async function GET(request, { params }) {
       [conference.id]
     );
 
+    // Build symposium -> room dictionary from all conference sessions (e.g. 'Opening B1 - Room 2')
+    const allConferenceSessions = await query(
+      `SELECT session_name, full_session_name 
+       FROM program_sessions 
+       WHERE conference_id = ?`,
+      [conference.id]
+    );
+
+    const symposiumRooms = {};
+    for (const s of allConferenceSessions) {
+      const text = `${s.session_name || ''} ${s.full_session_name || ''}`;
+      const m = text.match(/Opening\s+([A-Z0-9]+)\s*-\s*(Room\s*\d+|SALA\s*\d+|Auditorium)/i);
+      if (m) {
+        symposiumRooms[m[1].toUpperCase()] = m[2].replace(/Room\s*/i, 'Room ').trim();
+      }
+    }
+
+    function resolveSessionRoom(sess) {
+      const text = `${sess.full_session_name || ''} ${sess.session_name || ''}`;
+
+      // 1. Direct match in session name (e.g. 'Opening B1 - Room 2', 'Plenary Session - Auditorium', 'SALA 1')
+      const directMatch = text.match(/(Room\s*\d+|SALA\s*\d+|Auditorium)/i);
+      if (directMatch) {
+        return directMatch[1].replace(/Room\s*/i, 'Room ').trim();
+      }
+
+      // 2. Symposium code match (e.g. 'Session B2.1.1', 'B1.2.2', 'Closing B5', 'Session A6.1.3')
+      const codeMatch = text.match(/(?:Session\s+|Closing\s+|Opening\s+)?([A-Z]\d+)(?:\.\d+)*/i);
+      if (codeMatch && symposiumRooms[codeMatch[1].toUpperCase()]) {
+        return symposiumRooms[codeMatch[1].toUpperCase()];
+      }
+
+      return null;
+    }
+
     // 5. Batch query 2: All slots with resolved topics for these sessions
     const slots = await query(
       `SELECT s.id, s.session_id, s.type, s.title, s.presenter_name, s.presenter_entity, 
@@ -132,6 +167,7 @@ export async function GET(request, { params }) {
       id: sess.id,
       session_name: sess.session_name,
       full_session_name: sess.full_session_name,
+      room: resolveSessionRoom(sess),
       start_time: sess.start_time,
       end_time: sess.end_time,
       slots_count: (slotsBySession.get(sess.id) || []).length,
