@@ -3,6 +3,7 @@ import { hasAdminAccess } from '@/lib/roles';
 import { verifySession } from '@/lib/auth';
 import PrintableCertificate from '@/components/PrintableCertificate';
 import { emailTemplates } from '@/lib/email-templates';
+import { getPresentationsForParticipant } from '@/lib/presentation-matcher';
 export default async function CertificatePrintPage({ searchParams }) {
     const params = await searchParams;
     const registrationIds = params.registrationIds;
@@ -102,103 +103,6 @@ export default async function CertificatePrintPage({ searchParams }) {
         }
     }
 
-    const compareNames = (presenter, firstName, lastName) => {
-        if (!presenter || !firstName || !lastName) return false;
-        
-        const presenterClean = presenter.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const firstClean = firstName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const lastClean = lastName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        // Case 1: Presenter contains a comma (usually "LastName, FirstName")
-        if (presenterClean.includes(',')) {
-            const parts = presenterClean.split(',');
-            const presLast = parts[0].trim();
-            const presFirst = parts[1] ? parts[1].trim() : '';
-            
-            // Check if last names are equal, and first name matches or is a prefix/suffix
-            if (presLast === lastClean && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
-                return true;
-            }
-            // Sometimes lastName in the DB contains multiple surnames but only one matches:
-            if (lastClean.includes(presLast) && presLast.length > 2 && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
-                return true;
-            }
-        }
-        
-        // Case 2: No comma, check direct combinations
-        const option1 = `${firstClean} ${lastClean}`;
-        const option2 = `${lastClean} ${firstClean}`;
-        if (presenterClean === option1 || presenterClean === option2) {
-            return true;
-        }
-        
-        // Case 3: Fuzzy check - both first and last name appear somewhere in the presenter string
-        if (presenterClean.includes(firstClean) && presenterClean.includes(lastClean)) {
-            return true;
-        }
-        
-        return false;
-    };
-
-    const getPresentationsForParticipant = (participant) => {
-        const presentations = [];
-        const fName = participant.firstName || '';
-        const lName = participant.lastName || '';
-        
-        // Check slots
-        for (const slot of slots) {
-            if (slot.presenter_name && compareNames(slot.presenter_name, fName, lName)) {
-                presentations.push({
-                    title: slot.title,
-                    type: slot.type ? (slot.type.charAt(0).toUpperCase() + slot.type.slice(1)) : 'Oral'
-                });
-            }
-        }
-        
-        // Check posters (only primary author)
-        for (const poster of posters) {
-            let authors = [];
-            try {
-                authors = typeof poster.authors === 'string' ? JSON.parse(poster.authors) : poster.authors;
-            } catch (e) {}
-            
-            if (Array.isArray(authors) && authors.length > 0) {
-                const hasExplicitPresenter = authors.some(a => a && a.presenting === true);
-                const authorsToCheck = hasExplicitPresenter 
-                    ? authors.filter(a => a && a.presenting === true) 
-                    : [authors[0]];
-                
-                let isAuthor = false;
-                for (const author of authorsToCheck) {
-                    let aName = '';
-                    if (typeof author === 'string') {
-                        aName = author;
-                    } else if (author && author.name) {
-                        aName = author.name;
-                    } else if (author && author.firstName) {
-                        aName = `${author.firstName} ${author.lastName || ''}`.trim();
-                    } else if (author && author.lastName) {
-                        aName = author.lastName;
-                    }
-                    
-                    if (aName && compareNames(aName, fName, lName)) {
-                        isAuthor = true;
-                        break;
-                    }
-                }
-                
-                if (isAuthor) {
-                    presentations.push({
-                        title: poster.title,
-                        type: 'Poster'
-                    });
-                }
-            }
-        }
-        
-        return presentations;
-    };
-
     const isSpanish = conference.name && conference.name.toUpperCase().includes('CIPIE');
 
     // Generate custom HTML if defined for this conference
@@ -207,7 +111,7 @@ export default async function CertificatePrintPage({ searchParams }) {
     return (
         <div className="print-container">
             {participants.map(p => {
-                const presentations = getPresentationsForParticipant(p);
+                const presentations = getPresentationsForParticipant(p, slots, posters);
                 
                 let customHtml = null;
                 if (hasCustomBody) {

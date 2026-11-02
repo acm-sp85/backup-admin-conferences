@@ -224,7 +224,12 @@ async function syncAll() {
     const [existingParticipants] = await mariadb.execute('SELECT id, email FROM participants');
     const participantMap = new Map(existingParticipants.map(p => [p.email.toLowerCase(), p.id]));
 
-    const [existingRegs] = await mariadb.execute('SELECT id, participant_id FROM registrations WHERE conference_id = ?', [conferenceId]);
+    const [existingRegs] = await mariadb.execute(`
+      SELECT r.id, r.participant_id, p.firstName, p.lastName, p.email
+      FROM registrations r
+      JOIN participants p ON r.participant_id = p.id
+      WHERE r.conference_id = ?
+    `, [conferenceId]);
     const registrationMap = new Map(existingRegs.map(r => [r.participant_id, r.id]));
 
     // --- TRACKING FOR MIRROR SYNC ---
@@ -243,6 +248,28 @@ async function syncAll() {
       await runSyncModule('Participants', async () => {
         const records = await mongoDb.collection(SYNC_CONFIG.mongoParticipantsView).find({}).toArray();
         console.log(`👤 Processing ${records.length} participants...`);
+
+        // Build set of all incoming emails to detect email changes for existing conference registrants
+        const incomingEmails = new Set(
+          records
+            .map(r => (r.user?.email || r.user_email || r.email || '').toLowerCase().trim())
+            .filter(Boolean)
+        );
+        const normalizeNameKey = (first, last) =>
+          `${(first || '').trim().toLowerCase()}||${(last || '').trim().toLowerCase()}`;
+
+        // Map of normalized "firstName||lastName" -> existing registration row whose email is no longer in Mongo
+        const orphanedRegByName = new Map();
+        for (const r of existingRegs) {
+          const oldEmail = (r.email || '').toLowerCase().trim();
+          if (oldEmail && !incomingEmails.has(oldEmail)) {
+            const key = normalizeNameKey(r.firstName, r.lastName);
+            if (key !== '||') {
+              orphanedRegByName.set(key, r);
+            }
+          }
+        }
+
         for (const record of records) {
           const email = (record.user?.email || record.user_email || record.email || '').toLowerCase();
           if (!email) continue;
@@ -283,12 +310,27 @@ async function syncAll() {
           const paystatus = record.paystatus || { total: 0, paid: 0, due: 0 };
 
           if (!registrationMap.has(participantId)) {
-            const [regRes] = await mariadb.execute(
-              'INSERT INTO registrations (participant_id, conference_id, status, paystatus_total, paystatus_paid, paystatus_due) VALUES (?, ?, ?, ?, ?, ?)', 
-              [participantId, conferenceId, 'Registered', paystatus.total || 0, paystatus.paid || 0, paystatus.due || 0]
-            );
-            registrationMap.set(participantId, regRes.insertId);
-            summary.registrations++;
+            const nameKey = normalizeNameKey(firstName, lastName);
+            const orphanedReg = orphanedRegByName.get(nameKey);
+
+            if (orphanedReg && !seenRegistrationIds.has(orphanedReg.id)) {
+              // Participant changed email in Mongo: re-link existing registration to preserve QR check-in, votes, and badge settings
+              await mariadb.execute(
+                'UPDATE registrations SET participant_id = ?, paystatus_total = ?, paystatus_paid = ?, paystatus_due = ? WHERE id = ?',
+                [participantId, paystatus.total || 0, paystatus.paid || 0, paystatus.due || 0, orphanedReg.id]
+              );
+              registrationMap.delete(orphanedReg.participant_id);
+              registrationMap.set(participantId, orphanedReg.id);
+              orphanedRegByName.delete(nameKey);
+              console.log(`🔄 Re-linked registration #${orphanedReg.id} for ${firstName} ${lastName} (${orphanedReg.email} -> ${email})`);
+            } else {
+              const [regRes] = await mariadb.execute(
+                'INSERT INTO registrations (participant_id, conference_id, status, paystatus_total, paystatus_paid, paystatus_due) VALUES (?, ?, ?, ?, ?, ?)', 
+                [participantId, conferenceId, 'Registered', paystatus.total || 0, paystatus.paid || 0, paystatus.due || 0]
+              );
+              registrationMap.set(participantId, regRes.insertId);
+              summary.registrations++;
+            }
           } else {
             await mariadb.execute(
               'UPDATE registrations SET paystatus_total = ?, paystatus_paid = ?, paystatus_due = ? WHERE id = ?',
@@ -689,14 +731,34 @@ async function syncAll() {
       
       if (seenRegistrationIds.size > 0) {
           const ids = Array.from(seenRegistrationIds).join(',');
-          const [toArchive] = await mariadb.execute(`SELECT * FROM registrations WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})`, [conferenceId]);
+          const [protectedRegs] = await mariadb.execute(`
+              SELECT r.id FROM registrations r
+              LEFT JOIN participant_qr_tokens t ON r.id = t.registration_id
+              WHERE r.conference_id = ? AND r.is_guest = 0 AND r.is_manual = 0 AND r.id NOT IN (${ids})
+              AND (t.scanned_at IS NOT NULL OR r.has_voted = 1 OR r.has_custom_voted = 1)
+          `, [conferenceId]);
+          if (protectedRegs.length > 0) {
+              console.log(`🛡️  Protected ${protectedRegs.length} checked-in/voted registration(s) from deletion: [${protectedRegs.map(r => r.id).join(', ')}]`);
+          }
+
+          const [toArchive] = await mariadb.execute(`
+              SELECT * FROM registrations 
+              WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})
+              AND has_voted = 0 AND has_custom_voted = 0
+              AND id NOT IN (SELECT registration_id FROM participant_qr_tokens WHERE scanned_at IS NOT NULL)
+          `, [conferenceId]);
           for (const row of toArchive) {
               await mariadb.execute(
                   'INSERT INTO sync_graveyard (entity_type, original_id, conference_id, data) VALUES (?, ?, ?, ?)',
                   ['registration', row.id, conferenceId, JSON.stringify(row)]
               );
           }
-          const [delRegs] = await mariadb.execute(`DELETE FROM registrations WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})`, [conferenceId]);
+          const [delRegs] = await mariadb.execute(`
+              DELETE FROM registrations 
+              WHERE conference_id = ? AND is_guest = 0 AND is_manual = 0 AND id NOT IN (${ids})
+              AND has_voted = 0 AND has_custom_voted = 0
+              AND id NOT IN (SELECT registration_id FROM participant_qr_tokens WHERE scanned_at IS NOT NULL)
+          `, [conferenceId]);
           if (delRegs.affectedRows > 0) console.log(`🗑️  Archived and removed ${delRegs.affectedRows} stale registrations`);
       }
 
@@ -753,6 +815,8 @@ async function syncAll() {
               SELECT * FROM social_dinner_tickets 
               WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
               AND id NOT IN (${ids})
+              AND is_manual = 0
+              AND scanned_at IS NULL
           `, [conferenceId]);
           for (const row of toArchive) {
               await mariadb.execute(
@@ -765,6 +829,7 @@ async function syncAll() {
               WHERE registration_id IN (SELECT id FROM registrations WHERE conference_id = ?) 
               AND id NOT IN (${ids})
               AND is_manual = 0
+              AND scanned_at IS NULL
           `, [conferenceId]);
           if (delTickets.affectedRows > 0) console.log(`🗑️  Archived and removed ${delTickets.affectedRows} stale dinner tickets`);
       }

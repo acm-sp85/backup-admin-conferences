@@ -3,6 +3,7 @@ import { decrypt } from '@/lib/auth';
 import { emailTemplates } from '@/lib/email-templates';
 import { Award, AlertCircle, Printer, Download } from 'lucide-react';
 import PrintableCertificate from '@/components/PrintableCertificate';
+import { getPresentationsForParticipant } from '@/lib/presentation-matcher';
 
 export default async function AdminCertificatesViewPage({ params }) {
     const { token } = await params;
@@ -96,96 +97,6 @@ export default async function AdminCertificatesViewPage({ params }) {
     // Fetch Program Slots
     const slots = await query('SELECT id, type, title, presenter_name FROM program_slots WHERE session_id IN (SELECT id FROM program_sessions WHERE conference_id = ?)', [conferenceId]);
 
-    const compareNames = (presenter, firstName, lastName) => {
-        if (!presenter || !firstName || !lastName) return false;
-        
-        const presenterClean = presenter.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const firstClean = firstName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const lastClean = lastName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        if (presenterClean.includes(',')) {
-            const parts = presenterClean.split(',');
-            const presLast = parts[0].trim();
-            const presFirst = parts[1] ? parts[1].trim() : '';
-            
-            if (presLast === lastClean && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
-                return true;
-            }
-            if (lastClean.includes(presLast) && presLast.length > 2 && (presFirst.includes(firstClean) || firstClean.includes(presFirst))) {
-                return true;
-            }
-        }
-        
-        const option1 = `${firstClean} ${lastClean}`;
-        const option2 = `${lastClean} ${firstClean}`;
-        if (presenterClean === option1 || presenterClean === option2) {
-            return true;
-        }
-        
-        if (presenterClean.includes(firstClean) && presenterClean.includes(lastClean)) {
-            return true;
-        }
-        
-        return false;
-    };
-
-    const getPresentationsForParticipant = (p) => {
-        const presentations = [];
-        const fName = p.firstName || '';
-        const lName = p.lastName || '';
-        
-        for (const slot of slots) {
-            if (slot.presenter_name && compareNames(slot.presenter_name, fName, lName)) {
-                presentations.push({
-                    title: slot.title,
-                    type: slot.type ? (slot.type.charAt(0).toUpperCase() + slot.type.slice(1)) : 'Oral'
-                });
-            }
-        }
-        
-        for (const poster of posters) {
-            let authors = [];
-            try {
-                authors = typeof poster.authors === 'string' ? JSON.parse(poster.authors) : poster.authors;
-            } catch (e) {}
-            
-            if (Array.isArray(authors) && authors.length > 0) {
-                const hasExplicitPresenter = authors.some(a => a && a.presenting === true);
-                const authorsToCheck = hasExplicitPresenter 
-                    ? authors.filter(a => a && a.presenting === true) 
-                    : [authors[0]];
-                
-                let isAuthor = false;
-                for (const author of authorsToCheck) {
-                    let aName = '';
-                    if (typeof author === 'string') {
-                        aName = author;
-                    } else if (author && author.name) {
-                        aName = author.name;
-                    } else if (author && author.firstName) {
-                        aName = `${author.firstName} ${author.lastName || ''}`.trim();
-                    } else if (author && author.lastName) {
-                        aName = author.lastName;
-                    }
-                    
-                    if (aName && compareNames(aName, fName, lName)) {
-                        isAuthor = true;
-                        break;
-                    }
-                }
-                
-                if (isAuthor) {
-                    presentations.push({
-                        title: poster.title,
-                        type: 'Poster'
-                    });
-                }
-            }
-        }
-        
-        return presentations;
-    };
-
     const isLandscape = conference.certificate_orientation === 'landscape';
     const bgImage = conference.certificate_background_image;
 
@@ -194,7 +105,7 @@ export default async function AdminCertificatesViewPage({ params }) {
 
     // Process all participants
     const processedParticipants = participants.map(participant => {
-        const presentations = getPresentationsForParticipant(participant);
+        const presentations = getPresentationsForParticipant(participant, slots, posters);
 
         return { ...participant, presentations };
     });
